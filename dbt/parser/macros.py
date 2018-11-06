@@ -1,5 +1,4 @@
 import os
-import re
 
 import jinja2.runtime
 
@@ -31,11 +30,6 @@ class MacroParser(BaseParser):
             tags = []
 
         context = {}
-
-        macro_file_contents = '\n'.join(re.findall(
-            r'{% macro.*endmacro %}',
-            macro_file_contents,
-            flags=re.DOTALL))
 
         # change these to actual kwargs
         base_node = UnparsedMacro(

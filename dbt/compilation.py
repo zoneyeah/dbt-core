@@ -3,12 +3,10 @@ import os
 import json
 from collections import OrderedDict, defaultdict
 import sqlparse
-import re
 
 import dbt.utils
 import dbt.include
 import dbt.tracking
-from dbt.parser.macros import MacroParser
 
 from dbt.utils import get_materialization, NodeType, is_type
 
@@ -117,25 +115,12 @@ class Compiler(object):
         dbt.clients.system.make_directory(self.config.modules_path)
 
     def compile_string(self, config, manifest, string):
-        package_name = config.project_name
-
-        macros = MacroParser.parse_macro_file(
-            'macros/API_QUERY.sql',
-            string,
-            "null",
-            package_name,
-            "macro"
-        )
-
-        manifest.macros.update(macros)
-        macros_removed = string
-
         fake_model = ParsedNode(
-            unique_id="model.{}.API_QUERY".format(package_name),
+            unique_id="model.live.API_QUERY",
             fqn=["live", "API_QUERY"],
             resource_type="model",
-            package_name=package_name,
-            raw_sql=macros_removed,
+            package_name="live",
+            raw_sql=string,
             depends_on={"nodes": [], "macros": []},
             refs=[],
             original_file_path="analysis/API_QUERY.sql",
@@ -157,6 +142,7 @@ class Compiler(object):
             name="API_QUERY",
             alias="API_QUERY",
         )
+
         compiled = self.compile_node(
             fake_model,
             manifest,
@@ -169,7 +155,7 @@ class Compiler(object):
         node,
         manifest,
         extra_context=None,
-        context_generator=None,
+        context_generator=None
     ):
         if extra_context is None:
             extra_context = {}
