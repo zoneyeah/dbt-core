@@ -119,6 +119,10 @@ def write_file(path, contents=''):
     return True
 
 
+def read_json(path):
+    return json.loads(load_file_contents(path))
+
+
 def write_json(path, data):
     return write_file(path, json.dumps(data, cls=dbt.utils.JSONEncoder))
 

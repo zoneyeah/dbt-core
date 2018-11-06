@@ -1,7 +1,8 @@
 from dbt.api import APIObject
 from dbt.contracts.graph.unparsed import UNPARSED_NODE_CONTRACT
 from dbt.contracts.graph.parsed import PARSED_NODE_CONTRACT, \
-    PARSED_MACRO_CONTRACT, PARSED_DOCUMENTATION_CONTRACT, ParsedNode
+    PARSED_MACRO_CONTRACT, PARSED_DOCUMENTATION_CONTRACT, ParsedNode, \
+    ParsedMacro, ParsedDocumentation
 from dbt.contracts.graph.compiled import COMPILED_NODE_CONTRACT, CompiledNode
 from dbt.exceptions import ValidationException
 from dbt.node_types import NodeType
@@ -206,6 +207,31 @@ class Manifest(APIObject):
             'user_id': user_id,
             'send_anonymous_usage_stats': send_anonymous_usage_stats,
         }
+
+    @classmethod
+    def deserialize(cls, d):
+        """
+        Convert dictionary into manifest object.
+        """
+        return cls(
+            nodes={
+                node_name: ParsedNode(**node)
+                for (node_name, node)
+                in d.get('nodes', {}).items()
+            },
+            macros={
+                macro_name: ParsedMacro(**macro)
+                for (macro_name, macro)
+                in d.get('macros', {}).items()
+            },
+            docs={
+                doc_name: ParsedDocumentation(**doc)
+                for (doc_name, doc)
+                in d.get('docs', {}).items()
+            },
+            generated_at=d.get('generated_at'),
+            disabled=d.get('disabled')
+        )
 
     def serialize(self):
         """Convert the parsed manifest to a nested dict structure that we can

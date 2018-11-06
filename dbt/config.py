@@ -749,7 +749,7 @@ class Profile(object):
         profiles_dir = getattr(args, 'profiles_dir', PROFILES_DIR)
         target_override = getattr(args, 'target', None)
         raw_profiles = read_profile(profiles_dir)
-        profile_name = cls._pick_profile_name(args.profile,
+        profile_name = cls._pick_profile_name(getattr(args, 'profile', None),
                                               project_profile_name)
 
         return cls.from_raw_profiles(

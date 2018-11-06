@@ -12,7 +12,9 @@ from dbt.utils import get_materialization, NodeType, is_type
 
 from dbt.linker import Linker
 
+from dbt.contracts.graph.parsed import ParsedNode
 import dbt.compat
+import dbt.context.hackathon
 import dbt.context.runtime
 import dbt.contracts.project
 import dbt.exceptions
@@ -61,13 +63,17 @@ def _extend_prepended_ctes(prepended_ctes, new_prepended_ctes):
         _add_prepended_cte(prepended_ctes, new_cte)
 
 
-def prepend_ctes(model, manifest):
-    model, _, manifest = recursively_prepend_ctes(model, manifest)
+def prepend_ctes(model, manifest, compiler):
+    model, _, manifest = recursively_prepend_ctes(model, manifest, compiler)
 
     return (model, manifest)
 
 
-def recursively_prepend_ctes(model, manifest):
+def recursively_prepend_ctes(model, manifest, compiler):
+    if not isinstance(model, CompiledNode):
+        model = compiler.compile_node(model, manifest)
+        manifest.nodes[model.unique_id] = model
+
     if model.extra_ctes_injected:
         return (model, model.extra_ctes, manifest)
 
@@ -81,7 +87,7 @@ def recursively_prepend_ctes(model, manifest):
         cte_id = cte['id']
         cte_to_add = manifest.nodes.get(cte_id)
         cte_to_add, new_prepended_ctes, manifest = recursively_prepend_ctes(
-            cte_to_add, manifest)
+            cte_to_add, manifest, compiler)
 
         _extend_prepended_ctes(prepended_ctes, new_prepended_ctes)
         new_cte_name = '__dbt__CTE__{}'.format(cte_to_add.get('name'))
@@ -96,14 +102,61 @@ def recursively_prepend_ctes(model, manifest):
 
 
 class Compiler(object):
-    def __init__(self, config):
+    def __init__(self, config, context_generator=None):
         self.config = config
+
+        if context_generator is None:
+            self.context_generator = dbt.context.runtime.generate
+        else:
+            self.context_generator = dbt.context.hackathon.generate
 
     def initialize(self):
         dbt.clients.system.make_directory(self.config.target_path)
         dbt.clients.system.make_directory(self.config.modules_path)
 
-    def compile_node(self, node, manifest, extra_context=None):
+    def compile_string(self, config, manifest, string):
+        fake_model = ParsedNode(
+            unique_id="model.live.API_QUERY",
+            fqn=["live", "API_QUERY"],
+            resource_type="model",
+            package_name="live",
+            raw_sql=string,
+            depends_on={"nodes": [], "macros": []},
+            refs=[],
+            original_file_path="analysis/API_QUERY.sql",
+            root_path="null",
+            tags=[],
+            schema="public",
+            config={
+                "materialized": "ephemeral",
+                "enabled": True,
+                "post-hook": [],
+                "pre-hook": [],
+                "vars": {},
+                "quoting": {},
+                "column_types": {},
+                "tags": [],
+            },
+            path="analysis/API_QUERY.sql",
+            empty=False,
+            name="API_QUERY",
+            alias="API_QUERY",
+        )
+
+        compiled = self.compile_node(
+            fake_model,
+            manifest,
+        )
+
+        return compiled.injected_sql
+
+    def compile_node(
+        self,
+        node,
+        manifest,
+        extra_context=None,
+        context_generator=None
+    ):
         if extra_context is None:
             extra_context = {}
 
@@ -119,7 +172,7 @@ class Compiler(object):
         })
         compiled_node = CompiledNode(**data)
 
-        context = dbt.context.runtime.generate(
+        context = self.context_generator(
             compiled_node, self.config, manifest)
         context.update(extra_context)
 
@@ -130,7 +183,7 @@ class Compiler(object):
 
         compiled_node.compiled = True
 
-        injected_node, _ = prepend_ctes(compiled_node, manifest)
+        injected_node, _ = prepend_ctes(compiled_node, manifest, self)
 
         should_wrap = {NodeType.Test, NodeType.Analysis, NodeType.Operation}
         if injected_node.resource_type in should_wrap:
