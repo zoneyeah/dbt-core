@@ -211,7 +211,7 @@ class LogStream:
         self.info = info
 
     def write(self, msg):
-        return log(msg, self.info)
+        return log(msg.rstrip(), self.info)
 
 
 class Var(object):

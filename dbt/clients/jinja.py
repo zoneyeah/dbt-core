@@ -66,8 +66,8 @@ class TemplateCache(object):
     def get_node_template(self, node):
         key = (node['package_name'], node['original_file_path'])
 
-        if key in self.file_cache:
-            return self.file_cache[key]
+        # if key in self.file_cache:
+        #     return self.file_cache[key]
 
         template = get_template(
             string=node.get('raw_sql'),
@@ -90,12 +90,14 @@ def macro_generator(node):
         def call(*args, **kwargs):
             name = node.get('name')
             template = template_cache.get_node_template(node)
+
             module = template.make_module(context, False, context)
 
             if node['resource_type'] == NodeType.Operation:
                 macro = module.__dict__[dbt.utils.get_dbt_operation_name(name)]
             else:
                 macro = module.__dict__[dbt.utils.get_dbt_macro_name(name)]
+
             module.__dict__.update(context)
 
             try:
