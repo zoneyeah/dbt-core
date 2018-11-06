@@ -206,6 +206,14 @@ def log(msg, info=False):
     return ''
 
 
+class LogStream:
+    def __init__(self, info):
+        self.info = info
+
+    def write(self, msg):
+        return log(msg, self.info)
+
+
 class Var(object):
     UndefinedVarError = "Required var '{}' not found in config:\nVars "\
                         "supplied to {} = {}"
@@ -367,6 +375,8 @@ def generate_base(model, model_dict, config, manifest, source_config,
         # TODO: Do we have to leave this in?
         "graph": manifest.to_flat_graph(),
         "log": log,
+        "info_log_stream": LogStream(True),
+        "debug_log_stream": LogStream(False),
         "model": model_dict,
         "modules": {
             "pytz": pytz,
