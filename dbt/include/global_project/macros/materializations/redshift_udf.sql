@@ -9,13 +9,24 @@
     {%- set identifier = model['alias'] -%}
 
     {% call statement('find_udfs', fetch_result=True) %}
-        select * from pg_proc where proname ilike '%{{identifier}}%'
+        with schema as (
+            select
+                pg_namespace.oid as id,
+                pg_namespace.nspname as name
+            from pg_namespace
+            where nspname != 'information_schema' and nspname not like 'pg_%'
+        ),
+        select *
+        from pg_proc
+        left join schema on pg_proc.pronamespace = schema.id
+            where proname ilike '%{{identifier}}%'
+            and schema ilike '{{schema}}'
     {% endcall %}
 
     {% set matching_udfs = load_result('find_udfs')['data'] %}
 
     {% if matching_udfs.length > 0 %}
-        drop function {{ matching_udf }} cascade;
+        drop function {{ target_relation }} cascade;
     {% endif %}
 
     {% call statement('main') %}
