@@ -25,7 +25,7 @@ class TestSimpleCopy(BaseTestSimpleCopy):
         results = self.run_dbt(["seed"])
         self.assertEqual(len(results),  1)
         results = self.run_dbt()
-        self.assertEqual(len(results),  6)
+        self.assertEqual(len(results),  7)
 
         self.assertManyTablesEqual(["seed", "view_model", "incremental", "materialized"])
 
@@ -33,7 +33,7 @@ class TestSimpleCopy(BaseTestSimpleCopy):
         results = self.run_dbt(["seed"])
         self.assertEqual(len(results),  1)
         results = self.run_dbt()
-        self.assertEqual(len(results),  6)
+        self.assertEqual(len(results),  7)
 
         self.assertManyTablesEqual(["seed", "view_model", "incremental", "materialized"])
 
@@ -44,7 +44,7 @@ class TestSimpleCopy(BaseTestSimpleCopy):
         results = self.run_dbt(["seed"])
         self.assertEqual(len(results),  1)
         results = self.run_dbt()
-        self.assertEqual(len(results),  6)
+        self.assertEqual(len(results),  7)
 
         models = self.get_models_in_schema()
 
@@ -76,7 +76,7 @@ class TestSimpleCopy(BaseTestSimpleCopy):
         results = self.run_dbt(["seed"])
         self.assertEqual(len(results),  1)
         results = self.run_dbt()
-        self.assertEqual(len(results),  6)
+        self.assertEqual(len(results),  7)
 
         self.assertManyTablesEqual(["SEED", "VIEW_MODEL", "INCREMENTAL", "MATERIALIZED"])
 
@@ -87,7 +87,7 @@ class TestSimpleCopy(BaseTestSimpleCopy):
         results = self.run_dbt(["seed"])
         self.assertEqual(len(results),  1)
         results = self.run_dbt()
-        self.assertEqual(len(results),  6)
+        self.assertEqual(len(results),  7)
 
         self.assertManyTablesEqual(["SEED", "VIEW_MODEL", "INCREMENTAL", "MATERIALIZED"])
 
@@ -114,7 +114,7 @@ class TestSimpleCopy(BaseTestSimpleCopy):
         results = self.run_dbt(["seed"])
         self.assertEqual(len(results),  1)
         results = self.run_dbt()
-        self.assertEqual(len(results),  6)
+        self.assertEqual(len(results),  7)
 
         self.assertTablesEqual("seed","view_model")
         self.assertTablesEqual("seed","incremental")
@@ -125,7 +125,7 @@ class TestSimpleCopy(BaseTestSimpleCopy):
         results = self.run_dbt(["seed"])
         self.assertEqual(len(results),  1)
         results = self.run_dbt()
-        self.assertEqual(len(results),  6)
+        self.assertEqual(len(results),  7)
 
         self.assertTablesEqual("seed","view_model")
         self.assertTablesEqual("seed","incremental")
@@ -150,7 +150,7 @@ class TestSimpleCopyQuotingIdentifierOn(BaseTestSimpleCopy):
         results = self.run_dbt(["seed"])
         self.assertEqual(len(results),  1)
         results = self.run_dbt()
-        self.assertEqual(len(results),  6)
+        self.assertEqual(len(results),  7)
 
         self.assertManyTablesEqual(["seed", "view_model", "incremental", "materialized"])
 
@@ -160,7 +160,7 @@ class TestSimpleCopyQuotingIdentifierOn(BaseTestSimpleCopy):
         results = self.run_dbt(["seed"])
         self.assertEqual(len(results),  1)
         results = self.run_dbt()
-        self.assertEqual(len(results),  6)
+        self.assertEqual(len(results),  7)
 
         self.assertManyTablesEqual(["seed", "view_model", "incremental", "materialized"])
 

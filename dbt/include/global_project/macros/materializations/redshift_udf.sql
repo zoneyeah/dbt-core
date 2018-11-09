@@ -1,8 +1,12 @@
 {% materialization udf, default %}
 
     -- put matching udf here
+    {%- set matching_udf = null %}
     {%- set identifier = model['alias'] -%}
-    {% set matching_udf = null %}
+
+    {% call statement('find_udfs') %}
+        select * from pg_proc where proname ilike '%{{identifier}}%'
+    {% endcall %}
 
     {% if matching_udf %}
         drop function {{ matching_udf }} cascade;
@@ -20,7 +24,9 @@
         stable as $$
             {{ sql }}
         $$ language {{ config.require('language') }}
+
     {% endcall %}
 
+    {{ adapter.commit() }}
 
 {% endmaterialization %}
