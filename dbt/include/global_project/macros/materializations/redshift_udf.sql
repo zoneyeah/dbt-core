@@ -1,4 +1,4 @@
-{% materialization udf, redshift %}
+{% materialization udf, default %}
 
     -- put matching udf here
     {%- set identifier = model['alias'] -%}
@@ -8,16 +8,19 @@
         drop function {{ matching_udf }} cascade;
     {% endif %}
 
-    create function {{ model.alias }}
-        (
-            {% for name, type in config.require('arguments').items() %}
-                {{name}} {{type}}
-            {% endfor %}
-        )
-    returns {{ config.require('return_type') }}
-    stable as $$
-        {{ sql }}
-    $$ language {{ config.require('language') }}
+    {% call statement('main') %}
+
+        create function {{ model.alias }}
+            (
+                {% for name, type in config.require('arguments').items() %}
+                    {{name}} {{type}}
+                {% endfor %}
+            )
+        returns {{ config.require('return_type') }}
+        stable as $$
+            {{ sql }}
+        $$ language {{ config.require('language') }}
+    {% endcall %}
 
 
 {% endmaterialization %}
