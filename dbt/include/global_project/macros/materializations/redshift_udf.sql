@@ -42,25 +42,22 @@
     {% set udf_types = load_result('find_udf_types')['data'] %}
 
     {% for (type_id, type_name) in udf_types %}
-        {% set _ = arg_type_lookup.update({type_id: type_name}) %}
+        {% set _ = arg_type_lookup.update({(type_id | int): type_name}) %}
     {% endfor %}
-
-    {{log(arg_type_lookup, true)}}
 
     {% set matching_udfs = load_result('find_udfs')['data'] %}
 
-    {{log(matching_udfs, true)}}
-
     {% for matching_udf in matching_udfs %}
-
+        {% call statement('_') %}
         drop function {{ matching_udf[1] }}.{{ matching_udf[0] }}
         (
         {% for arg_type_id in (matching_udf[2]|string).split() %}
-            {{ arg_type_lookup[arg_type_id] }}
+            {{ arg_type_lookup[(arg_type_id | int)] }}
             {% if not loop.last %},{% endif %}
         {% endfor %}
         )
         cascade;
+        {% endcall %}
     {% endfor %}
 
     {% call statement('main') %}
@@ -69,6 +66,7 @@
             (
                 {% for name, type in config.require('arguments').items() %}
                     {{name}} {{type}}
+                    {% if not loop.last %},{% endif %}
                 {% endfor %}
             )
         returns {{ config.require('return_type') }}
