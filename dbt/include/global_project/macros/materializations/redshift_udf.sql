@@ -6,6 +6,20 @@
       schema=schema,
       type='view') -%}
 
+    {% call statement('find_udf_types', fetch_result=True) %}
+        with schema as (
+            select
+                pg_namespace.oid as id,
+                pg_namespace.nspname as name
+            from pg_namespace
+            where nspname != 'information_schema' and nspname not like 'pg_%'
+        )
+        select
+            oid as id,
+            typname
+        from pg_type
+    {% endcall %}
+
     {% call statement('find_udfs', fetch_result=True) %}
         with schema as (
             select
@@ -24,13 +38,30 @@
             and schema.name ilike '{{schema}}'
     {% endcall %}
 
+    {% set arg_type_lookup = {} %}
+    {% set udf_types = load_result('find_udf_types')['data'] %}
+
+    {% for (type_id, type_name) in udf_types %}
+        {% set _ = arg_type_lookup.update({type_id: type_name}) %}
+    {% endfor %}
+
+    {{log(arg_type_lookup, true)}}
+
     {% set matching_udfs = load_result('find_udfs')['data'] %}
 
-    {% for matching_udf in matching_udfs.rows() %}
+    {{log(matching_udfs, true)}}
+
+    {% for matching_udf in matching_udfs %}
+
         drop function {{ matching_udf[1] }}.{{ matching_udf[0] }}
-        ({{ matching_udf[2] }})
+        (
+        {% for arg_type_id in (matching_udf[2]|string).split() %}
+            {{ arg_type_lookup[arg_type_id] }}
+            {% if not loop.last %},{% endif %}
+        {% endfor %}
+        )
         cascade;
-    {% endif %}
+    {% endfor %}
 
     {% call statement('main') %}
 
