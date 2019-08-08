@@ -110,10 +110,10 @@
         select
             'update' as dbt_change_type,
             snapshotted_data.dbt_scd_id,
-            source_data.dbt_valid_from as dbt_valid_to
+            {{ strategy.get('new_valid_to', 'source_data.dbt_valid_from') }} as dbt_valid_to
 
-        from source_data
-        join snapshotted_data on snapshotted_data.dbt_unique_key = source_data.dbt_unique_key
+        from snapshotted_data
+        {{ strategy.get('update_join', 'join') }} source_data on snapshotted_data.dbt_unique_key = source_data.dbt_unique_key
         where snapshotted_data.dbt_valid_to is null
         and (
             {{ strategy.row_changed }}
