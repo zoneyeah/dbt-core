@@ -4,6 +4,7 @@ This is a bugfix release.
 
 ### Fixes:
 - Fix for `dictionary changed size during iteration` race condition ([#1740](https://github.com/fishtown-analytics/dbt/issues/1740), [#1750](https://github.com/fishtown-analytics/dbt/pull/1750))
+- Fix upper bound on jsonschema dependency to 3.1.1 ([#1817](https://github.com/fishtown-analytics/dbt/issues/1817), [#1819](https://github.com/fishtown-analytics/dbt/pull/1819))
 
 ### Under the hood:
 - Provide a programmatic method for validating profile targets ([#1754](https://github.com/fishtown-analytics/dbt/issues/1754), [#1775](https://github.com/fishtown-analytics/dbt/pull/1775))
