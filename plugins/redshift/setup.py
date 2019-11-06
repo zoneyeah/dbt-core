@@ -26,13 +26,13 @@ setup(
             'include/redshift/dbt_project.yml',
             'include/redshift/macros/*.sql',
             'include/redshift/macros/**/*.sql',
-        ]
+        ],
     },
     install_requires=[
         'dbt-core=={}'.format(package_version),
         'dbt-postgres=={}'.format(package_version),
-        'boto3>=1.6.23,<1.10.0',
-        'botocore>=1.9.23,<1.13.0',
-        'psycopg2>=2.7.5,<2.8',
-    ]
+        'psycopg2>=2.7,<2.8',
+        'boto3>=1.4.4,<1.11.0',
+        'botocore>=1.5.0,<1.14.0',
+    ],
 )
