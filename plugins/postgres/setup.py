@@ -30,6 +30,6 @@ setup(
     },
     install_requires=[
         'dbt-core=={}'.format(package_version),
-        'psycopg2>=2.7.5,<2.8',
+        'psycopg2>=2.7,<2.8',
     ]
 )
