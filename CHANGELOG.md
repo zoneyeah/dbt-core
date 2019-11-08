@@ -1,4 +1,4 @@
-## dbt 0.14.4 (To be released)
+## dbt 0.14.4 (November 8, 2019)
 
 This release changes the version ranges of some of dbt's dependencies. These changes address installation issues in 0.14.3 when dbt is installed from pip. You can view the full list of dependency version changes [in this commit](https://github.com/fishtown-analytics/dbt/commit/b4dd265cb433480a59bbd15d140d46ebf03644eb).
 
