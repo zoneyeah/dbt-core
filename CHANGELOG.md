@@ -24,6 +24,7 @@
 - Support Python 3.8 ([#1886](https://github.com/fishtown-analytics/dbt/pull/1886))
 - Support filters in sources for `dbt source snapshot-freshness` invocation ([#1495](https://github.com/fishtown-analytics/dbt/issues/1495), [#1776](https://github.com/fishtown-analytics/dbt/pull/1776))
 - Support external table configuration in yml source specifications ([#1784](https://github.com/fishtown-analytics/dbt/pull/1784))
+- Support configuration of seed column quoting ([#1917](https://github.com/fishtown-analytics/dbt/issues/1917), [#1935](https://github.com/fishtown-analytics/dbt/pull/1935))
 - Improve CLI output when running snapshots ([#1768](https://github.com/fishtown-analytics/dbt/issues/1768), [#1769](https://github.com/fishtown-analytics/dbt/pull/1769))
 
 #### Fixes
