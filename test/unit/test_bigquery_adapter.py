@@ -100,8 +100,6 @@ class TestBigQueryAdapterAcquire(BaseTestBigQueryAdapter):
         except BaseException as e:
             raise
 
-        mock_open_connection.assert_not_called()
-        connection.handle
         mock_open_connection.assert_called_once()
 
     @patch('dbt.adapters.bigquery.BigQueryConnectionManager.open', return_value=_bq_conn())
@@ -117,8 +115,6 @@ class TestBigQueryAdapterAcquire(BaseTestBigQueryAdapter):
         except BaseException as e:
             raise
 
-        mock_open_connection.assert_not_called()
-        connection.handle
         mock_open_connection.assert_called_once()
 
     @patch('dbt.adapters.bigquery.BigQueryConnectionManager.open', return_value=_bq_conn())
@@ -132,8 +128,9 @@ class TestBigQueryAdapterAcquire(BaseTestBigQueryAdapter):
         except dbt.exceptions.ValidationException as e:
             self.fail('got ValidationException: {}'.format(str(e)))
 
-        mock_open_connection.assert_not_called()
-        connection.handle
+        except BaseException as e:
+            raise
+
         mock_open_connection.assert_called_once()
 
     def test_cancel_open_connections_empty(self):
@@ -161,11 +158,8 @@ class TestBigQueryAdapterAcquire(BaseTestBigQueryAdapter):
         mock_auth_default.return_value = (creds, MagicMock())
         adapter = self.get_adapter('loc')
 
-        connection = adapter.acquire_connection('dummy')
+        adapter.acquire_connection('dummy')
         mock_client = mock_bq.Client
-
-        mock_client.assert_not_called()
-        connection.handle
         mock_client.assert_called_once_with('dbt-unit-000000', creds,
                                             location='Luna Station')
 

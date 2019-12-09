@@ -2,7 +2,7 @@ import abc
 import itertools
 from dataclasses import dataclass, field
 from typing import (
-    Any, ClassVar, Dict, Tuple, Iterable, Optional, NewType, List, Type
+    Any, ClassVar, Dict, Tuple, Iterable, Optional, NewType, List
 )
 from typing_extensions import Protocol
 
@@ -12,7 +12,6 @@ from hologram.helpers import (
 )
 
 from dbt.contracts.util import Replaceable
-from dbt.exceptions import InternalException
 from dbt.utils import translate_aliases
 
 
@@ -25,23 +24,6 @@ class ConnectionState(StrEnum):
     OPEN = 'open'
     CLOSED = 'closed'
     FAIL = 'fail'
-
-
-class ConnectionOpenerProtocol(Protocol):
-    @classmethod
-    def open(cls, connection: 'Connection') -> Any:
-        raise NotImplementedError(f'open() not implemented for {cls.__name__}')
-
-
-class LazyHandle:
-    """Opener must be a callable that takes a Connection object and opens the
-    connection, updating the handle on the Connection.
-    """
-    def __init__(self, opener: Type[ConnectionOpenerProtocol]):
-        self.opener = opener
-
-    def resolve(self, connection: 'Connection') -> Any:
-        return self.opener.open(connection)
 
 
 @dataclass(init=False)
@@ -80,15 +62,6 @@ class Connection(ExtensibleJsonSchemaMixin, Replaceable):
 
     @property
     def handle(self):
-        if isinstance(self._handle, LazyHandle):
-            try:
-                # this will actually change 'self._handle'.
-                self._handle.resolve(self)
-            except RecursionError as exc:
-                raise InternalException(
-                    "A connection's open() method attempted to read the "
-                    "handle value"
-                ) from exc
         return self._handle
 
     @handle.setter

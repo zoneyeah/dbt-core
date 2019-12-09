@@ -234,11 +234,11 @@ class BaseAdapter(metaclass=AdapterMeta):
     @contextmanager
     def connection_named(
         self, name: str, node: Optional[CompileResultNode] = None
-    ) -> Iterator[None]:
+    ):
         try:
             self.connections.query_header.set(name, node)
-            self.acquire_connection(name)
-            yield
+            conn = self.acquire_connection(name)
+            yield conn
         finally:
             self.release_connection()
             self.connections.query_header.reset()
@@ -246,9 +246,9 @@ class BaseAdapter(metaclass=AdapterMeta):
     @contextmanager
     def connection_for(
         self, node: CompileResultNode
-    ) -> Iterator[None]:
-        with self.connection_named(node.unique_id, node):
-            yield
+    ) -> Iterator[Connection]:
+        with self.connection_named(node.unique_id, node) as conn:
+            yield conn
 
     @available.parse(lambda *a, **k: ('', empty_table()))
     def execute(

@@ -11,7 +11,7 @@ import agate
 import dbt.exceptions
 import dbt.flags
 from dbt.contracts.connection import (
-    Connection, Identifier, ConnectionState, AdapterRequiredConfig, LazyHandle
+    Connection, Identifier, ConnectionState, AdapterRequiredConfig
 )
 from dbt.adapters.base.query_headers import (
     QueryStringSetter, MacroQueryStringSetter,
@@ -61,14 +61,6 @@ class BaseConnectionManager(metaclass=abc.ABCMeta):
                 )
             return self.thread_connections[key]
 
-    def set_thread_connection(self, conn):
-        key = self.get_thread_identifier()
-        if key in self.thread_connections:
-            raise dbt.exceptions.InternalException(
-                'In set_thread_connection, existing connection exists for {}'
-            )
-        self.thread_connections[key] = conn
-
     def get_if_exists(self) -> Optional[Connection]:
         key = self.get_thread_identifier()
         with self.lock:
@@ -117,6 +109,8 @@ class BaseConnectionManager(metaclass=abc.ABCMeta):
             conn_name = name
 
         conn = self.get_if_exists()
+        thread_id_key = self.get_thread_identifier()
+
         if conn is None:
             conn = Connection(
                 type=Identifier(self.TYPE),
@@ -126,7 +120,7 @@ class BaseConnectionManager(metaclass=abc.ABCMeta):
                 handle=None,
                 credentials=self.profile.credentials
             )
-            self.set_thread_connection(conn)
+            self.thread_connections[thread_id_key] = conn
 
         if conn.name == conn_name and conn.state == 'open':
             return conn
@@ -144,7 +138,7 @@ class BaseConnectionManager(metaclass=abc.ABCMeta):
                 'Opening a new connection, currently in state {}'
                 .format(conn.state)
             )
-            conn.handle = LazyHandle(type(self))
+            self.open(conn)
 
         conn.name = conn_name
         return conn
