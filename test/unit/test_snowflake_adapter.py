@@ -230,10 +230,7 @@ class TestSnowflakeAdapter(unittest.TestCase):
             add_query.assert_called_once_with('select system$abort_session(42)')
 
     def test_client_session_keep_alive_false_by_default(self):
-        conn = self.adapter.connections.set_connection_name(name='new_connection_with_new_config')
-
-        self.snowflake.assert_not_called()
-        conn.handle
+        self.adapter.connections.set_connection_name(name='new_connection_with_new_config')
         self.snowflake.assert_has_calls([
             mock.call(
                 account='test_account', autocommit=False,
@@ -246,10 +243,8 @@ class TestSnowflakeAdapter(unittest.TestCase):
         self.config.credentials = self.config.credentials.replace(
                                           client_session_keep_alive=True)
         self.adapter = SnowflakeAdapter(self.config)
-        conn = self.adapter.connections.set_connection_name(name='new_connection_with_new_config')
+        self.adapter.connections.set_connection_name(name='new_connection_with_new_config')
 
-        self.snowflake.assert_not_called()
-        conn.handle
         self.snowflake.assert_has_calls([
             mock.call(
                 account='test_account', autocommit=False,
@@ -263,10 +258,8 @@ class TestSnowflakeAdapter(unittest.TestCase):
             password='test_password',
         )
         self.adapter = SnowflakeAdapter(self.config)
-        conn = self.adapter.connections.set_connection_name(name='new_connection_with_new_config')
+        self.adapter.connections.set_connection_name(name='new_connection_with_new_config')
 
-        self.snowflake.assert_not_called()
-        conn.handle
         self.snowflake.assert_has_calls([
             mock.call(
                 account='test_account', autocommit=False,
@@ -282,10 +275,8 @@ class TestSnowflakeAdapter(unittest.TestCase):
             authenticator='test_sso_url',
         )
         self.adapter = SnowflakeAdapter(self.config)
-        conn = self.adapter.connections.set_connection_name(name='new_connection_with_new_config')
+        self.adapter.connections.set_connection_name(name='new_connection_with_new_config')
 
-        self.snowflake.assert_not_called()
-        conn.handle
         self.snowflake.assert_has_calls([
             mock.call(
                 account='test_account', autocommit=False,
@@ -301,10 +292,8 @@ class TestSnowflakeAdapter(unittest.TestCase):
             authenticator='externalbrowser'
         )
         self.adapter = SnowflakeAdapter(self.config)
-        conn = self.adapter.connections.set_connection_name(name='new_connection_with_new_config')
+        self.adapter.connections.set_connection_name(name='new_connection_with_new_config')
 
-        self.snowflake.assert_not_called()
-        conn.handle
         self.snowflake.assert_has_calls([
             mock.call(
                 account='test_account', autocommit=False,
@@ -322,10 +311,8 @@ class TestSnowflakeAdapter(unittest.TestCase):
         )
 
         self.adapter = SnowflakeAdapter(self.config)
-        conn = self.adapter.connections.set_connection_name(name='new_connection_with_new_config')
+        self.adapter.connections.set_connection_name(name='new_connection_with_new_config')
 
-        self.snowflake.assert_not_called()
-        conn.handle
         self.snowflake.assert_has_calls([
             mock.call(
                 account='test_account', autocommit=False,
