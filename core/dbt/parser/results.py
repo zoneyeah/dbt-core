@@ -14,6 +14,7 @@ from dbt.exceptions import (
     raise_duplicate_resource_name, raise_duplicate_patch_name,
     CompilationException, InternalException
 )
+from dbt.node_types import NodeType
 from dbt.version import __version__
 
 
@@ -105,7 +106,9 @@ class ParseResult(JsonSchemaMixin, Writable, Replaceable):
         self.get_file(source_file).patches.append(patch.name)
 
     def _get_disabled(
-        self, unique_id: str, match_file: SourceFile
+        self,
+        unique_id: str,
+        match_file: SourceFile,
     ) -> List[ParsedNode]:
         if unique_id not in self.disabled:
             raise InternalException(
@@ -117,8 +120,45 @@ class ParseResult(JsonSchemaMixin, Writable, Replaceable):
             if n.original_file_path == match_file.path.original_file_path
         ]
 
+    def _process_node(
+        self,
+        node_id: str,
+        source_file: SourceFile,
+        old_file: SourceFile,
+        old_result: 'ParseResult',
+    ) -> None:
+        """Nodes are a special kind of complicated - there can be multiple
+        with the same name, as long as all but one are disabled.
+
+        Only handle nodes where the matching node has the same resource type
+        as the current parser.
+        """
+        source_path = source_file.path.original_file_path
+        found: bool = False
+        if node_id in old_result.nodes:
+            old_node = old_result.nodes[node_id]
+            if old_node.original_file_path == source_path:
+                self.add_node(source_file, old_node)
+                found = True
+
+        if node_id in old_result.disabled:
+            matches = old_result._get_disabled(node_id, source_file)
+            for match in matches:
+                self.add_disabled(source_file, match)
+                found = True
+
+        if not found:
+            raise CompilationException(
+                'Expected to find "{}" in cached "manifest.nodes" or '
+                '"manifest.disabled" based on cached file information: {}!'
+                .format(node_id, old_file)
+            )
+
     def sanitized_update(
-        self, source_file: SourceFile, old_result: 'ParseResult',
+        self,
+        source_file: SourceFile,
+        old_result: 'ParseResult',
+        resource_type: NodeType,
     ) -> bool:
         """Perform a santized update. If the file can't be updated, invalidate
         it and return false.
@@ -146,20 +186,14 @@ class ParseResult(JsonSchemaMixin, Writable, Replaceable):
         # because we know this is how we _parsed_ the node, we can safely
         # assume if it's disabled it was done by the project or file, and
         # we can keep our old data
+        # the node ID could be in old_result.disabled AND in old_result.nodes.
+        # In that case, we have to make sure the path also matches.
         for node_id in old_file.nodes:
-            if node_id in old_result.nodes:
-                node = old_result.nodes[node_id]
-                self.add_node(source_file, node)
-            elif node_id in old_result.disabled:
-                matches = old_result._get_disabled(node_id, source_file)
-                for match in matches:
-                    self.add_disabled(source_file, match)
-            else:
-                raise CompilationException(
-                    'Expected to find "{}" in cached "manifest.nodes" or '
-                    '"manifest.disabled" based on cached file information: {}!'
-                    .format(node_id, old_file)
-                )
+            # cheat: look at the first part of the node ID and compare it to
+            # the parser resource type. On a mismatch, bail out.
+            if resource_type != node_id.split('.')[0]:
+                continue
+            self._process_node(node_id, source_file, old_file, old_result)
 
         for name in old_file.patches:
             patch = _expect_value(
