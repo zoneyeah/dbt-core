@@ -1,5 +1,8 @@
 ## dbt 0.17.0 (Release TBD)
 
+## dbt 0.14.1b3 (June 02, 2020)
+
+
 ### Fixes
 - Added filename, project, and the value that failed to render to the exception raised when rendering fails. ([#2499](https://github.com/fishtown-analytics/dbt/issues/2499), [#2501](https://github.com/fishtown-analytics/dbt/pull/2501))
 
