@@ -156,6 +156,19 @@ class TestBytesFormatting(unittest.TestCase):
         self.assertEqual(dbt.utils.format_bytes(1024**6*42), '43008.0 PB')
 
 
+class TestRowsNumberFormatting(unittest.TestCase):
+
+    def test__simple_cases(self):
+        self.assertEqual(dbt.utils.format_rows_number(-1), '-1.0')
+        self.assertEqual(dbt.utils.format_rows_number(0), '0.0')
+        self.assertEqual(dbt.utils.format_rows_number(20), '20.0')
+        self.assertEqual(dbt.utils.format_rows_number(1030), '1.0 k')
+        self.assertEqual(dbt.utils.format_rows_number(1000**2*1.5), '1.5 m')
+        self.assertEqual(dbt.utils.format_rows_number(1000**3*52.6), '52.6 b')
+        self.assertEqual(dbt.utils.format_rows_number(1000**3*128), '128.0 b')
+        self.assertEqual(dbt.utils.format_rows_number(1000**4), '1.0 t')
+        self.assertEqual(dbt.utils.format_rows_number(1000**4*31.4), '31.4 t')
+        self.assertEqual(dbt.utils.format_rows_number(1000**5*31.4), '31400.0 t')
 
 
 class TestMultiDict(unittest.TestCase):
