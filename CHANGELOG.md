@@ -1,3 +1,9 @@
+## dbt next
+
+### Under the hood
+- Added support for running docker-based tests under Linux. ([#2739](https://github.com/fishtown-analytics/dbt/issues/2739))
+
+
 ## dbt 0.18.0 (September 03, 2020)
 
 ## dbt 0.18.0rc2 (September 03, 2020)
