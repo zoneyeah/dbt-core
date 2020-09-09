@@ -28,12 +28,17 @@ RUN pip3 install -U "tox==3.14.4" wheel "six>=1.14.0,<1.15.0" "virtualenv==20.0.
 RUN pip install -U "tox==3.14.4" "six>=1.14.0,<1.15.0" "virtualenv==20.0.3" setuptools
 
 # These args are passed in via docker-compose, which reads then from the .env file.
-# Run `make .env` to create the .env file for the current user.
+# On Linux, run `make .env` to create the .env file for the current user.
+# On MacOS and Windows, these can stay unset.
 ARG USER_ID
 ARG GROUP_ID
 
-RUN groupadd -g ${GROUP_ID} dbt_test_user
-RUN useradd -m -l -u ${USER_ID} -g ${GROUP_ID} dbt_test_user
+RUN if [ ${USER_ID:-0} -ne 0 ] && [ ${GROUP_ID:-0} -ne 0 ]; then \
+        groupadd -g ${GROUP_ID} dbt_test_user && \
+        useradd -m -l -u ${USER_ID} -g ${GROUP_ID} dbt_test_user; \
+    else \
+        useradd -mU -l dbt_test_user; \
+    fi
 RUN mkdir /usr/app && chown dbt_test_user /usr/app
 RUN mkdir /home/tox && chown dbt_test_user /home/tox
 
