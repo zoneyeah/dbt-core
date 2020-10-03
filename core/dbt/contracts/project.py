@@ -187,7 +187,7 @@ class Project(HyphenatedJsonSchemaMixin, Replaceable):
         ),
     )
     packages: List[PackageSpec] = field(default_factory=list)
-    query_comment: Optional[Union[QueryComment, NoValue, str]] = NoValue()
+    query_comment: Optional[Union[QueryComment, str]] = ''
 
     @classmethod
     def from_dict(cls, data, validate=True) -> 'Project':

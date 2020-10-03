@@ -279,6 +279,10 @@ class BaseRelation(FakeAPIObject, Hashable):
         })
         return cls.from_dict(kwargs)
 
+    @classmethod
+    def fake(cls: Type[Self]) -> Self:
+        return cls(path=Path(database=None, schema=None, identifier="<unresolved>"), type=None)
+
     def __repr__(self) -> str:
         return "<{} {}>".format(self.__class__.__name__, self.render())
 

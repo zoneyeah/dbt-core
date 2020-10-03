@@ -416,8 +416,7 @@ class ParseRefResolver(BaseRefResolver):
         self, name: str, package: Optional[str] = None
     ) -> RelationProxy:
         self.model.refs.append(self._repack_args(name, package))
-
-        return self.Relation.create_from(self.config, self.model)
+        return self.Relation.fake()
 
 
 ResolveRef = Union[Disabled, ManifestNode]
@@ -1273,10 +1272,9 @@ def generate_parser_model(
     manifest: Manifest,
     context_config: ContextConfig,
 ) -> Dict[str, Any]:
-    ctx = ModelContext(
+    return ModelContext(
         model, config, manifest, ParseProvider(), context_config
     )
-    return ctx.to_dict()
 
 
 def generate_parser_macro(

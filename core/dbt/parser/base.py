@@ -15,7 +15,7 @@ from dbt.context.providers import (
     generate_generate_component_name_macro,
 )
 from dbt.adapters.factory import get_adapter
-from dbt.clients.jinja import get_rendered
+from dbt.clients.jinja import get_rendered, get_dag_edges_and_configs
 from dbt.config import Project, RuntimeConfig
 from dbt.context.context_config import (
     ContextConfig
@@ -252,7 +252,7 @@ class ConfiguredParser(
         }
         dct.update(kwargs)
         try:
-            return self.parse_from_dict(dct)
+            return self.parse_from_dict(dct, validate=False)
         except ValidationError as exc:
             msg = validator_error_message(exc)
             # this is a bit silly, but build an UnparsedNode just for error
@@ -282,12 +282,15 @@ class ConfiguredParser(
         """
         # during parsing, we don't have a connection, but we might need one, so
         # we have to acquire it.
-        with get_adapter(self.root_project).connection_for(parsed_node):
-            context = self._context_for(parsed_node, config)
+        # TODO: What happens if we don't have an adapter during parsing??
+        #   - What does calling `connection_for` actually do to the context here?
+        #with get_adapter(self.root_project).connection_for(parsed_node):
+        context = self._context_for(parsed_node, config)
 
-            get_rendered(
-                parsed_node.raw_sql, context, parsed_node, capture_macros=True
-            )
+        #get_rendered(
+        #    parsed_node.raw_sql, context, parsed_node, capture_macros=True
+        #)
+        get_dag_edges_and_configs(parsed_node.raw_sql, context, parsed_node)
 
     def update_parsed_node_config(
         self, parsed_node: IntermediateNode, config_dict: Dict[str, Any]
@@ -313,6 +316,7 @@ class ConfiguredParser(
         generate and set the true values to use, overriding the temporary parse
         values set in _build_intermediate_parsed_node.
         """
+        return
         config_dict = config.build_config_dict()
 
         # Set tags on node provided in config blocks

@@ -29,7 +29,8 @@ from dbt.contracts.graph.compiled import CompiledSchemaTestNode
 from dbt.contracts.graph.parsed import ParsedSchemaTestNode
 from dbt.exceptions import (
     InternalException, raise_compiler_error, CompilationException,
-    invalid_materialization_argument, MacroReturn, JinjaRenderingException
+    invalid_materialization_argument, MacroReturn, JinjaRenderingException,
+    StaticAnalysisNotPossibleException
 )
 from dbt import flags
 from dbt.logger import GLOBAL_LOGGER as logger  # noqa
@@ -459,14 +460,13 @@ TEXT_FILTERS: Dict[str, Callable[[Any], Any]] = {
     'as_number': lambda x: x,
 }
 
-
 def get_environment(
     node=None,
     capture_macros: bool = False,
     native: bool = False,
 ) -> jinja2.Environment:
     args: Dict[str, List[Union[str, Type[jinja2.ext.Extension]]]] = {
-        'extensions': ['jinja2.ext.do']
+        'extensions': ['jinja2.ext.do'],
     }
 
     if capture_macros:
@@ -528,18 +528,6 @@ def render_template(template, ctx: Dict[str, Any], node=None) -> str:
         return template.render(ctx)
 
 
-def _requote_result(raw_value: str, rendered: str) -> str:
-    double_quoted = raw_value.startswith('"') and raw_value.endswith('"')
-    single_quoted = raw_value.startswith("'") and raw_value.endswith("'")
-    if double_quoted:
-        quote_char = '"'
-    elif single_quoted:
-        quote_char = "'"
-    else:
-        quote_char = ''
-    return f'{quote_char}{rendered}{quote_char}'
-
-
 # performance note: Local benmcharking (so take it with a big grain of salt!)
 # on this indicates that it is is on average slightly slower than
 # checking two separate patterns, but the standard deviation is smaller with
@@ -562,7 +550,6 @@ def get_rendered(
     # native=True case by passing the input string to ast.literal_eval, like
     # the native renderer does.
     if (
-        not native and
         isinstance(string, str) and
         _HAS_RENDER_CHARS_PAT.search(string) is None
     ):
@@ -575,6 +562,54 @@ def get_rendered(
         native=native,
     )
     return render_template(template, ctx, node)
+
+
+def statically_extract_function_calls(string, ctx, node):
+    env = get_environment(node, capture_macros=True)
+    parsed = env.parse(string)
+
+    captured_calls = {
+        'source': [],
+        'ref': [],
+        'config': [],
+    }
+
+    for func_call in parsed.find_all(jinja2.nodes.Call):
+        if func_call.node.name in captured_calls:
+            # TODO : Verify that args are consts?
+            try:
+                call_args = [arg.as_const() for arg in func_call.args]
+                #call_kwargs = {k.as_const() : v.as_const() for (k,v) in func_call.kwargs.items()}
+                # TODO
+                call_kwargs = {}
+                captured_calls[func_call.node.name].append((call_args, call_kwargs))
+            except Exception as e:
+                import ipdb; ipdb.set_trace()
+                pass
+        else:
+            raise StaticAnalysisNotPossibleException()
+
+    # If we got here without raising, then we can just call the methods
+    for func_name, arglist in captured_calls.items():
+        func = getattr(ctx, func_name)
+
+        for args, kwargs in arglist:
+            res = func(*args, **kwargs)
+
+
+def get_dag_edges_and_configs(
+    string: str,
+    ctx: Dict[str, Any],
+    node=None,
+):
+    # Try to statically analyze an AST to extract sources, refs
+    # configs, etc. If that's not possible, then just render the
+    # template for accuracy.
+
+    try:
+        statically_extract_function_calls(string, ctx, node)
+    except StaticAnalysisNotPossibleException:
+        return get_rendered(string, ctx.to_dict(), node, capture_macros=True)
 
 
 def undefined_error(msg) -> NoReturn:

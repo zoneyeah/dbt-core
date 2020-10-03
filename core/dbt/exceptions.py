@@ -16,8 +16,10 @@ def validator_error_message(exc):
     """
     if not isinstance(exc, hologram.ValidationError):
         return str(exc)
-    path = "[%s]" % "][".join(map(repr, exc.relative_path))
-    return 'at path {}: {}'.format(path, exc.message)
+    import ipdb; ipdb.set_trace()
+    #path = "[%s]" % "][".join(map(repr, exc.path))
+    #return 'at path {}: {}'.format(path, exc.message)
+    return exc.message
 
 
 class Exception(builtins.Exception):
@@ -40,6 +42,9 @@ class MacroReturn(builtins.BaseException):
     def __init__(self, value):
         self.value = value
 
+
+class StaticAnalysisNotPossibleException(builtins.BaseException):
+    pass
 
 class InternalException(Exception):
     pass
