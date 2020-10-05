@@ -119,7 +119,6 @@ class CompilerTest(unittest.TestCase):
                     compiled=True,
                     extra_ctes_injected=False,
                     extra_ctes=[InjectedCTE(id='model.root.ephemeral', sql='select * from source_table')],
-                    injected_sql='',
                     compiled_sql=(
                         'with cte as (select * from something_else) '
                         'select * from __dbt__CTE__ephemeral'),
@@ -147,7 +146,6 @@ class CompilerTest(unittest.TestCase):
                     compiled_sql='select * from source_table',
                     extra_ctes_injected=False,
                     extra_ctes=[],
-                    injected_sql='',
                     checksum=FileHash.from_contents(''),
                 ),
             },
@@ -168,7 +166,7 @@ class CompilerTest(unittest.TestCase):
         self.assertEqual(result, manifest.nodes['model.root.view'])
         self.assertEqual(result.extra_ctes_injected, True)
         self.assertEqualIgnoreWhitespace(
-            result.injected_sql,
+            result.compiled_sql,
             ('with __dbt__CTE__ephemeral as ('
              'select * from source_table'
              '), cte as (select * from something_else) '
@@ -204,7 +202,6 @@ class CompilerTest(unittest.TestCase):
                     compiled=True,
                     extra_ctes_injected=False,
                     extra_ctes=[],
-                    injected_sql='',
                     compiled_sql=('with cte as (select * from something_else) '
                                   'select * from source_table'),
                     checksum=FileHash.from_contents(''),
@@ -230,7 +227,6 @@ class CompilerTest(unittest.TestCase):
                     compiled=True,
                     extra_ctes_injected=False,
                     extra_ctes=[],
-                    injected_sql='',
                     compiled_sql=('select * from source_table'),
                     checksum=FileHash.from_contents(''),
                 ),
@@ -246,15 +242,14 @@ class CompilerTest(unittest.TestCase):
         result, _ = compiler._recursively_prepend_ctes(
             manifest.nodes['model.root.view'],
             manifest,
-            {}
-        )
+            {})
 
         self.assertEqual(
             result,
             manifest.nodes.get('model.root.view'))
         self.assertTrue(result.extra_ctes_injected)
         self.assertEqualIgnoreWhitespace(
-            result.injected_sql,
+            result.compiled_sql,
             manifest.nodes.get('model.root.view').compiled_sql)
 
         compiler = dbt.compilation.Compiler(self.config)
@@ -268,7 +263,7 @@ class CompilerTest(unittest.TestCase):
             manifest.nodes.get('model.root.view_no_cte'))
         self.assertTrue(result.extra_ctes_injected)
         self.assertEqualIgnoreWhitespace(
-            result.injected_sql,
+            result.compiled_sql,
             manifest.nodes.get('model.root.view_no_cte').compiled_sql)
 
     def test__prepend_ctes(self):
@@ -298,7 +293,6 @@ class CompilerTest(unittest.TestCase):
                     compiled=True,
                     extra_ctes_injected=False,
                     extra_ctes=[InjectedCTE(id='model.root.ephemeral', sql='select * from source_table')],
-                    injected_sql='',
                     compiled_sql='select * from __dbt__CTE__ephemeral',
                     checksum=FileHash.from_contents(''),
                 ),
@@ -323,7 +317,6 @@ class CompilerTest(unittest.TestCase):
                     compiled=True,
                     extra_ctes_injected=False,
                     extra_ctes=[],
-                    injected_sql='',
                     compiled_sql='select * from source_table',
                     checksum=FileHash.from_contents(''),
                 ),
@@ -347,7 +340,7 @@ class CompilerTest(unittest.TestCase):
 
         self.assertTrue(result.extra_ctes_injected)
         self.assertEqualIgnoreWhitespace(
-            result.injected_sql,
+            result.compiled_sql,
             ('with __dbt__CTE__ephemeral as ('
              'select * from source_table'
              ') '
@@ -397,7 +390,6 @@ class CompilerTest(unittest.TestCase):
             raw_sql='select * from source_table',
             compiled=True,
             compiled_sql='select * from source_table',
-            injected_sql='select * from source_table',
             extra_ctes_injected=True,
             extra_ctes=[],
             checksum=FileHash.from_contents(''),
@@ -426,7 +418,6 @@ class CompilerTest(unittest.TestCase):
                     compiled=True,
                     extra_ctes_injected=False,
                     extra_ctes=[InjectedCTE(id='model.root.ephemeral', sql='select * from source_table')],
-                    injected_sql='',
                     compiled_sql='select * from __dbt__CTE__ephemeral',
                     checksum=FileHash.from_contents(''),
                 ),
@@ -448,7 +439,6 @@ class CompilerTest(unittest.TestCase):
                 manifest,
                 {}
             )
-            compile_node.assert_called_once_with(parsed_ephemeral, manifest, {})
 
         self.assertEqual(result,
                          manifest.nodes.get('model.root.view'))
@@ -456,7 +446,7 @@ class CompilerTest(unittest.TestCase):
         self.assertTrue(manifest.nodes['model.root.ephemeral'].compiled)
         self.assertTrue(result.extra_ctes_injected)
         self.assertEqualIgnoreWhitespace(
-            result.injected_sql,
+            result.compiled_sql,
             ('with __dbt__CTE__ephemeral as ('
              'select * from source_table'
              ') '
@@ -491,7 +481,6 @@ class CompilerTest(unittest.TestCase):
                     compiled=True,
                     extra_ctes_injected=False,
                     extra_ctes=[InjectedCTE(id='model.root.ephemeral', sql=None)],
-                    injected_sql=None,
                     compiled_sql='select * from __dbt__CTE__ephemeral',
                     checksum=FileHash.from_contents(''),
 
@@ -554,7 +543,7 @@ class CompilerTest(unittest.TestCase):
         self.assertEqual(result, manifest.nodes['model.root.view'])
         self.assertTrue(result.extra_ctes_injected)
         self.assertEqualIgnoreWhitespace(
-            result.injected_sql,
+            result.compiled_sql,
             ('with __dbt__CTE__ephemeral_level_two as ('
              'select * from source_table'
              '), __dbt__CTE__ephemeral as ('
