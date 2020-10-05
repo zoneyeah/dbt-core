@@ -169,36 +169,6 @@ class Compiler:
         relation_cls = adapter.Relation
         return relation_cls.add_ephemeral_prefix(name)
 
-    def _get_compiled_model(
-        self,
-        manifest: Manifest,
-        cte_id: str,
-        extra_context: Dict[str, Any],
-    ) -> NonSourceCompiledNode:
-
-        if cte_id not in manifest.nodes:
-            raise InternalException(
-                f'During compilation, found a cte reference that could not be '
-                f'resolved: {cte_id}'
-            )
-        cte_model = manifest.nodes[cte_id]
-        if getattr(cte_model, 'compiled', False):
-            assert isinstance(cte_model, tuple(COMPILED_TYPES.values()))
-            return cast(NonSourceCompiledNode, cte_model)
-        elif cte_model.is_ephemeral_model:
-            # this must be some kind of parsed node that we can compile.
-            # we know it's not a parsed source definition
-            assert isinstance(cte_model, tuple(COMPILED_TYPES))
-            # update the node so
-            node = self.compile_node(cte_model, manifest, extra_context)
-            manifest.sync_update_node(node)
-            return node
-        else:
-            raise InternalException(
-                f'During compilation, found an uncompiled cte that '
-                f'was not an ephemeral model: {cte_id}'
-            )
-
     def _inject_ctes_into_sql(self, sql: str, ctes: List[InjectedCTE]) -> str:
         """
         `ctes` is a list of InjectedCTEs like:
@@ -260,26 +230,6 @@ class Compiler:
 
         return str(parsed)
 
-    def _model_prepend_ctes(
-        self,
-        model: NonSourceCompiledNode,
-        prepended_ctes: List[InjectedCTE]
-    ) -> NonSourceCompiledNode:
-        if model.compiled_sql is None:
-            raise RuntimeException(
-                'Cannot prepend ctes to an unparsed node', model
-            )
-        injected_sql = self._inject_ctes_into_sql(
-            model.compiled_sql,
-            prepended_ctes,
-        )
-
-        model.extra_ctes_injected = True
-        model.extra_ctes = prepended_ctes
-        model.injected_sql = injected_sql
-        model.validate(model.to_dict())
-        return model
-
     def _get_dbt_test_name(self) -> str:
         return 'dbt__CTE__INTERNAL_test'
 
@@ -288,9 +238,10 @@ class Compiler:
         model: NonSourceCompiledNode,
         manifest: Manifest,
         extra_context: Dict[str, Any],
-    ) -> Tuple[NonSourceCompiledNode, List[InjectedCTE]]:
+    ) -> Tuple[NonSourceCompiledNode, List[InjectedCTE], str]:
+
         if model.extra_ctes_injected:
-            return (model, model.extra_ctes)
+            return (model, model.extra_ctes, '')
 
         if flags.STRICT_MODE:
             if not isinstance(model, tuple(COMPILED_TYPES.values())):
@@ -303,28 +254,84 @@ class Compiler:
         dbt_test_name = self._get_dbt_test_name()
 
         for cte in model.extra_ctes:
+            new_prepended_ctes: List[InjectedCTE]
+            orig_compiled_sql: str
             if cte.id == dbt_test_name:
                 sql = cte.sql
             else:
-                cte_model = self._get_compiled_model(
-                    manifest,
-                    cte.id,
-                    extra_context,
-                )
-                cte_model, new_prepended_ctes = self._recursively_prepend_ctes(
-                    cte_model, manifest, extra_context
-                )
+                cte_model = manifest.nodes[cte.id]
+                if getattr(cte_model, 'compiled', False):
+                    assert isinstance(cte_model, tuple(COMPILED_TYPES.values()))
+                    cte_model = cast(NonSourceCompiledNode, cte_model)
+                    cte_model, new_prepended_ctes, orig_compiled_sql = self._recursively_prepend_ctes(
+                        cte_model, manifest, extra_context
+                    )
+                elif cte_model.is_ephemeral_model:
+                    assert isinstance(cte_model, tuple(COMPILED_TYPES))
+                    data = cte_model.to_dict()
+                    data.update({
+                        'compiled': False,
+                        'compiled_sql': None,
+                        'extra_ctes_injected': False,
+                        'extra_ctes': [],
+                    })
+                    compiled_node = _compiled_type_for(cte_model).from_dict(data)
+                    context = self._create_node_context(
+                        compiled_node, manifest, extra_context
+                    )
+                    compiled_node.compiled_sql = jinja.get_rendered(
+                        cte_model.raw_sql,
+                        context,
+                        cte_model,
+                    )
+
+                    compiled_node.compiled = True
+                    if isinstance(compiled_node, CompiledDataTestNode):
+                        name = self._get_dbt_test_name()
+                        cte = InjectedCTE(
+                            id=name,
+                            sql=f' {name} as (\n{compiled_node.compiled_sql}\n)'
+                        )
+                        compiled_node.extra_ctes.append(cte)
+                        compiled_node.compiled_sql = f'\nselect count(*) from {name}'
+
+                    injected_node, new_prepended_ctes, orig_compiled_sql = self._recursively_prepend_ctes(
+                        compiled_node, manifest, extra_context
+                    )
+                    node = injected_node
+                    manifest.sync_update_node(node)
+                    cte_model = node
+                else:
+                    raise InternalException(
+                        f'During compilation, found an uncompiled cte that '
+                        f'was not an ephemeral model: {cte.id}'
+                    )
+
+
                 _extend_prepended_ctes(prepended_ctes, new_prepended_ctes)
 
                 new_cte_name = self.add_ephemeral_prefix(cte_model.name)
-                sql = f' {new_cte_name} as (\n{cte_model.compiled_sql}\n)'
+                sql = f' {new_cte_name} as (\n{orig_compiled_sql}\n)'
+
             _add_prepended_cte(prepended_ctes, InjectedCTE(id=cte.id, sql=sql))
 
-        model = self._model_prepend_ctes(model, prepended_ctes)
+        if model.compiled_sql is None:
+            raise RuntimeException(
+                'Cannot prepend ctes to an unparsed node', model
+            )
+        injected_sql = self._inject_ctes_into_sql(
+            model.compiled_sql,
+            prepended_ctes,
+        )
+        model.extra_ctes_injected = True
+        model.extra_ctes = prepended_ctes
+        orig_compiled_sql = model.compiled_sql
+        model.compiled_sql = injected_sql
+        model.validate(model.to_dict())
 
         manifest.update_node(model)
 
-        return model, prepended_ctes
+        return model, prepended_ctes, orig_compiled_sql
 
     def _insert_ctes(
         self,
@@ -352,7 +359,7 @@ class Compiler:
             compiled_node.extra_ctes.append(cte)
             compiled_node.compiled_sql = f'\nselect count(*) from {name}'
 
-        injected_node, _ = self._recursively_prepend_ctes(
+        injected_node, _, _ = self._recursively_prepend_ctes(
             compiled_node, manifest, extra_context
         )
         return injected_node
@@ -374,7 +381,6 @@ class Compiler:
             'compiled_sql': None,
             'extra_ctes_injected': False,
             'extra_ctes': [],
-            'injected_sql': None,
         })
         compiled_node = _compiled_type_for(node).from_dict(data)
 
@@ -454,18 +460,16 @@ class Compiler:
             return node
         logger.debug(f'Writing injected SQL for node "{node.unique_id}"')
 
-        if node.injected_sql is None:
-            # this should not really happen, but it'd be a shame to crash
-            # over it
+        if node.compiled_sql is None:
             logger.error(
-                f'Compiled node "{node.unique_id}" had no injected_sql, '
+                f'Compiled node "{node.unique_id}" had no compiled_sql, '
                 'cannot write sql!'
             )
         else:
             node.build_path = node.write_node(
                 self.config.target_path,
                 'compiled',
-                node.injected_sql
+                node.compiled_sql
             )
         return node
 
@@ -484,7 +488,7 @@ class Compiler:
 
 
 def _is_writable(node):
-    if not node.injected_sql:
+    if not node.compiled_sql:
         return False
 
     if node.resource_type == NodeType.Snapshot:

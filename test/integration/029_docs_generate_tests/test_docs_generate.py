@@ -131,17 +131,6 @@ class TestDocsGenerate(DBTIntegrationTest):
         return self.dir("models")
 
     @property
-    def packages_config(self):
-        return {
-            'packages': [
-                {
-                    'git': 'https://github.com/fishtown-analytics/dbt-integration-project',
-                    'revision': 'dbt/0.17.0',
-                },
-            ],
-        }
-
-    @property
     def project_config(self):
         return {
             'config-version': 2,
@@ -1114,7 +1103,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'compiled_sql': ANY,
                     'extra_ctes_injected': True,
                     'extra_ctes': [],
-                    'injected_sql': ANY,
                     'checksum': self._checksum_file(model_sql_path),
                     'unrendered_config': unrendered_model_config,
                 },
@@ -1188,7 +1176,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'compiled_sql': ANY,
                     'extra_ctes_injected': True,
                     'extra_ctes': [],
-                    'injected_sql': ANY,
                     'checksum': self._checksum_file(second_model_sql_path),
                     'unrendered_config': unrendered_second_config
                 },
@@ -1264,7 +1251,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'compiled_sql': '',
                     'extra_ctes_injected': True,
                     'extra_ctes': [],
-                    'injected_sql': '',
                     'checksum': self._checksum_file(seed_path),
                     'unrendered_config': unrendered_seed_config,
                 },
@@ -1301,7 +1287,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'compiled_sql': AnyStringWith('count(*)'),
                     'extra_ctes_injected': True,
                     'extra_ctes': [],
-                    'injected_sql': AnyStringWith('count(*)'),
                     'test_metadata': {
                         'namespace': None,
                         'name': 'not_null',
@@ -1346,7 +1331,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'compiled_sql': AnyStringWith('select 0'),
                     'extra_ctes_injected': True,
                     'extra_ctes': [],
-                    'injected_sql': AnyStringWith('select 0'),
                     'test_metadata': {
                         'namespace': 'test',
                         'name': 'nothing',
@@ -1390,7 +1374,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'compiled_sql': AnyStringWith('count(*)'),
                     'extra_ctes_injected': True,
                     'extra_ctes': [],
-                    'injected_sql': AnyStringWith('count(*)'),
                     'test_metadata': {
                         'namespace': None,
                         'name': 'unique',
@@ -1587,7 +1570,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'compiled_sql': ANY,
                     'extra_ctes_injected': True,
                     'extra_ctes': [],
-                    'injected_sql': ANY,
                     'checksum': self._checksum_file(ephemeral_copy_path),
                     'unrendered_config': self.unrendered_model_config(materialized='ephemeral'),
                 },
@@ -1645,7 +1627,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'compiled_sql': ANY,
                     'extra_ctes_injected': True,
                     'extra_ctes': [ANY],
-                    'injected_sql': ANY,
                     'checksum': self._checksum_file(ephemeral_summary_path),
                     'unrendered_config': self.unrendered_model_config(materialized='table'),
                 },
@@ -1702,7 +1683,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'compiled_sql': ANY,
                     'extra_ctes_injected': True,
                     'extra_ctes': [],
-                    'injected_sql': ANY,
                     'checksum': self._checksum_file(view_summary_path),
                     'unrendered_config': self.unrendered_model_config(materialized='view'),
                 },
@@ -1776,7 +1756,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'compiled_sql': '',
                     'extra_ctes_injected': True,
                     'extra_ctes': [],
-                    'injected_sql': '',
                     'checksum': self._checksum_file(seed_path),
                     'unrendered_config': self.unrendered_seed_config(),
                 },
@@ -2047,7 +2026,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'compiled_sql': ANY,
                     'extra_ctes_injected': True,
                     'extra_ctes': [],
-                    'injected_sql': ANY,
                     'checksum': self._checksum_file(clustered_sql_path),
                     'unrendered_config': self.unrendered_model_config(
                         cluster_by=['first_name'],
@@ -2129,7 +2107,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'compiled_sql': ANY,
                     'extra_ctes_injected': True,
                     'extra_ctes': [],
-                    'injected_sql': ANY,
                     'checksum': self._checksum_file(multi_clustered_sql_path),
                     'unrendered_config': self.unrendered_model_config(
                         cluster_by=['first_name', 'email'],
@@ -2210,7 +2187,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'compiled_sql': ANY,
                     'extra_ctes_injected': True,
                     'extra_ctes': [],
-                    'injected_sql': ANY,
                     'checksum': self._checksum_file(nested_view_sql_path),
                     'unrendered_config': self.unrendered_model_config(materialized='view'),
                 },
@@ -2246,7 +2222,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'compiled_sql': ANY,
                     'extra_ctes_injected': True,
                     'extra_ctes': [],
-                    'injected_sql': ANY,
                     'checksum': self._checksum_file(nested_table_sql_path),
                     'unrendered_config': self.unrendered_model_config(materialized='table'),
                 },
@@ -2323,7 +2298,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'compiled_sql': '',
                     'extra_ctes_injected': True,
                     'extra_ctes': [],
-                    'injected_sql': '',
                     'checksum': self._checksum_file(seed_path),
                     'unrendered_config': self.unrendered_seed_config(),
                 },
@@ -2459,7 +2433,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'compiled_sql': ANY,
                     'extra_ctes_injected': True,
                     'extra_ctes': [],
-                    'injected_sql': ANY,
                     'checksum': self._checksum_file(model_sql_path),
                     'unrendered_config': self.unrendered_model_config(bind=False, materialized='view'),
                 },
@@ -2536,7 +2509,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'compiled_sql': ANY,
                     'extra_ctes_injected': True,
                     'extra_ctes': [],
-                    'injected_sql': ANY,
                     'checksum': self._checksum_file(seed_path),
                     'unrendered_config': self.unrendered_seed_config(),
                 },
@@ -2710,7 +2682,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'extra_ctes': [],
                     'extra_ctes_injected': True,
                     'fqn': ['test', 'model'],
-                    'injected_sql': compiled_sql,
                     'meta': {},
                     'name': 'model',
                     'original_file_path': model_sql_path,
@@ -2799,7 +2770,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'extra_ctes': [],
                     'extra_ctes_injected': True,
                     'fqn': ['test', 'second_model'],
-                    'injected_sql': compiled_sql,
                     'meta': {},
                     'name': 'second_model',
                     'original_file_path': second_model_sql_path,
@@ -2883,7 +2853,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'extra_ctes': [],
                     'extra_ctes_injected': True,
                     'fqn': ['test', 'seed'],
-                    'injected_sql': '',
                     'meta': {},
                     'name': 'seed',
                     'original_file_path': seed_path,
@@ -2930,7 +2899,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'extra_ctes': [],
                     'extra_ctes_injected': True,
                     'fqn': ['test', 'schema_test', 'not_null_model_id'],
-                    'injected_sql': AnyStringWith('id is null'),
                     'meta': {},
                     'name': 'not_null_model_id',
                     'original_file_path': model_schema_yml_path,
@@ -2985,7 +2953,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'extra_ctes': [],
                     'extra_ctes_injected': True,
                     'fqn': ['test', 'schema_test', 'test_nothing_model_'],
-                    'injected_sql': AnyStringWith('select 0'),
                     'meta': {},
                     'name': 'test_nothing_model_',
                     'original_file_path': model_schema_yml_path,
@@ -3039,7 +3006,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'extra_ctes': [],
                     'extra_ctes_injected': True,
                     'fqn': ['test', 'schema_test', 'unique_model_id'],
-                    'injected_sql': AnyStringWith('count(*)'),
                     'meta': {},
                     'name': 'unique_model_id',
                     'original_file_path': model_schema_yml_path,
@@ -3129,7 +3095,7 @@ class TestDocsGenerate(DBTIntegrationTest):
                         },
                     },
                     'compiled': True,
-                    'compiled_sql': ephemeral_compiled_sql,
+                    'compiled_sql': ephemeral_injected_sql,
                     'config': self.rendered_model_config(materialized='table'),
                     'sources': [],
                     'depends_on': {
@@ -3146,7 +3112,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     ],
                     'extra_ctes_injected': True,
                     'fqn': ['test', 'ephemeral_summary'],
-                    'injected_sql': ephemeral_injected_sql,
                     'meta': {},
                     'name': 'ephemeral_summary',
                     'original_file_path': ephemeral_summary_path,
@@ -3220,7 +3185,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'extra_ctes': [],
                     'extra_ctes_injected': True,
                     'fqn': ['test', 'view_summary'],
-                    'injected_sql': view_compiled_sql,
                     'meta': {},
                     'name': 'view_summary',
                     'original_file_path': view_summary_path,
@@ -3308,7 +3272,6 @@ class TestDocsGenerate(DBTIntegrationTest):
                     'extra_ctes': [],
                     'extra_ctes_injected': True,
                     'fqn': ['test', 'seed'],
-                    'injected_sql': '',
                     'meta': {},
                     'name': 'seed',
                     'original_file_path': seed_path,
