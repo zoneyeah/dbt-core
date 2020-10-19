@@ -454,6 +454,10 @@ class DelayedFileHandler(logbook.RotatingFileHandler, FormatterMixin):
         elif self.initialized:
             super().emit(record)
         else:
+            print(
+                "[DEBUG] LOGGER IS NOT INITIALIZED: "
+                f"index={len(self._msg_buffer)} msg={record.msg}"
+            )
             assert self._msg_buffer is not None, \
                 '_msg_buffer should never be None if _log_path is set'
             self._msg_buffer.append(record)
