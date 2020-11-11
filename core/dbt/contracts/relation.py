@@ -1,7 +1,7 @@
 from collections.abc import Mapping
-from dataclasses import dataclass, fields
+from dataclasses import dataclass, fields, Field
 from typing import (
-    Optional, TypeVar, Generic, Dict,
+    Optional, TypeVar, Generic, Dict, get_type_hints, List, Tuple
 )
 from typing_extensions import Protocol
 
@@ -13,6 +13,8 @@ from dbt.contracts.util import Replaceable
 from dbt.exceptions import CompilationException
 from dbt.utils import deep_merge
 
+
+from mashumaro import DataClassJSONMixin
 
 class RelationType(StrEnum):
     Table = 'table'
@@ -31,8 +33,40 @@ class ComponentName(StrEnum):
 class HasQuoting(Protocol):
     quoting: Dict[str, bool]
 
+"""
+This is a throwaway shim to match the JsonSchemaMixin interface
+that downstream consumers (ie. PostgresRelation) is expecting. 
+I imagine that we would try to remove code that depends on this type
+reflection if we pursue an approach like the one shown here
+"""
+class FastDataClassJSONMixing(DataClassJSONMixin):
+    @classmethod
+    def field_mapping(cls) -> Dict[str, str]:
+        """Defines the mapping of python field names to JSON field names.
 
-class FakeAPIObject(JsonSchemaMixin, Replaceable, Mapping):
+        The main use-case is to allow JSON field names which are Python keywords
+        """
+        return {}
+
+    @classmethod
+    def _get_fields(cls) -> List[Tuple[Field, str]]:
+        mapped_fields = []
+        type_hints = get_type_hints(cls)
+
+        for f in fields(cls):
+            # Skip internal fields
+            if f.name.startswith("_"):
+                continue
+
+            # Note fields() doesn't resolve forward refs
+            f.type = type_hints[f.name]
+
+            mapped_fields.append((f, cls.field_mapping().get(f.name, f.name)))
+
+        return mapped_fields  # type: ignore
+
+
+class FakeAPIObject(FastDataClassJSONMixing, Replaceable, Mapping):
     # override the mapping truthiness, len is always >1
     def __bool__(self):
         return True
@@ -62,12 +96,12 @@ T = TypeVar('T')
 
 
 @dataclass
-class _ComponentObject(FakeAPIObject, Generic[T]):
-    database: T
-    schema: T
-    identifier: T
+class Policy(FakeAPIObject):
+    database: bool = True
+    schema: bool = True
+    identifier: bool = True
 
-    def get_part(self, key: ComponentName) -> T:
+    def get_part(self, key: ComponentName) -> bool:
         if key == ComponentName.Database:
             return self.database
         elif key == ComponentName.Schema:
@@ -80,22 +114,15 @@ class _ComponentObject(FakeAPIObject, Generic[T]):
                 .format(key, list(ComponentName))
             )
 
-    def replace_dict(self, dct: Dict[ComponentName, T]):
-        kwargs: Dict[str, T] = {}
+    def replace_dict(self, dct: Dict[ComponentName, bool]):
+        kwargs: Dict[str, bool] = {}
         for k, v in dct.items():
             kwargs[str(k)] = v
         return self.replace(**kwargs)
 
 
 @dataclass
-class Policy(_ComponentObject[bool]):
-    database: bool = True
-    schema: bool = True
-    identifier: bool = True
-
-
-@dataclass
-class Path(_ComponentObject[Optional[str]]):
+class Path(FakeAPIObject):
     database: Optional[str]
     schema: Optional[str]
     identifier: Optional[str]
@@ -120,3 +147,22 @@ class Path(_ComponentObject[Optional[str]]):
         if part is not None:
             part = part.lower()
         return part
+
+    def get_part(self, key: ComponentName) -> str:
+        if key == ComponentName.Database:
+            return self.database
+        elif key == ComponentName.Schema:
+            return self.schema
+        elif key == ComponentName.Identifier:
+            return self.identifier
+        else:
+            raise ValueError(
+                'Got a key of {}, expected one of {}'
+                .format(key, list(ComponentName))
+            )
+
+    def replace_dict(self, dct: Dict[ComponentName, str]):
+        kwargs: Dict[str, str] = {}
+        for k, v in dct.items():
+            kwargs[str(k)] = v
+        return self.replace(**kwargs)
