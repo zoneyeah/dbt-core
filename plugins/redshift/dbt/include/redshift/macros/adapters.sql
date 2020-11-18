@@ -86,7 +86,8 @@
           data_type,
           character_maximum_length,
           numeric_precision,
-          numeric_scale
+          numeric_scale,
+          ordinal_position
 
         from information_schema."columns"
         where table_name = '{{ relation.identifier }}'
@@ -121,7 +122,8 @@
             SPLIT_PART(REGEXP_SUBSTR(col_type, '[0-9,]+'), ',', 2),
             '')::int
           else null
-        end as numeric_scale
+        end as numeric_scale,
+        col_num as ordinal_position
 
       from pg_get_late_binding_view_cols()
       cols(view_schema name, view_name name, col_name name,
@@ -254,4 +256,3 @@
 {% macro redshift__alter_column_comment(relation, column_dict) %}
   {% do return(postgres__alter_column_comment(relation, column_dict)) %}
 {% endmacro %}
-

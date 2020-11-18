@@ -39,7 +39,8 @@
           data_type,
           character_maximum_length,
           numeric_precision,
-          numeric_scale
+          numeric_scale,
+          ordinal_position
 
       from {{ relation.information_schema('columns') }}
       where table_name = '{{ relation.identifier }}'
@@ -121,7 +122,7 @@
   Postgres tables have a maximum length off 63 characters, anything longer is silently truncated.
   Temp relations add a lot of extra characters to the end of table namers to ensure uniqueness.
   To prevent this going over the character limit, the base_relation name is truncated to ensure
-  that name + suffix + uniquestring is < 63 characters.  
+  that name + suffix + uniquestring is < 63 characters.
 #}
 {% macro postgres__make_temp_relation(base_relation, suffix) %}
     {% set dt = modules.datetime.datetime.now() %}

@@ -20,6 +20,7 @@ class Column(JsonSchemaMixin):
     char_size: Optional[int] = None
     numeric_precision: Optional[Any] = None
     numeric_scale: Optional[Any] = None
+    ordinal_position: Optional[int] = None
 
     @classmethod
     def translate_type(cls, dtype: str) -> str:
@@ -37,6 +38,10 @@ class Column(JsonSchemaMixin):
     @property
     def quoted(self) -> str:
         return '"{}"'.format(self.column)
+
+    @property
+    def ordinal_position(self) -> int:
+        return self.ordinal_position
 
     @property
     def data_type(self) -> str:
