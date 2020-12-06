@@ -416,7 +416,9 @@ class ParseRefResolver(BaseRefResolver):
         self, name: str, package: Optional[str] = None
     ) -> RelationProxy:
         self.model.refs.append(self._repack_args(name, package))
-        return self.Relation.fake()
+
+        # Big takeaway: this is _very_ slow
+        #return self.Relation.create_from(self.config, self.model)
 
 
 ResolveRef = Union[Disabled, ManifestNode]
@@ -494,6 +496,8 @@ class ParseSourceResolver(BaseSourceResolver):
     def resolve(self, source_name: str, table_name: str):
         # When you call source(), this is what happens at parse time
         self.model.sources.append([source_name, table_name])
+
+        # Big takeaway: this is very, very slow
         return self.Relation.create_from(self.config, self.model)
 
 
@@ -1274,9 +1278,10 @@ def generate_parser_model(
     manifest: Manifest,
     context_config: ContextConfig,
 ) -> Dict[str, Any]:
-    return ModelContext(
+    ctx = ModelContext(
         model, config, manifest, ParseProvider(), context_config
     )
+    return ctx.to_dict()
 
 
 def generate_parser_macro(

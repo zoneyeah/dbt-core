@@ -252,7 +252,7 @@ class ConfiguredParser(
         }
         dct.update(kwargs)
         try:
-            return self.parse_from_dict(dct, validate=False)
+            return self.parse_from_dict(dct)
         except ValidationError as exc:
             msg = validator_error_message(exc)
             # this is a bit silly, but build an UnparsedNode just for error
@@ -316,7 +316,6 @@ class ConfiguredParser(
         generate and set the true values to use, overriding the temporary parse
         values set in _build_intermediate_parsed_node.
         """
-        return
         config_dict = config.build_config_dict()
 
         # Set tags on node provided in config blocks

@@ -16,10 +16,8 @@ def validator_error_message(exc):
     """
     if not isinstance(exc, hologram.ValidationError):
         return str(exc)
-    import ipdb; ipdb.set_trace()
-    #path = "[%s]" % "][".join(map(repr, exc.path))
-    #return 'at path {}: {}'.format(path, exc.message)
-    return exc.message
+    path = "[%s]" % "][".join(map(repr, exc.relative_path))
+    return 'at path {}: {}'.format(path, exc.message)
 
 
 class Exception(builtins.Exception):

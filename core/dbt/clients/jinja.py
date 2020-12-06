@@ -35,6 +35,17 @@ from dbt.exceptions import (
 from dbt import flags
 from dbt.logger import GLOBAL_LOGGER as logger  # noqa
 
+class Timer(object):
+    old = 0
+    new = 0
+    old_time = 0
+    new_time = 0
+
+    def debug(self):
+        print(f"OLD: {self.old} @ {self.old_time}s")
+        print(f"NEW: {self.new} @ {self.new_time}s")
+
+timer = Timer()
 
 def _linecache_inject(source, write):
     if write:
@@ -466,7 +477,7 @@ def get_environment(
     native: bool = False,
 ) -> jinja2.Environment:
     args: Dict[str, List[Union[str, Type[jinja2.ext.Extension]]]] = {
-        'extensions': ['jinja2.ext.do'],
+        'extensions': ['jinja2.ext.do']
     }
 
     if capture_macros:
@@ -574,27 +585,46 @@ def statically_extract_function_calls(string, ctx, node):
         'config': [],
     }
 
+    logger.info(f"DEBUG: Attempting static analysis for {node.name}")
     for func_call in parsed.find_all(jinja2.nodes.Call):
-        if func_call.node.name in captured_calls:
-            # TODO : Verify that args are consts?
-            try:
-                call_args = [arg.as_const() for arg in func_call.args]
-                #call_kwargs = {k.as_const() : v.as_const() for (k,v) in func_call.kwargs.items()}
-                # TODO
-                call_kwargs = {}
-                captured_calls[func_call.node.name].append((call_args, call_kwargs))
-            except Exception as e:
-                import ipdb; ipdb.set_trace()
-                pass
-        else:
+        func_name = func_call.node.name
+
+        # An unknown function was called - we cannot statically analyze
+        if func_name not in captured_calls:
             raise StaticAnalysisNotPossibleException()
 
+        else:
+            try:
+                call_args = [
+                    arg.as_const()
+                    for arg in func_call.args
+                ]
+
+                call_kwargs = {
+                    arg.key: arg.value.as_const()
+                    for arg in func_call.kwargs
+                }
+            except jinja2.nodes.Impossible as e:
+                raise StaticAnalysisNotPossibleException()
+
+            try:
+                captured_calls[func_name].append((call_args, call_kwargs))
+            except Exception as e:
+                pass
+
     # If we got here without raising, then we can just call the methods
+    logger.info(f"DEBUG:   Statically capturing refs/configs for {node.name}")
     for func_name, arglist in captured_calls.items():
-        func = getattr(ctx, func_name)
+
+        func = ctx.get(func_name)
+        # TODO : We could raise a smarter exception here (calling a method
+        #        that is not in the context is bad anyway), but for now,
+        #        let's just let the error bubble up through compilation
+        if func is None:
+            raise StaticAnalysisNotPossibleException()
 
         for args, kwargs in arglist:
-            res = func(*args, **kwargs)
+            func(*args, **kwargs)
 
 
 def get_dag_edges_and_configs(
@@ -605,11 +635,24 @@ def get_dag_edges_and_configs(
     # Try to statically analyze an AST to extract sources, refs
     # configs, etc. If that's not possible, then just render the
     # template for accuracy.
+    import time
 
     try:
+        start = time.time()
         statically_extract_function_calls(string, ctx, node)
+        timer.new_time += time.time() - start
+        timer.new += 1
+
+        # Hack to make sure that we run it both ways
+        raise StaticAnalysisNotPossibleException()
+
     except StaticAnalysisNotPossibleException:
-        return get_rendered(string, ctx.to_dict(), node, capture_macros=True)
+        start = time.time()
+        get_rendered(string, ctx, node, capture_macros=True)
+        timer.old_time += time.time() - start
+        timer.old += 1
+
+    timer.debug()
 
 
 def undefined_error(msg) -> NoReturn:

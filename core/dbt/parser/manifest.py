@@ -436,9 +436,9 @@ class ManifestLoader:
             projects = root_config.load_dependencies()
             loader = cls(root_config, projects, macro_hook)
             loader.load(macro_manifest=macro_manifest)
-            #loader.write_parse_results()
+            loader.write_parse_results()
             manifest = loader.create_manifest()
-            #_check_manifest(manifest, root_config)
+            _check_manifest(manifest, root_config)
             manifest.build_flat_graph()
 
             loader._perf_info.load_all_elapsed = (
