@@ -71,6 +71,38 @@ class BaseTestBigQueryAdapter(unittest.TestCase):
                     'threads': 1,
                     'impersonate_service_account': 'dummyaccount@dbt.iam.gserviceaccount.com'
                 },
+                'oauth-credentials-token': {
+                    'type': 'bigquery',
+                    'method': 'oauth-secrets',
+                    'token': 'abc',
+                    'project': 'dbt-unit-000000',
+                    'schema': 'dummy_schema',
+                    'threads': 1,
+                    'location': 'Luna Station',
+                    'priority': 'batch',
+                    'maximum_bytes_billed': 0,
+                },
+                'oauth-credentials': {
+                    'type': 'bigquery',
+                    'method': 'oauth-secrets',
+                    'client_id': 'abc',
+                    'client_secret': 'def',
+                    'refresh_token': 'ghi',
+                    'token_uri': 'jkl',
+                    'project': 'dbt-unit-000000',
+                    'schema': 'dummy_schema',
+                    'threads': 1,
+                    'location': 'Luna Station',
+                    'priority': 'batch',
+                    'maximum_bytes_billed': 0,
+                },
+                'oauth--no-project': {
+                    'type': 'bigquery',
+                    'method': 'oauth',
+                    'schema': 'dummy_schema',
+                    'threads': 1,
+                    'location': 'Solar Station',
+                },
             },
             'target': 'oauth',
         }
@@ -131,6 +163,40 @@ class TestBigQueryAdapterAcquire(BaseTestBigQueryAdapter):
     @patch('dbt.adapters.bigquery.BigQueryConnectionManager.open', return_value=_bq_conn())
     def test_acquire_connection_service_account_validations(self, mock_open_connection):
         adapter = self.get_adapter('service_account')
+        try:
+            connection = adapter.acquire_connection('dummy')
+            self.assertEqual(connection.type, 'bigquery')
+
+        except dbt.exceptions.ValidationException as e:
+            self.fail('got ValidationException: {}'.format(str(e)))
+
+        except BaseException as e:
+            raise
+
+        mock_open_connection.assert_not_called()
+        connection.handle
+        mock_open_connection.assert_called_once()
+
+    @patch('dbt.adapters.bigquery.BigQueryConnectionManager.open', return_value=_bq_conn())
+    def test_acquire_connection_oauth_token_validations(self, mock_open_connection):
+        adapter = self.get_adapter('oauth-credentials-token')
+        try:
+            connection = adapter.acquire_connection('dummy')
+            self.assertEqual(connection.type, 'bigquery')
+
+        except dbt.exceptions.ValidationException as e:
+            self.fail('got ValidationException: {}'.format(str(e)))
+
+        except BaseException as e:
+            raise
+
+        mock_open_connection.assert_not_called()
+        connection.handle
+        mock_open_connection.assert_called_once()
+
+    @patch('dbt.adapters.bigquery.BigQueryConnectionManager.open', return_value=_bq_conn())
+    def test_acquire_connection_oauth_credentials_validations(self, mock_open_connection):
+        adapter = self.get_adapter('oauth-credentials')
         try:
             connection = adapter.acquire_connection('dummy')
             self.assertEqual(connection.type, 'bigquery')
@@ -488,11 +554,13 @@ class TestBigQueryConnectionManager(unittest.TestCase):
         bad_request_error = exceptions.BadRequest('code broke')
         connection_error = ConnectionError('code broke')
         client_error = exceptions.ClientError('bad code')
+        rate_limit_error = exceptions.Forbidden("code broke", errors=[{"reason": "rateLimitExceeded"}])
 
         self.assertTrue(_is_retryable(internal_server_error))
         self.assertTrue(_is_retryable(bad_request_error))
         self.assertTrue(_is_retryable(connection_error))
         self.assertFalse(_is_retryable(client_error))
+        self.assertTrue(_is_retryable(rate_limit_error))
 
     def test_drop_dataset(self):
         mock_table = Mock()
@@ -591,7 +659,8 @@ class TestBigQueryAdapter(BaseTestBigQueryAdapter):
                 "field": "ts",
             }).to_dict(), {
                 "field": "ts",
-                "data_type": "date"
+                "data_type": "date",
+                "granularity": "day"
             }
         )
 
@@ -601,7 +670,112 @@ class TestBigQueryAdapter(BaseTestBigQueryAdapter):
                 "data_type": "date",
             }).to_dict(), {
                 "field": "ts",
-                "data_type": "date"
+                "data_type": "date",
+                "granularity": "day"
+            }
+        )
+
+        self.assertEqual(
+            adapter.parse_partition_by({
+                "field": "ts",
+                "data_type": "date",
+                "granularity": "MONTH"
+
+            }).to_dict(), {
+                "field": "ts",
+                "data_type": "date",
+                "granularity": "MONTH"
+            }
+        )
+        
+        self.assertEqual(
+            adapter.parse_partition_by({
+                "field": "ts",
+                "data_type": "date",
+                "granularity": "YEAR"
+
+            }).to_dict(), {
+                "field": "ts",
+                "data_type": "date",
+                "granularity": "YEAR"
+            }
+        )
+
+        self.assertEqual(
+            adapter.parse_partition_by({
+                "field": "ts",
+                "data_type": "timestamp",
+                "granularity": "HOUR"
+
+            }).to_dict(), {
+                "field": "ts",
+                "data_type": "timestamp",
+                "granularity": "HOUR"
+            }
+        )
+
+        self.assertEqual(
+            adapter.parse_partition_by({
+                "field": "ts",
+                "data_type": "timestamp",
+                "granularity": "MONTH"
+
+            }).to_dict(), {
+                "field": "ts",
+                "data_type": "timestamp",
+                "granularity": "MONTH"
+            }
+        )
+
+        self.assertEqual(
+            adapter.parse_partition_by({
+                "field": "ts",
+                "data_type": "timestamp",
+                "granularity": "YEAR"
+
+            }).to_dict(), {
+                "field": "ts",
+                "data_type": "timestamp",
+                "granularity": "YEAR"
+            }
+        )
+
+        self.assertEqual(
+            adapter.parse_partition_by({
+                "field": "ts",
+                "data_type": "datetime",
+                "granularity": "HOUR"
+
+            }).to_dict(), {
+                "field": "ts",
+                "data_type": "datetime",
+                "granularity": "HOUR"
+            }
+        )
+
+        self.assertEqual(
+            adapter.parse_partition_by({
+                "field": "ts",
+                "data_type": "datetime",
+                "granularity": "MONTH"
+
+            }).to_dict(), {
+                "field": "ts",
+                "data_type": "datetime",
+                "granularity": "MONTH"
+            }
+        )
+
+        self.assertEqual(
+            adapter.parse_partition_by({
+                "field": "ts",
+                "data_type": "datetime",
+                "granularity": "YEAR"
+
+            }).to_dict(), {
+                "field": "ts",
+                "data_type": "datetime",
+                "granularity": "YEAR"
             }
         )
 
@@ -622,6 +796,7 @@ class TestBigQueryAdapter(BaseTestBigQueryAdapter):
             }).to_dict(), {
                 "field": "id",
                 "data_type": "int64",
+                "granularity": "day",
                 "range": {
                     "start": 1,
                     "end": 100,

@@ -1,7 +1,8 @@
 from contextlib import contextmanager
 from dataclasses import dataclass
+from functools import lru_cache
 from requests.exceptions import ConnectionError
-from typing import Optional, Any, Dict
+from typing import Optional, Any, Dict, Tuple
 
 import google.auth
 import google.auth.exceptions
@@ -9,10 +10,14 @@ import google.cloud.bigquery
 import google.cloud.exceptions
 from google.api_core import retry, client_info
 from google.auth import impersonated_credentials
-from google.oauth2 import service_account
+from google.oauth2 import (
+    credentials as GoogleCredentials,
+    service_account as GoogleServiceAccountCredentials
+)
 
 from dbt.utils import format_bytes, format_rows_number
 from dbt.clients import agate_helper, gcloud
+from dbt.tracking import active_user
 from dbt.contracts.connection import ConnectionState
 from dbt.exceptions import (
     FailedToConnectException, RuntimeException, DatabaseException
@@ -41,6 +46,17 @@ RETRYABLE_ERRORS = (
 )
 
 
+@lru_cache()
+def get_bigquery_defaults() -> Tuple[Any, Optional[str]]:
+    """
+    Returns (credentials, project_id)
+
+    project_id is returned available from the environment; otherwise None
+    """
+    # Cached, because the underlying implementation shells out, taking ~1s
+    return google.auth.default()
+
+
 class Priority(StrEnum):
     Interactive = 'interactive'
     Batch = 'batch'
@@ -50,19 +66,33 @@ class BigQueryConnectionMethod(StrEnum):
     OAUTH = 'oauth'
     SERVICE_ACCOUNT = 'service-account'
     SERVICE_ACCOUNT_JSON = 'service-account-json'
+    OAUTH_SECRETS = 'oauth-secrets'
 
 
 @dataclass
 class BigQueryCredentials(Credentials):
     method: BigQueryConnectionMethod
-    keyfile: Optional[str] = None
-    keyfile_json: Optional[Dict[str, Any]] = None
+    # BigQuery allows an empty database / project, where it defers to the
+    # environment for the project
+    database: Optional[str]
     timeout_seconds: Optional[int] = 300
     location: Optional[str] = None
     priority: Optional[Priority] = None
     retries: Optional[int] = 1
     maximum_bytes_billed: Optional[int] = None
     impersonate_service_account: Optional[str] = None
+
+    # Keyfile json creds
+    keyfile: Optional[str] = None
+    keyfile_json: Optional[Dict[str, Any]] = None
+
+    # oauth-secrets
+    token: Optional[str] = None
+    refresh_token: Optional[str] = None
+    client_id: Optional[str] = None
+    client_secret: Optional[str] = None
+    token_uri: Optional[str] = None
+
     _ALIASES = {
         'project': 'database',
         'dataset': 'schema',
@@ -75,6 +105,16 @@ class BigQueryCredentials(Credentials):
     def _connection_keys(self):
         return ('method', 'database', 'schema', 'location', 'priority',
                 'timeout_seconds', 'maximum_bytes_billed')
+
+    def __post_init__(self):
+        # We need to inject the correct value of the database (aka project) at
+        # this stage, ref
+        # https://github.com/fishtown-analytics/dbt/pull/2908#discussion_r532927436.
+
+        # `database` is an alias of `project` in BigQuery
+        if self.database is None:
+            _, database = get_bigquery_defaults()
+            self.database = database
 
 
 class BigQueryConnectionManager(BaseConnectionManager):
@@ -110,12 +150,13 @@ class BigQueryConnectionManager(BaseConnectionManager):
             message = "Access denied while running query"
             self.handle_error(e, message)
 
-        except google.auth.exceptions.RefreshError:
+        except google.auth.exceptions.RefreshError as e:
             message = "Unable to generate access token, if you're using " \
                       "impersonate_service_account, make sure your " \
                       'initial account has the "roles/' \
                       'iam.serviceAccountTokenCreator" role on the ' \
-                      'account you are trying to impersonate.'
+                      'account you are trying to impersonate.\n\n' \
+                      f'{str(e)}'
             raise RuntimeException(message)
 
         except Exception as e:
@@ -151,10 +192,10 @@ class BigQueryConnectionManager(BaseConnectionManager):
     @classmethod
     def get_bigquery_credentials(cls, profile_credentials):
         method = profile_credentials.method
-        creds = service_account.Credentials
+        creds = GoogleServiceAccountCredentials.Credentials
 
         if method == BigQueryConnectionMethod.OAUTH:
-            credentials, project_id = google.auth.default(scopes=cls.SCOPE)
+            credentials, _ = get_bigquery_defaults()
             return credentials
 
         elif method == BigQueryConnectionMethod.SERVICE_ACCOUNT:
@@ -164,6 +205,16 @@ class BigQueryConnectionManager(BaseConnectionManager):
         elif method == BigQueryConnectionMethod.SERVICE_ACCOUNT_JSON:
             details = profile_credentials.keyfile_json
             return creds.from_service_account_info(details, scopes=cls.SCOPE)
+
+        elif method == BigQueryConnectionMethod.OAUTH_SECRETS:
+            return GoogleCredentials.Credentials(
+                token=profile_credentials.token,
+                refresh_token=profile_credentials.refresh_token,
+                client_id=profile_credentials.client_id,
+                client_secret=profile_credentials.client_secret,
+                token_uri=profile_credentials.token_uri,
+                scopes=cls.SCOPE
+            )
 
         error = ('Invalid `method` in profile: "{}"'.format(method))
         raise FailedToConnectException(error)
@@ -212,7 +263,6 @@ class BigQueryConnectionManager(BaseConnectionManager):
             handle = cls.get_bigquery_client(connection.credentials)
 
         except Exception as e:
-            raise
             logger.debug("Got an error when attempting to create a bigquery "
                          "client: '{}'".format(e))
 
@@ -243,13 +293,18 @@ class BigQueryConnectionManager(BaseConnectionManager):
         column_names = [field.name for field in resp.schema]
         return agate_helper.table_from_data_flat(resp, column_names)
 
-    def raw_execute(self, sql, fetch=False):
+    def raw_execute(self, sql, fetch=False, *, use_legacy_sql=False):
         conn = self.get_thread_connection()
         client = conn.handle
 
         logger.debug('On {}: {}', conn.name, sql)
 
-        job_params = {'use_legacy_sql': False}
+        job_params = {'use_legacy_sql': use_legacy_sql}
+
+        if active_user:
+            job_params['labels'] = {
+                'dbt_invocation_id': active_user.invocation_id
+            }
 
         priority = conn.credentials.priority
         if priority == Priority.Batch:
@@ -307,6 +362,19 @@ class BigQueryConnectionManager(BaseConnectionManager):
             status = 'OK'
 
         return status, res
+
+    def get_partitions_metadata(self, table):
+        def standard_to_legacy(table):
+            return table.project + ':' + table.dataset + '.' + table.identifier
+
+        legacy_sql = 'SELECT * FROM ['\
+            + standard_to_legacy(table) + '$__PARTITIONS_SUMMARY__]'
+
+        sql = self._add_query_comment(legacy_sql)
+        # auto_begin is ignored on bigquery, and only included for consistency
+        _, iterator =\
+            self.raw_execute(sql, fetch='fetch_result', use_legacy_sql=True)
+        return self.get_table_from_response(iterator)
 
     def create_bigquery_table(self, database, schema, table_name, callback,
                               sql):
@@ -476,5 +544,8 @@ class _ErrorCounter(object):
 def _is_retryable(error):
     """Return true for errors that are unlikely to occur again if retried."""
     if isinstance(error, RETRYABLE_ERRORS):
+        return True
+    elif isinstance(error, google.api_core.exceptions.Forbidden) and any(
+            e['reason'] == 'rateLimitExceeded' for e in error.errors):
         return True
     return False

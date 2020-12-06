@@ -20,7 +20,7 @@ from dbt.context.context_config import (
 )
 from dbt.context.configured import generate_schema_yml
 from dbt.context.target import generate_target_context
-from dbt.context.providers import generate_parse_report
+from dbt.context.providers import generate_parse_exposure
 from dbt.contracts.files import FileHash
 from dbt.contracts.graph.manifest import SourceFile
 from dbt.contracts.graph.model_config import SourceConfig
@@ -31,7 +31,7 @@ from dbt.contracts.graph.parsed import (
     ParsedSchemaTestNode,
     ParsedMacroPatch,
     UnpatchedSourceDefinition,
-    ParsedReport,
+    ParsedExposure,
 )
 from dbt.contracts.graph.unparsed import (
     FreshnessThreshold,
@@ -43,7 +43,7 @@ from dbt.contracts.graph.unparsed import (
     UnparsedColumn,
     UnparsedMacroUpdate,
     UnparsedNodeUpdate,
-    UnparsedReport,
+    UnparsedExposure,
     UnparsedSourceDefinition,
 )
 from dbt.exceptions import (
@@ -264,6 +264,11 @@ class SchemaParser(SimpleParser[SchemaTestBlock, ParsedSchemaTestNode]):
             base=False,
         )
 
+    def _get_relation_name(self, node: ParsedSourceDefinition):
+        adapter = get_adapter(self.root_project)
+        relation_cls = adapter.Relation
+        return str(relation_cls.create_from(self.root_project, node))
+
     def parse_source(
         self, target: UnpatchedSourceDefinition
     ) -> ParsedSourceDefinition:
@@ -302,7 +307,7 @@ class SchemaParser(SimpleParser[SchemaTestBlock, ParsedSchemaTestNode]):
 
         default_database = self.root_project.credentials.database
 
-        return ParsedSourceDefinition(
+        parsed_source = ParsedSourceDefinition(
             package_name=target.package_name,
             database=(source.database or default_database),
             schema=(source.schema or source.name),
@@ -329,6 +334,11 @@ class SchemaParser(SimpleParser[SchemaTestBlock, ParsedSchemaTestNode]):
             config=config,
             unrendered_config=unrendered_config,
         )
+
+        # relation name is added after instantiation because the adapter does
+        # not provide the relation name for a UnpatchedSourceDefinition object
+        parsed_source.relation_name = self._get_relation_name(parsed_source)
+        return parsed_source
 
     def create_test_node(
         self,
@@ -543,10 +553,10 @@ class SchemaParser(SimpleParser[SchemaTestBlock, ParsedSchemaTestNode]):
         for test in block.tests:
             self.parse_test(block, test, None)
 
-    def parse_reports(self, block: YamlBlock) -> None:
-        parser = ReportParser(self, block)
+    def parse_exposures(self, block: YamlBlock) -> None:
+        parser = ExposureParser(self, block)
         for node in parser.parse():
-            self.results.add_report(block.file, node)
+            self.results.add_exposure(block.file, node)
 
     def parse_file(self, block: FileBlock) -> None:
         dct = self._yaml_from_file(block.file)
@@ -578,7 +588,7 @@ class SchemaParser(SimpleParser[SchemaTestBlock, ParsedSchemaTestNode]):
                     parser = TestablePatchParser(self, yaml_block, plural)
                 for test_block in parser.parse():
                     self.parse_tests(test_block)
-            self.parse_reports(yaml_block)
+            self.parse_exposures(yaml_block)
 
 
 Parsed = TypeVar(
@@ -805,21 +815,21 @@ class MacroPatchParser(NonSourceParser[UnparsedMacroUpdate, ParsedMacroPatch]):
         self.results.add_macro_patch(self.yaml.file, result)
 
 
-class ReportParser(YamlReader):
+class ExposureParser(YamlReader):
     def __init__(self, schema_parser: SchemaParser, yaml: YamlBlock):
-        super().__init__(schema_parser, yaml, NodeType.Report.pluralize())
+        super().__init__(schema_parser, yaml, NodeType.Exposure.pluralize())
         self.schema_parser = schema_parser
         self.yaml = yaml
 
-    def parse_report(self, unparsed: UnparsedReport) -> ParsedReport:
+    def parse_exposure(self, unparsed: UnparsedExposure) -> ParsedExposure:
         package_name = self.project.project_name
-        unique_id = f'{NodeType.Report}.{package_name}.{unparsed.name}'
+        unique_id = f'{NodeType.Exposure}.{package_name}.{unparsed.name}'
         path = self.yaml.path.relative_path
 
         fqn = self.schema_parser.get_fqn_prefix(path)
         fqn.append(unparsed.name)
 
-        parsed = ParsedReport(
+        parsed = ParsedExposure(
             package_name=package_name,
             root_path=self.project.project_root,
             path=path,
@@ -833,7 +843,7 @@ class ReportParser(YamlReader):
             owner=unparsed.owner,
             maturity=unparsed.maturity,
         )
-        ctx = generate_parse_report(
+        ctx = generate_parse_exposure(
             parsed,
             self.root_project,
             self.schema_parser.macro_manifest,
@@ -848,12 +858,12 @@ class ReportParser(YamlReader):
         # parsed now has a populated refs/sources
         return parsed
 
-    def parse(self) -> Iterable[ParsedReport]:
+    def parse(self) -> Iterable[ParsedExposure]:
         for data in self.get_key_dicts():
             try:
-                unparsed = UnparsedReport.from_dict(data)
+                unparsed = UnparsedExposure.from_dict(data)
             except (ValidationError, JSONValidationException) as exc:
                 msg = error_context(self.yaml.path, self.key, data, exc)
                 raise CompilationException(msg) from exc
-            parsed = self.parse_report(unparsed)
+            parsed = self.parse_exposure(unparsed)
             yield parsed

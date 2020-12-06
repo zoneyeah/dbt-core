@@ -93,7 +93,9 @@ class SelectionCriteria:
         try:
             method_name = MethodName(method_parts[0])
         except ValueError as exc:
-            raise InvalidSelectorException(method_parts[0]) from exc
+            raise InvalidSelectorException(
+                f"'{method_parts[0]}' is not a valid method name"
+            ) from exc
 
         method_arguments: List[str] = method_parts[1:]
 
@@ -120,6 +122,26 @@ class SelectionCriteria:
             children=bool(dct.get('children')),
             children_depth=children_depth,
         )
+
+    @classmethod
+    def dict_from_single_spec(cls, raw: str):
+        result = RAW_SELECTOR_PATTERN.match(raw)
+        if result is None:
+            return {'error': 'Invalid selector spec'}
+        dct: Dict[str, Any] = result.groupdict()
+        method_name, method_arguments = cls.parse_method(dct)
+        meth_name = str(method_name)
+        if method_arguments:
+            meth_name = meth_name + '.' + '.'.join(method_arguments)
+        dct['method'] = meth_name
+        dct = {k: v for k, v in dct.items() if (v is not None and v != '')}
+        if 'childrens_parents' in dct:
+            dct['childrens_parents'] = bool(dct.get('childrens_parents'))
+        if 'parents' in dct:
+            dct['parents'] = bool(dct.get('parents'))
+        if 'children' in dct:
+            dct['children'] = bool(dct.get('children'))
+        return dct
 
     @classmethod
     def from_single_spec(cls, raw: str) -> 'SelectionCriteria':

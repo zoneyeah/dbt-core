@@ -50,6 +50,7 @@ def sql_escape(string):
 class PartitionConfig(JsonSchemaMixin):
     field: str
     data_type: str = 'date'
+    granularity: str = 'day'
     range: Optional[Dict[str, Any]] = None
 
     def render(self, alias: Optional[str] = None):
@@ -57,10 +58,11 @@ class PartitionConfig(JsonSchemaMixin):
         if alias:
             column = f'{alias}.{self.field}'
 
-        if self.data_type in ('timestamp', 'datetime'):
-            return f'date({column})'
-        else:
+        if self.data_type.lower() == 'date' and \
+                self.granularity.lower() == 'day':
             return column
+        else:
+            return f'{self.data_type}_trunc({column}, {self.granularity})'
 
     @classmethod
     def parse(cls, raw_partition_by) -> Optional['PartitionConfig']:
@@ -385,7 +387,7 @@ class BigQueryAdapter(BaseAdapter):
         model_database = model.get('database')
         model_schema = model.get('schema')
         model_alias = model.get('alias')
-        model_sql = model.get('injected_sql')
+        model_sql = model.get('compiled_sql')
 
         logger.debug("Model SQL ({}):\n{}".format(model_alias, model_sql))
         self.connections.create_view(
@@ -505,7 +507,7 @@ class BigQueryAdapter(BaseAdapter):
                       decorator=None):
 
         if sql_override is None:
-            sql_override = model.get('injected_sql')
+            sql_override = model.get('compiled_sql')
 
         if flags.STRICT_MODE:
             connection = self.connections.get_thread_connection()
@@ -547,7 +549,9 @@ class BigQueryAdapter(BaseAdapter):
             return True
         elif conf_partition and table.time_partitioning is not None:
             table_field = table.time_partitioning.field
-            return table_field == conf_partition.field
+            table_granularity = table.partitioning_type
+            return table_field == conf_partition.field \
+                and table_granularity == conf_partition.granularity
         elif conf_partition and table.range_partitioning is not None:
             dest_part = table.range_partitioning
             conf_part = conf_partition.range or {}

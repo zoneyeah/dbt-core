@@ -180,6 +180,9 @@ class BaseAdapter(metaclass=AdapterMeta):
     def commit_if_has_connection(self) -> None:
         self.connections.commit_if_has_connection()
 
+    def debug_query(self) -> None:
+        self.execute('select 1 as id')
+
     def nice_connection_name(self) -> str:
         conn = self.connections.get_if_exists()
         if conn is None or conn.name is None:
@@ -225,6 +228,21 @@ class BaseAdapter(metaclass=AdapterMeta):
             sql=sql,
             auto_begin=auto_begin,
             fetch=fetch
+        )
+
+    @available.parse(lambda *a, **k: ('', empty_table()))
+    def get_partitions_metadata(
+        self, table: str
+    ) -> Tuple[agate.Table]:
+        """Obtain partitions metadata for a BigQuery partitioned table.
+
+        :param str table_id: a partitioned table id, in standard SQL format.
+        :return: a partition metadata tuple, as described in
+            https://cloud.google.com/bigquery/docs/creating-partitioned-tables#getting_partition_metadata_using_meta_tables.
+        :rtype: agate.Table
+        """
+        return self.connections.get_partitions_metadata(
+            table=table
         )
 
     ###

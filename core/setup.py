@@ -24,7 +24,7 @@ def read(fname):
 
 
 package_name = "dbt-core"
-package_version = "0.19.0a1"
+package_version = "0.19.0b1"
 description = """dbt (data build tool) is a command line tool that helps \
 analysts and engineers transform data in their warehouse more effectively"""
 
@@ -64,13 +64,13 @@ setup(
         'sqlparse>=0.2.3,<0.4',
         'networkx>=2.3,<3',
         'minimal-snowplow-tracker==0.0.2',
-        'colorama>=0.3.9,<0.5',
+        'colorama>=0.3.9,<0.4.4',
         'agate>=1.6,<2',
         'isodate>=0.6,<0.7',
         'json-rpc>=1.12,<2',
         'werkzeug>=0.15,<0.17',
         'dataclasses==0.6;python_version<"3.7"',
-        'hologram==0.0.10',
+        'hologram==0.0.11',
         'logbook>=1.5,<1.6',
         'typing-extensions>=3.7.4,<3.8',
         # the following are all to match snowflake-connector-python
