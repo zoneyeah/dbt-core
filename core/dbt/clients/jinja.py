@@ -42,8 +42,10 @@ class Timer(object):
     new_time = 0
 
     def debug(self):
-        print(f"OLD: {self.old} @ {self.old_time}s")
-        print(f"NEW: {self.new} @ {self.new_time}s")
+        if self.old % 25 == 0:
+            print()
+            print(f"OLD: {self.old} @ {self.old_time}s")
+            print(f"NEW: {self.new} @ {self.new_time}s")
 
 timer = Timer()
 
@@ -585,7 +587,6 @@ def statically_extract_function_calls(string, ctx, node):
         'config': [],
     }
 
-    logger.info(f"DEBUG: Attempting static analysis for {node.name}")
     for func_call in parsed.find_all(jinja2.nodes.Call):
         func_name = func_call.node.name
 
@@ -613,7 +614,6 @@ def statically_extract_function_calls(string, ctx, node):
                 pass
 
     # If we got here without raising, then we can just call the methods
-    logger.info(f"DEBUG:   Statically capturing refs/configs for {node.name}")
     for func_name, arglist in captured_calls.items():
 
         func = ctx.get(func_name)
