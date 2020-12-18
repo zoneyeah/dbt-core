@@ -234,7 +234,8 @@ def build_edges(nodes: List[ManifestNode]):
     for node in nodes:
         backward_edges[node.unique_id] = node.depends_on_nodes[:]
         for unique_id in node.depends_on_nodes:
-            forward_edges[unique_id].append(node.unique_id)
+            if unique_id in forward_edges.keys():
+                forward_edges[unique_id].append(node.unique_id)
     return _sort_values(forward_edges), _sort_values(backward_edges)
 
 
@@ -887,6 +888,7 @@ class Manifest:
 
     def merge_from_artifact(
         self,
+        adapter,
         other: 'WritableManifest',
         selected: AbstractSet[UniqueID],
     ) -> None:
@@ -898,10 +900,14 @@ class Manifest:
         refables = set(NodeType.refable())
         merged = set()
         for unique_id, node in other.nodes.items():
-            if (
+            current = self.nodes.get(unique_id)
+            if current and (
                 node.resource_type in refables and
                 not node.is_ephemeral and
-                unique_id not in selected
+                unique_id not in selected and
+                not adapter.get_relation(
+                    current.database, current.schema, current.identifier
+                )
             ):
                 merged.add(unique_id)
                 self.nodes[unique_id] = node.replace(deferred=True)
