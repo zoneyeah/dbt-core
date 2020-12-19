@@ -20,6 +20,8 @@ from dbt.rpc.task_handler import RequestTaskHandler
 from dbt.rpc.method import RemoteMethod
 from dbt.rpc.task_manager import TaskManager
 
+from dbt.contracts.jsonschema import dbtClassMixin
+
 
 def track_rpc_request(task):
     dbt.tracking.track_rpc_request({
@@ -90,11 +92,11 @@ class ResponseManager(JSONRPCResponseManager):
     @classmethod
     def _get_responses(cls, requests, dispatcher):
         for output in super()._get_responses(requests, dispatcher):
-            # if it's a result, check if it's a JsonSchemaMixin and if so call
+            # if it's a result, check if it's a dbtClassMixin and if so call
             # to_dict
             if hasattr(output, 'result'):
-                if isinstance(output.result, JsonSchemaMixin):
-                    output.result = output.result.to_dict(omit_none=False)
+                if isinstance(output.result, dbtClassMixin):
+                    output.result = output.result.serialize(omit_none=False)
             yield output
 
     @classmethod

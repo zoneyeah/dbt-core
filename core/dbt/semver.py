@@ -8,6 +8,8 @@ from hologram import JsonSchemaMixin
 from hologram.helpers import StrEnum
 from typing import Optional
 
+from dbt.contracts.jsonschema import dbtClassMixin
+
 
 class Matchers(StrEnum):
     GREATER_THAN = '>'
@@ -18,12 +20,13 @@ class Matchers(StrEnum):
 
 
 @dataclass
-class VersionSpecification(JsonSchemaMixin):
-    major: Optional[str]
-    minor: Optional[str]
-    patch: Optional[str]
-    prerelease: Optional[str]
-    build: Optional[str]
+class VersionSpecification(dbtClassMixin):
+    # TODO : Is it ok to initialize these as None?
+    major: Optional[str] = None
+    minor: Optional[str] = None
+    patch: Optional[str] = None
+    prerelease: Optional[str] = None
+    build: Optional[str] = None
     matcher: Matchers = Matchers.EXACT
 
 

@@ -7,6 +7,7 @@ from typing import (
 )
 
 from hologram import ValidationError, JsonSchemaMixin
+from dbt.contracts.jsonschema import dbtClassMixin
 
 from dbt.adapters.factory import get_adapter
 from dbt.clients.jinja import get_rendered, add_rendered_test_kwargs
@@ -119,7 +120,8 @@ class ParserRef:
             meta=meta,
             tags=tags,
             quote=quote,
-            _extra=column.extra
+            # TODO
+            #_extra=column.extra
         )
 
     @classmethod
@@ -201,7 +203,7 @@ class SchemaParser(SimpleParser[SchemaTestBlock, ParsedSchemaTestNode]):
         )
 
     def parse_from_dict(self, dct, validate=True) -> ParsedSchemaTestNode:
-        return ParsedSchemaTestNode.from_dict(dct, validate=validate)
+        return ParsedSchemaTestNode.deserialize(dct, validate=validate)
 
     def _parse_format_version(
         self, yaml: YamlBlock
@@ -654,7 +656,7 @@ class YamlDocsReader(YamlReader):
         raise NotImplementedError('parse is abstract')
 
 
-T = TypeVar('T', bound=JsonSchemaMixin)
+T = TypeVar('T', bound=dbtClassMixin)
 
 
 class SourceParser(YamlDocsReader):

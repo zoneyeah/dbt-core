@@ -23,15 +23,17 @@ from hologram import JsonSchemaMixin
 from dataclasses import dataclass, field
 from typing import Optional, List, Union, Dict, Type
 
+from dbt.contracts.jsonschema import dbtClassMixin
+
 
 @dataclass
-class InjectedCTE(JsonSchemaMixin, Replaceable):
+class InjectedCTE(dbtClassMixin, Replaceable):
     id: str
     sql: str
 
 
 @dataclass
-class CompiledNodeMixin(JsonSchemaMixin):
+class CompiledNodeMixin(dbtClassMixin):
     # this is a special mixin class to provide a required argument. If a node
     # is missing a `compiled` flag entirely, it must not be a CompiledNode.
     compiled: bool
@@ -179,7 +181,8 @@ def parsed_instance_for(compiled: CompiledNode) -> ParsedResource:
                          .format(compiled.resource_type))
 
     # validate=False to allow extra keys from compiling
-    return cls.from_dict(compiled.to_dict(), validate=False)
+    # TODO : This is probably not going to do the right thing....
+    return cls.deserialize(compiled.to_dict(), validate=False)
 
 
 NonSourceCompiledNode = Union[

@@ -13,7 +13,7 @@ class SeedParser(SimpleSQLParser[ParsedSeedNode]):
         )
 
     def parse_from_dict(self, dct, validate=True) -> ParsedSeedNode:
-        return ParsedSeedNode.from_dict(dct, validate=validate)
+        return ParsedSeedNode.deserialize(dct, validate=validate)
 
     @property
     def resource_type(self) -> NodeType:

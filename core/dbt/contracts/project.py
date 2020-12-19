@@ -12,12 +12,25 @@ from hologram.helpers import HyphenatedJsonSchemaMixin, register_pattern, \
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Union, Any, NewType
 
+from dbt.contracts.jsonschema import dbtClassMixin
+from mashumaro.types import SerializableType
+
 PIN_PACKAGE_URL = 'https://docs.getdbt.com/docs/package-management#section-specifying-package-versions' # noqa
 DEFAULT_SEND_ANONYMOUS_USAGE_STATS = True
 
 
 Name = NewType('Name', str)
 register_pattern(Name, r'^[^\d\W]\w*$')
+
+# TODO : Validate
+# TODO : Make some sort of validated identifier class - couple other places we do this
+class Name(str, SerializableType):
+    def _serialize(self) -> str:
+        return self
+
+    @classmethod
+    def _deserialize(cls, value: str) -> 'Name':
+        return Name(value)
 
 # this does not support the full semver (does not allow a trailing -fooXYZ) and
 # is not restrictive enough for full semver, (allows '1.0'). But it's like
@@ -28,17 +41,26 @@ register_pattern(
     r'^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(\.(?:0|[1-9]\d*))?$',
 )
 
+class SemverString(str, SerializableType):
+    def _serialize(self) -> str:
+        return self
+
+    @classmethod
+    def _deserialize(cls, value: str) -> 'SemverString':
+        return SemverString(value)
+
 
 @dataclass
-class Quoting(JsonSchemaMixin, Mergeable):
-    identifier: Optional[bool]
-    schema: Optional[bool]
-    database: Optional[bool]
-    project: Optional[bool]
+class Quoting(dbtClassMixin, Mergeable):
+    identifier: Optional[bool] = None
+    schema: Optional[bool] = None
+    database: Optional[bool] = None
+    project: Optional[bool] = None
 
 
+# TODO .... hyphenation.... what.... why
 @dataclass
-class Package(Replaceable, HyphenatedJsonSchemaMixin):
+class Package(dbtClassMixin, Replaceable):
     pass
 
 
@@ -80,7 +102,7 @@ PackageSpec = Union[LocalPackage, GitPackage, RegistryPackage]
 
 
 @dataclass
-class PackageConfig(JsonSchemaMixin, Replaceable):
+class PackageConfig(dbtClassMixin, Replaceable):
     packages: List[PackageSpec]
 
 
@@ -96,13 +118,13 @@ class ProjectPackageMetadata:
 
 
 @dataclass
-class Downloads(ExtensibleJsonSchemaMixin, Replaceable):
+class Downloads(dbtClassMixin, Replaceable):
     tarball: str
 
 
 @dataclass
 class RegistryPackageMetadata(
-    ExtensibleJsonSchemaMixin,
+    dbtClassMixin,
     ProjectPackageMetadata,
 ):
     downloads: Downloads
@@ -153,7 +175,7 @@ BANNED_PROJECT_NAMES = {
 
 
 @dataclass
-class Project(HyphenatedJsonSchemaMixin, Replaceable):
+class Project(dbtClassMixin, Replaceable):
     name: Name
     version: Union[SemverString, float]
     config_version: int
@@ -189,9 +211,30 @@ class Project(HyphenatedJsonSchemaMixin, Replaceable):
     packages: List[PackageSpec] = field(default_factory=list)
     query_comment: Optional[Union[QueryComment, NoValue, str]] = NoValue()
 
+    _ALIASES = {
+        'config-version': 'config_version',
+        'source-paths': 'source_paths',
+        'macro-paths': 'macro_paths',
+        'data-paths': 'data_paths',
+        'test-paths': 'test_paths',
+        'analysis-paths': 'analysis_paths',
+        'docs-paths': 'docs_paths',
+        'asset-paths': 'asset_paths',
+        'target-path': 'target_path',
+        'snapshot-paths': 'snapshot_paths',
+        'clean-targets': 'clean_targets',
+        'log-path': 'log_path',
+        'modules-path': 'modules_path',
+        'on-run-start': 'on_run_start',
+        'on-run-end': 'on_run_end',
+        'require-dbt-version': 'require_dbt_version',
+        'project-root': 'project_root',
+    }
+
     @classmethod
-    def from_dict(cls, data, validate=True) -> 'Project':
-        result = super().from_dict(data, validate=validate)
+    def deserialize(cls, data) -> 'Project':
+        # TODO : Deserialize this with aliases - right now, only implemented for serializer?
+        result = super().deserialize(data, with_aliases=True)
         if result.name in BANNED_PROJECT_NAMES:
             raise ValidationError(
                 f'Invalid project name: {result.name} is a reserved word'
@@ -200,8 +243,9 @@ class Project(HyphenatedJsonSchemaMixin, Replaceable):
         return result
 
 
+# TODO : Make extensible?
 @dataclass
-class UserConfig(ExtensibleJsonSchemaMixin, Replaceable, UserConfigContract):
+class UserConfig(dbtClassMixin, Replaceable, UserConfigContract):
     send_anonymous_usage_stats: bool = DEFAULT_SEND_ANONYMOUS_USAGE_STATS
     use_colors: Optional[bool] = None
     partial_parse: Optional[bool] = None
@@ -221,7 +265,7 @@ class UserConfig(ExtensibleJsonSchemaMixin, Replaceable, UserConfigContract):
 
 
 @dataclass
-class ProfileConfig(HyphenatedJsonSchemaMixin, Replaceable):
+class ProfileConfig(dbtClassMixin, Replaceable):
     profile_name: str = field(metadata={'preserve_underscore': True})
     target_name: str = field(metadata={'preserve_underscore': True})
     config: UserConfig
@@ -234,8 +278,8 @@ class ProfileConfig(HyphenatedJsonSchemaMixin, Replaceable):
 class ConfiguredQuoting(Quoting, Replaceable):
     identifier: bool
     schema: bool
-    database: Optional[bool]
-    project: Optional[bool]
+    database: Optional[bool] = None
+    project: Optional[bool] = None
 
 
 @dataclass
@@ -248,5 +292,5 @@ class Configuration(Project, ProfileConfig):
 
 
 @dataclass
-class ProjectList(JsonSchemaMixin):
+class ProjectList(dbtClassMixin):
     projects: Dict[str, Project]

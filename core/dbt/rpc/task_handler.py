@@ -43,6 +43,9 @@ from dbt.rpc.method import RemoteMethod
 # we use this in typing only...
 from queue import Queue  # noqa
 
+from dbt.contracts.jsonschema import dbtClassMixin
+
+
 
 def sigterm_handler(signum, frame):
     raise dbt.exceptions.RPCKilledException(signum)
@@ -283,7 +286,7 @@ class RequestTaskHandler(threading.Thread, TaskHandlerProtocol):
         #   - The actual thread that this represents, which writes its data to
         #     the result and logs. The atomicity of list.append() and item
         #     assignment means we don't need a lock.
-        self.result: Optional[JsonSchemaMixin] = None
+        self.result: Optional[dbtClassMixin] = None
         self.error: Optional[RPCException] = None
         self.state: TaskHandlerState = TaskHandlerState.NotStarted
         self.logs: List[LogMessage] = []

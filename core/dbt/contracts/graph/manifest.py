@@ -508,10 +508,10 @@ class Manifest:
         """
         self.flat_graph = {
             'nodes': {
-                k: v.to_dict(omit_none=False) for k, v in self.nodes.items()
+                k: v.serialize(omit_none=False) for k, v in self.nodes.items()
             },
             'sources': {
-                k: v.to_dict(omit_none=False) for k, v in self.sources.items()
+                k: v.serialize(omit_none=False) for k, v in self.sources.items()
             }
         }
 
@@ -764,7 +764,7 @@ class Manifest:
         )
 
     def to_dict(self, omit_none=True, validate=False):
-        return self.writable_manifest().to_dict(
+        return self.writable_manifest().serialize(
             omit_none=omit_none, validate=validate
         )
 

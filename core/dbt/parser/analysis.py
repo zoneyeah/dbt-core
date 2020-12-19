@@ -13,7 +13,7 @@ class AnalysisParser(SimpleSQLParser[ParsedAnalysisNode]):
         )
 
     def parse_from_dict(self, dct, validate=True) -> ParsedAnalysisNode:
-        return ParsedAnalysisNode.from_dict(dct, validate=validate)
+        return ParsedAnalysisNode.deserialize(dct, validate=validate)
 
     @property
     def resource_type(self) -> NodeType:

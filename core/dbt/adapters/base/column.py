@@ -5,10 +5,11 @@ from hologram import JsonSchemaMixin
 from dbt.exceptions import RuntimeException
 
 from typing import Dict, ClassVar, Any, Optional
+from dbt.contracts.jsonschema import dbtClassMixin
 
 
 @dataclass
-class Column(JsonSchemaMixin):
+class Column(dbtClassMixin):
     TYPE_LABELS: ClassVar[Dict[str, str]] = {
         'STRING': 'TEXT',
         'TIMESTAMP': 'TIMESTAMP',

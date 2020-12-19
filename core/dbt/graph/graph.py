@@ -4,8 +4,20 @@ from typing import (
 import networkx as nx  # type: ignore
 
 from dbt.exceptions import InternalException
+from mashumaro.types import SerializableType
 
 UniqueId = NewType('UniqueId', str)
+
+# TODO?
+class UniqueId(str, SerializableType):
+    @classmethod
+    def _deserialize(cls, value: str) -> 'UniqueId':
+        # TODO : Validate here?
+        return UniqueId(value)
+
+    def _serialize(self) -> str:
+        # TODO : Validate here?
+        return self
 
 
 class Graph:

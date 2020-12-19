@@ -21,6 +21,9 @@ from dbt.contracts.util import Replaceable, list_str
 from dbt import hooks
 from dbt.node_types import NodeType
 
+from dbt.contracts.jsonschema import dbtClassMixin
+from mashumaro.types import SerializableType
+
 
 M = TypeVar('M', bound='Metadata')
 
@@ -170,9 +173,19 @@ def insensitive_patterns(*patterns: str):
     return '^({})$'.format('|'.join(lowercased))
 
 
+# TODO?
 Severity = NewType('Severity', str)
 
 register_pattern(Severity, insensitive_patterns('warn', 'error'))
+class Severity(str, SerializableType):
+    @classmethod
+    def _deserialize(cls, value: str) -> 'Severity':
+        # TODO : Validate here?
+        return Severity(value)
+
+    def _serialize(self) -> str:
+        # TODO : Validate here?
+        return self
 
 
 class SnapshotStrategy(StrEnum):
@@ -185,7 +198,7 @@ class All(StrEnum):
 
 
 @dataclass
-class Hook(JsonSchemaMixin, Replaceable):
+class Hook(dbtClassMixin, Replaceable):
     sql: str
     transaction: bool = True
     index: Optional[int] = None
@@ -196,7 +209,7 @@ T = TypeVar('T', bound='BaseConfig')
 
 @dataclass
 class BaseConfig(
-    AdditionalPropertiesAllowed, Replaceable, MutableMapping[str, Any]
+    dbtClassMixin, Replaceable, MutableMapping[str, Any]
 ):
     # Implement MutableMapping so this config will behave as some macros expect
     # during parsing (notably, syntax like `{{ node.config['schema'] }}`)
@@ -294,23 +307,25 @@ class BaseConfig(
         """
         result = {}
 
-        for fld, target_field in cls._get_fields():
-            if target_field not in data:
-                continue
+        # TODO : This is not correct.... must implement without reflection
 
-            data_attr = data.pop(target_field)
-            if target_field not in src:
-                result[target_field] = data_attr
-                continue
+        # for fld, target_field in cls._get_fields():
+        #     if target_field not in data:
+        #         continue
 
-            merge_behavior = MergeBehavior.from_field(fld)
-            self_attr = src[target_field]
+        #     data_attr = data.pop(target_field)
+        #     if target_field not in src:
+        #         result[target_field] = data_attr
+        #         continue
 
-            result[target_field] = _merge_field_value(
-                merge_behavior=merge_behavior,
-                self_value=self_attr,
-                other_value=data_attr,
-            )
+        #     merge_behavior = MergeBehavior.from_field(fld)
+        #     self_attr = src[target_field]
+
+        #     result[target_field] = _merge_field_value(
+        #         merge_behavior=merge_behavior,
+        #         self_value=self_attr,
+        #         other_value=data_attr,
+        #     )
         return result
 
     def to_dict(
@@ -320,7 +335,7 @@ class BaseConfig(
         *,
         omit_hidden: bool = True,
     ) -> Dict[str, Any]:
-        result = super().to_dict(omit_none=omit_none, validate=validate)
+        result = super().serialize(omit_none=omit_none, validate=validate)
         if omit_hidden and not omit_none:
             for fld, target_field in self._get_fields():
                 if target_field not in result:
@@ -344,7 +359,9 @@ class BaseConfig(
         """
         # sadly, this is a circular import
         from dbt.adapters.factory import get_config_class_by_name
-        dct = self.to_dict(omit_none=False, validate=False, omit_hidden=False)
+        # TODO : omit_hidden?
+        # dct = self.serialize(omit_none=False, validate=False, omit_hidden=False)
+        dct = self.serialize(omit_none=False, validate=False)
 
         adapter_config_cls = get_config_class_by_name(adapter_type)
 
@@ -358,11 +375,11 @@ class BaseConfig(
         dct.update(data)
 
         # any validation failures must have come from the update
-        return self.from_dict(dct, validate=validate)
+        return self.deserialize(dct, validate=validate)
 
     def finalize_and_validate(self: T) -> T:
         # from_dict will validate for us
-        dct = self.to_dict(omit_none=False, validate=False)
+        dct = self.serialize(omit_none=False, validate=False)
         return self.from_dict(dct)
 
     def replace(self, **kwargs):
@@ -372,7 +389,7 @@ class BaseConfig(
         for key, value in kwargs.items():
             new_key = mapping.get(key, key)
             dct[new_key] = value
-        return self.from_dict(dct, validate=False)
+        return self.deserialize(dct, validate=False)
 
 
 @dataclass
@@ -435,12 +452,15 @@ class NodeConfig(BaseConfig):
         for key in hooks.ModelHookType:
             if key in data:
                 data[key] = [hooks.get_hook_dict(h) for h in data[key]]
-        return super().from_dict(data, validate=validate)
+        return super().deserialize(data, validate=validate)
 
     @classmethod
     def field_mapping(cls):
         return {'post_hook': 'post-hook', 'pre_hook': 'pre-hook'}
 
+    def validate(self):
+        # TODO : Not implemented!
+        pass
 
 @dataclass
 class SeedConfig(NodeConfig):
@@ -454,63 +474,10 @@ class TestConfig(NodeConfig):
     severity: Severity = Severity('ERROR')
 
 
-SnapshotVariants = Union[
-    'TimestampSnapshotConfig',
-    'CheckSnapshotConfig',
-    'GenericSnapshotConfig',
-]
-
-
-def _relevance_without_strategy(error: jsonschema.ValidationError):
-    # calculate the 'relevance' of an error the normal jsonschema way, except
-    # if the validator is in the 'strategy' field and its conflicting with the
-    # 'enum'. This suppresses `"'timestamp' is not one of ['check']` and such
-    if 'strategy' in error.path and error.validator in {'enum', 'not'}:
-        length = 1
-    else:
-        length = -len(error.path)
-    validator = error.validator
-    return length, validator not in {'anyOf', 'oneOf'}
-
-
-@dataclass
-class SnapshotWrapper(JsonSchemaMixin):
-    """This is a little wrapper to let us serialize/deserialize the
-    SnapshotVariants union.
-    """
-    config: SnapshotVariants  # mypy: ignore
-
-    @classmethod
-    def validate(cls, data: Any):
-        config = data.get('config', {})
-
-        if config.get('strategy') == 'check':
-            schema = _validate_schema(CheckSnapshotConfig)
-            to_validate = config
-
-        elif config.get('strategy') == 'timestamp':
-            schema = _validate_schema(TimestampSnapshotConfig)
-            to_validate = config
-
-        else:
-            h_cls = cast(Hashable, cls)
-            schema = _validate_schema(h_cls)
-            to_validate = data
-
-        validator = jsonschema.Draft7Validator(schema)
-
-        error = jsonschema.exceptions.best_match(
-            validator.iter_errors(to_validate),
-            key=_relevance_without_strategy,
-        )
-
-        if error is not None:
-            raise ValidationError.create_from(error) from error
-
-
 @dataclass
 class EmptySnapshotConfig(NodeConfig):
     materialized: str = 'snapshot'
+    strategy: str = None
 
 
 @dataclass(init=False)
@@ -519,117 +486,17 @@ class SnapshotConfig(EmptySnapshotConfig):
     target_schema: str = field(init=False, metadata=dict(init_required=True))
     target_database: Optional[str] = None
 
-    def __init__(
-        self,
-        unique_key: str,
-        target_schema: str,
-        target_database: Optional[str] = None,
-        **kwargs
-    ) -> None:
-        self.unique_key = unique_key
-        self.target_schema = target_schema
-        self.target_database = target_database
-        # kwargs['materialized'] = materialized
-        super().__init__(**kwargs)
 
-    # type hacks...
-    @classmethod
-    def _get_fields(cls) -> List[Tuple[Field, str]]:  # type: ignore
-        fields: List[Tuple[Field, str]] = []
-        for old_field, name in super()._get_fields():
-            new_field = old_field
-            # tell hologram we're really an initvar
-            if old_field.metadata and old_field.metadata.get('init_required'):
-                new_field = field(init=True, metadata=old_field.metadata)
-                new_field.name = old_field.name
-                new_field.type = old_field.type
-                new_field._field_type = old_field._field_type  # type: ignore
-            fields.append((new_field, name))
-        return fields
-
-    def finalize_and_validate(self: 'SnapshotConfig') -> SnapshotVariants:
-        data = self.to_dict()
-        return SnapshotWrapper.from_dict({'config': data}).config
-
-
-@dataclass(init=False)
-class GenericSnapshotConfig(SnapshotConfig):
-    strategy: str = field(init=False, metadata=dict(init_required=True))
-
-    def __init__(self, strategy: str, **kwargs) -> None:
-        self.strategy = strategy
-        super().__init__(**kwargs)
-
-    @classmethod
-    def _collect_json_schema(
-        cls, definitions: Dict[str, Any]
-    ) -> Dict[str, Any]:
-        # this is the method you want to override in hologram if you want
-        # to do clever things about the json schema and have classes that
-        # contain instances of your JsonSchemaMixin respect the change.
-        schema = super()._collect_json_schema(definitions)
-
-        # Instead of just the strategy we'd calculate normally, say
-        # "this strategy except none of our specialization strategies".
-        strategies = [schema['properties']['strategy']]
-        for specialization in (TimestampSnapshotConfig, CheckSnapshotConfig):
-            strategies.append(
-                {'not': specialization.json_schema()['properties']['strategy']}
-            )
-
-        schema['properties']['strategy'] = {
-            'allOf': strategies
-        }
-        return schema
-
-
-@dataclass(init=False)
 class TimestampSnapshotConfig(SnapshotConfig):
-    strategy: str = field(
-        init=False,
-        metadata=dict(
-            restrict=[str(SnapshotStrategy.Timestamp)],
-            init_required=True,
-        ),
-    )
-    updated_at: str = field(init=False, metadata=dict(init_required=True))
-
-    def __init__(
-        self, strategy: str, updated_at: str, **kwargs
-    ) -> None:
-        self.strategy = strategy
-        self.updated_at = updated_at
-        super().__init__(**kwargs)
+    updated_at: str
 
 
-@dataclass(init=False)
 class CheckSnapshotConfig(SnapshotConfig):
-    strategy: str = field(
-        init=False,
-        metadata=dict(
-            restrict=[str(SnapshotStrategy.Check)],
-            init_required=True,
-        ),
-    )
-    # TODO: is there a way to get this to accept tuples of strings? Adding
-    # `Tuple[str, ...]` to the list of types results in this:
-    # ['email'] is valid under each of {'type': 'array', 'items':
-    # {'type': 'string'}}, {'type': 'array', 'items': {'type': 'string'}}
-    # but without it, parsing gets upset about values like `('email',)`
-    # maybe hologram itself should support this behavior? It's not like tuples
-    # are meaningful in json
-    check_cols: Union[All, List[str]] = field(
-        init=False,
-        metadata=dict(init_required=True),
-    )
+    check_cols: Union[All, List[str]]
 
-    def __init__(
-        self, strategy: str, check_cols: Union[All, List[str]],
-        **kwargs
-    ) -> None:
-        self.strategy = strategy
-        self.check_cols = check_cols
-        super().__init__(**kwargs)
+
+class CheckSnapshotConfig(SnapshotConfig):
+    pass
 
 
 RESOURCE_TYPES: Dict[NodeType, Type[BaseConfig]] = {

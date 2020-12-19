@@ -8,6 +8,8 @@ from hologram import JsonSchemaMixin, ValidationError
 from dbt.contracts.rpc import RPCParameters, RemoteResult, RemoteMethodFlags
 from dbt.exceptions import NotImplementedException, InternalException
 
+from dbt.contracts.jsonschema import dbtClassMixin
+
 Parameters = TypeVar('Parameters', bound=RPCParameters)
 Result = TypeVar('Result', bound=RemoteResult)
 
@@ -109,7 +111,7 @@ class RemoteBuiltinMethod(RemoteMethod[Parameters, Result]):
             'the run() method on builtins should never be called'
         )
 
-    def __call__(self, **kwargs: Dict[str, Any]) -> JsonSchemaMixin:
+    def __call__(self, **kwargs: Dict[str, Any]) -> dbtClassMixin:
         try:
             params = self.get_parameters().from_dict(kwargs)
         except ValidationError as exc:

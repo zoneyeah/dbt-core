@@ -11,7 +11,7 @@ class ModelParser(SimpleSQLParser[ParsedModelNode]):
         )
 
     def parse_from_dict(self, dct, validate=True) -> ParsedModelNode:
-        return ParsedModelNode.from_dict(dct, validate=validate)
+        return ParsedModelNode.deserialize(dct, validate=validate)
 
     @property
     def resource_type(self) -> NodeType:

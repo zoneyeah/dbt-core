@@ -14,6 +14,7 @@ from dbt.exceptions import (
 from dbt.version import __version__
 from dbt.tracking import get_invocation_id
 from hologram import JsonSchemaMixin
+from dbt.contracts.jsonschema import dbtClassMixin
 
 MacroKey = Tuple[str, str]
 SourceKey = Tuple[str, str]
@@ -58,7 +59,8 @@ class Mergeable(Replaceable):
 
 class Writable:
     def write(self, path: str, omit_none: bool = False):
-        write_json(path, self.to_dict(omit_none=omit_none))  # type: ignore
+        # TODO : Do this faster?
+        write_json(path, self.serialize(omit_none=omit_none))  # type: ignore
 
 
 class AdditionalPropertiesMixin:
@@ -71,20 +73,20 @@ class AdditionalPropertiesMixin:
 
     @classmethod
     def from_dict(cls, data, validate=True):
-        self = super().from_dict(data=data, validate=validate)
-        keys = self.to_dict(validate=False, omit_none=False)
+        self = super().deserialize(data=data, validate=validate)
+        keys = self.serialize(validate=False, omit_none=False)
         for key, value in data.items():
             if key not in keys:
                 self.extra[key] = value
         return self
 
     def to_dict(self, omit_none=True, validate=False):
-        data = super().to_dict(omit_none=omit_none, validate=validate)
+        data = super().serialize(omit_none=omit_none, validate=validate)
         data.update(self.extra)
         return data
 
     def replace(self, **kwargs):
-        dct = self.to_dict(omit_none=False, validate=False)
+        dct = self.serialize(omit_none=False, validate=False)
         dct.update(kwargs)
         return self.from_dict(dct)
 
@@ -135,7 +137,7 @@ def get_metadata_env() -> Dict[str, str]:
 
 
 @dataclasses.dataclass
-class BaseArtifactMetadata(JsonSchemaMixin):
+class BaseArtifactMetadata(dbtClassMixin):
     dbt_schema_version: str
     dbt_version: str = __version__
     generated_at: datetime = dataclasses.field(
@@ -158,7 +160,7 @@ def schema_version(name: str, version: int):
 
 
 @dataclasses.dataclass
-class VersionedSchema(JsonSchemaMixin):
+class VersionedSchema(dbtClassMixin):
     dbt_schema_version: ClassVar[SchemaVersion]
 
     @classmethod
@@ -194,4 +196,4 @@ class ArtifactMixin(VersionedSchema, Writable, Readable):
             if found != expected:
                 raise IncompatibleSchemaException(expected, found)
 
-        return super().from_dict(data=data, validate=validate)
+        return super().deserialize(data=data, validate=validate)

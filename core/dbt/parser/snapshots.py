@@ -26,7 +26,7 @@ class SnapshotParser(
         )
 
     def parse_from_dict(self, dct, validate=True) -> IntermediateSnapshotNode:
-        return IntermediateSnapshotNode.from_dict(dct, validate=validate)
+        return IntermediateSnapshotNode.deserialize(dct, validate=validate)
 
     @property
     def resource_type(self) -> NodeType:
@@ -66,6 +66,9 @@ class SnapshotParser(
 
     def transform(self, node: IntermediateSnapshotNode) -> ParsedSnapshotNode:
         try:
+            # TODO : This is not going to work at all
+            # TODO : We need to accept the config and turn that into a concrete
+            #        Snapshot node type
             parsed_node = ParsedSnapshotNode.from_dict(node.to_dict())
             self.set_snapshot_attributes(parsed_node)
             return parsed_node

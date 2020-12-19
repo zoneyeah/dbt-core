@@ -137,6 +137,7 @@ def main(args=None):
             exit_code = e.code
 
         except BaseException as e:
+            print(traceback.format_exc())
             logger.warning("Encountered an error:")
             logger.warning(str(e))
 

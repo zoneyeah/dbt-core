@@ -5,13 +5,14 @@ from typing import (
 )
 from typing_extensions import Protocol
 
-from dbt.contracts.jsonschema import JsonSchemaMixin
 from hologram.helpers import StrEnum
 
 from dbt import deprecations
 from dbt.contracts.util import Replaceable
 from dbt.exceptions import CompilationException
 from dbt.utils import deep_merge
+
+from dbt.contracts.jsonschema import dbtClassMixin
 
 
 class RelationType(StrEnum):
@@ -32,7 +33,7 @@ class HasQuoting(Protocol):
     quoting: Dict[str, bool]
 
 
-class FakeAPIObject(JsonSchemaMixin, Replaceable, Mapping):
+class FakeAPIObject(dbtClassMixin, Replaceable, Mapping):
     # override the mapping truthiness, len is always >1
     def __bool__(self):
         return True
@@ -63,6 +64,8 @@ mashumaro does not support generic types, so I just duplicated
 the generic type class that was here previously to get things
 working. We'd probably want to do this differently
 in the future
+
+TODO
 """
 
 @dataclass

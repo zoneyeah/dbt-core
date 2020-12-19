@@ -3,6 +3,8 @@ from typing import TypeVar, MutableMapping, Mapping, Union, List
 
 from hologram import JsonSchemaMixin
 
+from dbt.contracts.jsonschema import dbtClassMixin
+
 from dbt.contracts.files import RemoteFile, FileHash, SourceFile
 from dbt.contracts.graph.compiled import CompileResultNode
 from dbt.contracts.graph.parsed import (
@@ -62,7 +64,7 @@ def dict_field():
 
 
 @dataclass
-class ParseResult(JsonSchemaMixin, Writable, Replaceable):
+class ParseResult(dbtClassMixin, Writable, Replaceable):
     vars_hash: FileHash
     profile_hash: FileHash
     project_hashes: MutableMapping[str, FileHash]

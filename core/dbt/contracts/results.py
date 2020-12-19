@@ -21,6 +21,9 @@ from dbt.utils import lowercase
 from hologram.helpers import StrEnum
 from hologram import JsonSchemaMixin
 
+from dbt.contracts.jsonschema import dbtClassMixin
+from mashumaro.types import SerializableType
+
 import agate
 
 from dataclasses import dataclass, field
@@ -31,7 +34,7 @@ from dbt.clients.system import write_json
 
 
 @dataclass
-class TimingInfo(JsonSchemaMixin):
+class TimingInfo(dbtClassMixin):
     name: str
     started_at: Optional[datetime] = None
     completed_at: Optional[datetime] = None
@@ -88,7 +91,7 @@ class FreshnessStatus(StrEnum):
 
 
 @dataclass
-class BaseResult(JsonSchemaMixin):
+class BaseResult(dbtClassMixin):
     status: Union[RunStatus, TestStatus, FreshnessStatus]
     timing: List[TimingInfo]
     thread_id: str
@@ -109,15 +112,14 @@ class PartialNodeResult(NodeResult):
     def skipped(self):
         return False
 
+# TODO : Does this work? no-op agate table serialization in RunModelResult
+class SerializableAgateTable(agate.Table, SerializableType):
+    def _serialize(self) -> None:
+        return None
 
 @dataclass
 class RunModelResult(NodeResult):
-    agate_table: Optional[agate.Table] = None
-
-    def to_dict(self, *args, **kwargs):
-        dct = super().to_dict(*args, **kwargs)
-        dct.pop('agate_table', None)
-        return dct
+    agate_table: Optional[SerializableAgateTable] = None
 
     @property
     def skipped(self):
@@ -125,7 +127,7 @@ class RunModelResult(NodeResult):
 
 
 @dataclass
-class ExecutionResult(JsonSchemaMixin):
+class ExecutionResult(dbtClassMixin):
     results: Sequence[BaseResult]
     elapsed_time: float
 
@@ -210,7 +212,8 @@ class RunResultsArtifact(ExecutionResult, ArtifactMixin):
         )
 
     def write(self, path: str, omit_none=False):
-        write_json(path, self.to_dict(omit_none=omit_none))
+        # TODO: Implement omit_none
+        write_json(path, self.to_dict())
 
 
 @dataclass
@@ -268,14 +271,14 @@ class FreshnessErrorEnum(StrEnum):
 
 
 @dataclass
-class SourceFreshnessRuntimeError(JsonSchemaMixin):
+class SourceFreshnessRuntimeError(dbtClassMixin):
     unique_id: str
     error: Optional[Union[str, int]]
     status: FreshnessErrorEnum
 
 
 @dataclass
-class SourceFreshnessOutput(JsonSchemaMixin):
+class SourceFreshnessOutput(dbtClassMixin):
     unique_id: str
     max_loaded_at: datetime
     snapshotted_at: datetime
@@ -383,7 +386,7 @@ CatalogKey = NamedTuple(
 
 
 @dataclass
-class StatsItem(JsonSchemaMixin):
+class StatsItem(dbtClassMixin):
     id: str
     label: str
     value: Primitive
@@ -395,7 +398,7 @@ StatsDict = Dict[str, StatsItem]
 
 
 @dataclass
-class ColumnMetadata(JsonSchemaMixin):
+class ColumnMetadata(dbtClassMixin):
     type: str
     comment: Optional[str]
     index: int
@@ -406,7 +409,7 @@ ColumnMap = Dict[str, ColumnMetadata]
 
 
 @dataclass
-class TableMetadata(JsonSchemaMixin):
+class TableMetadata(dbtClassMixin):
     type: str
     database: Optional[str]
     schema: str
@@ -416,7 +419,7 @@ class TableMetadata(JsonSchemaMixin):
 
 
 @dataclass
-class CatalogTable(JsonSchemaMixin, Replaceable):
+class CatalogTable(dbtClassMixin, Replaceable):
     metadata: TableMetadata
     columns: ColumnMap
     stats: StatsDict
@@ -439,7 +442,7 @@ class CatalogMetadata(BaseArtifactMetadata):
 
 
 @dataclass
-class CatalogResults(JsonSchemaMixin):
+class CatalogResults(dbtClassMixin):
     nodes: Dict[str, CatalogTable]
     sources: Dict[str, CatalogTable]
     errors: Optional[List[str]]

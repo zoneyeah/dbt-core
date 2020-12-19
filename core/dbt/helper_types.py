@@ -2,16 +2,33 @@
 from dataclasses import dataclass
 from datetime import timedelta
 from pathlib import Path
-from typing import NewType, Tuple, AbstractSet
+from typing import NewType, Tuple, AbstractSet, Union
 
 from hologram import (
     FieldEncoder, JsonSchemaMixin, JsonDict, ValidationError
 )
 from hologram.helpers import StrEnum
+from dbt.contracts.jsonschema import dbtClassMixin
+from mashumaro.types import SerializableType
 
 Port = NewType('Port', int)
 
+class Port(int, SerializableType):
+    @classmethod
+    def _deserialize(cls, value: Union[int, str]) -> 'Port':
+        try:
+            value = int(value)
+        except ValueError:
+            raise ValidationError(f'Cannot encode {value} into port numbr')
 
+        return Port(value)
+
+    def _serialize(self) -> int:
+        # TODO : Validate here?
+        return self
+
+
+# TODO
 class PortEncoder(FieldEncoder):
     @property
     def json_schema(self):
@@ -66,16 +83,17 @@ class NVEnum(StrEnum):
 
 
 @dataclass
-class NoValue(JsonSchemaMixin):
+class NoValue(dbtClassMixin):
     """Sometimes, you want a way to say none that isn't None"""
     novalue: NVEnum = NVEnum.novalue
 
 
-JsonSchemaMixin.register_field_encoders({
-    Port: PortEncoder(),
-    timedelta: TimeDeltaFieldEncoder(),
-    Path: PathEncoder(),
-})
+# TODO : None of this is right lol
+# JsonSchemaMixin.register_field_encoders({
+#     Port: PortEncoder(),
+#     timedelta: TimeDeltaFieldEncoder(),
+#     Path: PathEncoder(),
+# })
 
 
 FQNPath = Tuple[str, ...]

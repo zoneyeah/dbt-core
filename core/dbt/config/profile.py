@@ -137,7 +137,7 @@ class Profile(HasCredentials):
     def validate(self):
         try:
             if self.credentials:
-                self.credentials.to_dict(validate=True)
+                self.credentials.serialize(validate=True)
             ProfileConfig.from_dict(
                 self.to_profile_info(serialize_credentials=True)
             )

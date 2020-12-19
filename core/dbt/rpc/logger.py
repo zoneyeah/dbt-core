@@ -15,6 +15,9 @@ from dbt.contracts.rpc import (
 from dbt.exceptions import InternalException
 from dbt.utils import restrict_to
 
+from dbt.contracts.jsonschema import dbtClassMixin
+from mashumaro.types import SerializableType
+
 
 class QueueMessageType(StrEnum):
     Error = 'error'
@@ -26,8 +29,33 @@ class QueueMessageType(StrEnum):
 
 
 @dataclass
-class QueueMessage(JsonSchemaMixin):
+class QueueMessage(dbtClassMixin):
     message_type: QueueMessageType
+
+
+class SerializableLogRecord(logbook.LogRecord, SerializableType):
+    def _serialize(self):
+        # TODO
+        import ipdb; ipdb.set_trace()
+        pass
+
+    @classmethod
+    def _deserialize(cls, value):
+        # TODO
+        import ipdb; ipdb.set_trace()
+        pass
+
+class SerializableJSONRPCError(JSONRPCError, SerializableType):
+    def _serialize(self):
+        # TODO
+        import ipdb; ipdb.set_trace()
+        pass
+
+    @classmethod
+    def _deserialize(cls, value):
+        # TODO
+        import ipdb; ipdb.set_trace()
+        pass
 
 
 @dataclass
@@ -35,7 +63,7 @@ class QueueLogMessage(QueueMessage):
     message_type: QueueMessageType = field(
         metadata=restrict_to(QueueMessageType.Log)
     )
-    record: logbook.LogRecord
+    record: SerializableLogRecord
 
     @classmethod
     def from_record(cls, record: logbook.LogRecord):
@@ -50,7 +78,7 @@ class QueueErrorMessage(QueueMessage):
     message_type: QueueMessageType = field(
         metadata=restrict_to(QueueMessageType.Error)
     )
-    error: JSONRPCError
+    error: SerializableJSONRPCError
 
     @classmethod
     def from_error(cls, error: JSONRPCError):

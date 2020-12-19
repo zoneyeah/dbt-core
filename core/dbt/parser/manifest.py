@@ -53,20 +53,22 @@ from dbt.version import __version__
 
 from hologram import JsonSchemaMixin
 
+from dbt.contracts.jsonschema import dbtClassMixin
+
 PARTIAL_PARSE_FILE_NAME = 'partial_parse.pickle'
 PARSING_STATE = DbtProcessState('parsing')
 DEFAULT_PARTIAL_PARSE = False
 
 
 @dataclass
-class ParserInfo(JsonSchemaMixin):
+class ParserInfo(dbtClassMixin):
     parser: str
     elapsed: float
     path_count: int = 0
 
 
 @dataclass
-class ProjectLoaderInfo(JsonSchemaMixin):
+class ProjectLoaderInfo(dbtClassMixin):
     project_name: str
     elapsed: float
     parsers: List[ParserInfo]
@@ -74,7 +76,7 @@ class ProjectLoaderInfo(JsonSchemaMixin):
 
 
 @dataclass
-class ManifestLoaderInfo(JsonSchemaMixin, Writable):
+class ManifestLoaderInfo(dbtClassMixin, Writable):
     path_count: int = 0
     is_partial_parse_enabled: Optional[bool] = None
     parse_project_elapsed: Optional[float] = None

@@ -17,9 +17,22 @@ from dbt.utils import translate_aliases
 
 from dbt.logger import GLOBAL_LOGGER as logger
 
+from dbt.contracts.jsonschema import dbtClassMixin
+from mashumaro.types import SerializableType
 
 Identifier = NewType('Identifier', str)
 register_pattern(Identifier, r'^[A-Za-z_][A-Za-z0-9_]+$')
+
+# TODO?
+class Identifier(str, SerializableType):
+    @classmethod
+    def _deserialize(cls, value: str) -> 'Identifier':
+        # TODO : Validate here?
+        return Identifier(value)
+
+    def _serialize(self) -> str:
+        # TODO : Validate here?
+        return self
 
 
 class ConnectionState(StrEnum):
@@ -28,22 +41,30 @@ class ConnectionState(StrEnum):
     CLOSED = 'closed'
     FAIL = 'fail'
 
+# I think that... this is not the right way to do this
+# TODO!!
+class DoNotSerializeType(SerializableType):
+    def _serialize(self) -> None:
+        return None
 
+# TODO : Figure out ExtensibleJsonSchemaMixin?
 @dataclass(init=False)
-class Connection(ExtensibleJsonSchemaMixin, Replaceable):
+class Connection(dbtClassMixin, Replaceable):
     type: Identifier
     name: Optional[str]
     state: ConnectionState = ConnectionState.INIT
     transaction_open: bool = False
     # prevent serialization
-    _handle: Optional[Any] = None
-    _credentials: JsonSchemaMixin = field(init=False)
+    #_handle: Optional[Any] = None
+    #_credentials: dbtClassMixin = field(init=False)
+    _handle: Optional[DoNotSerializeType] = None
+    _credentials: Optional[DoNotSerializeType] = None
 
     def __init__(
         self,
         type: Identifier,
         name: Optional[str],
-        credentials: JsonSchemaMixin,
+        credentials: dbtClassMixin,
         state: ConnectionState = ConnectionState.INIT,
         transaction_open: bool = False,
         handle: Optional[Any] = None,
@@ -102,7 +123,8 @@ class LazyHandle:
 # will work.
 @dataclass  # type: ignore
 class Credentials(
-    ExtensibleJsonSchemaMixin,
+    # ExtensibleJsonSchemaMixin,
+    dbtClassMixin,
     Replaceable,
     metaclass=abc.ABCMeta
 ):
@@ -121,7 +143,8 @@ class Credentials(
     ) -> Iterable[Tuple[str, Any]]:
         """Return an ordered iterator of key/value pairs for pretty-printing.
         """
-        as_dict = self.to_dict(omit_none=False, with_aliases=with_aliases)
+        # TODO: Does this... work?
+        as_dict = self.serialize(omit_none=False, with_aliases=with_aliases)
         connection_keys = set(self._connection_keys())
         aliases: List[str] = []
         if with_aliases:
@@ -136,10 +159,11 @@ class Credentials(
     def _connection_keys(self) -> Tuple[str, ...]:
         raise NotImplementedError
 
-    @classmethod
-    def from_dict(cls, data):
-        data = cls.translate_aliases(data)
-        return super().from_dict(data)
+    # TODO TODO TODO
+    # @classmethod
+    # def from_dict(cls, data):
+    #     data = cls.translate_aliases(data)
+    #     return super().from_dict(data)
 
     @classmethod
     def translate_aliases(
@@ -147,15 +171,16 @@ class Credentials(
     ) -> Dict[str, Any]:
         return translate_aliases(kwargs, cls._ALIASES, recurse)
 
-    def to_dict(self, omit_none=True, validate=False, *, with_aliases=False):
-        serialized = super().to_dict(omit_none=omit_none, validate=validate)
-        if with_aliases:
-            serialized.update({
-                new_name: serialized[canonical_name]
-                for new_name, canonical_name in self._ALIASES.items()
-                if canonical_name in serialized
-            })
-        return serialized
+    # TODO TODO TODO
+    # def to_dict(self, omit_none=True, validate=False, *, with_aliases=False):
+    #     serialized = super().to_dict(omit_none=omit_none, validate=validate)
+    #     if with_aliases:
+    #         serialized.update({
+    #             new_name: serialized[canonical_name]
+    #             for new_name, canonical_name in self._ALIASES.items()
+    #             if canonical_name in serialized
+    #         })
+    #     return serialized
 
 
 class UserConfigContract(Protocol):
@@ -205,7 +230,7 @@ DEFAULT_QUERY_COMMENT = '''
 
 
 @dataclass
-class QueryComment(JsonSchemaMixin):
+class QueryComment(dbtClassMixin):
     comment: str = DEFAULT_QUERY_COMMENT
     append: bool = False
 

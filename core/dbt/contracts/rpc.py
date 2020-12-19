@@ -26,6 +26,8 @@ from dbt.exceptions import InternalException
 from dbt.logger import LogMessage
 from dbt.utils import restrict_to
 
+from dbt.contracts.jsonschema import dbtClassMixin
+
 
 TaskTags = Optional[Dict[str, Any]]
 TaskID = uuid.UUID
@@ -34,7 +36,7 @@ TaskID = uuid.UUID
 
 
 @dataclass
-class RPCParameters(JsonSchemaMixin):
+class RPCParameters(dbtClassMixin):
     timeout: Optional[float]
     task_tags: TaskTags
 
@@ -132,7 +134,7 @@ class StatusParameters(RPCParameters):
 
 
 @dataclass
-class GCSettings(JsonSchemaMixin):
+class GCSettings(dbtClassMixin):
     # start evicting the longest-ago-ended tasks here
     maxsize: int
     # start evicting all tasks before now - auto_reap_age when we have this
@@ -254,7 +256,7 @@ class RemoteExecutionResult(ExecutionResult, RemoteResult):
 
 
 @dataclass
-class ResultTable(JsonSchemaMixin):
+class ResultTable(dbtClassMixin):
     column_names: List[str]
     rows: List[Any]
 
@@ -411,7 +413,7 @@ class TaskHandlerState(StrEnum):
 
 
 @dataclass
-class TaskTiming(JsonSchemaMixin):
+class TaskTiming(dbtClassMixin):
     state: TaskHandlerState
     start: Optional[datetime]
     end: Optional[datetime]

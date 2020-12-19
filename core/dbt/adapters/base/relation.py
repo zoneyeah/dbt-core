@@ -47,13 +47,16 @@ class BaseRelation(FakeAPIObject, Hashable):
             return False
         return self.to_dict() == other.to_dict()
 
+    # TODO : Unclear why we're leveraging a type system to implement inheritance?
     @classmethod
     def get_default_quote_policy(cls) -> Policy:
-        return cls._get_field_named('quote_policy').default
+        #return cls._get_field_named('quote_policy').default
+        return Policy()
 
     @classmethod
     def get_default_include_policy(cls) -> Policy:
-        return cls._get_field_named('include_policy').default
+        #return cls._get_field_named('include_policy').default
+        return Policy()
 
     def get(self, key, default=None):
         """Override `.get` to return a metadata object so we don't break
