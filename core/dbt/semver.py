@@ -21,7 +21,6 @@ class Matchers(StrEnum):
 
 @dataclass
 class VersionSpecification(dbtClassMixin):
-    # TODO : Is it ok to initialize these as None?
     major: Optional[str] = None
     minor: Optional[str] = None
     patch: Optional[str] = None

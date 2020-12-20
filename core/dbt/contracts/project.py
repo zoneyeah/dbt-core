@@ -12,25 +12,16 @@ from hologram.helpers import HyphenatedJsonSchemaMixin, register_pattern, \
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Union, Any, NewType
 
-from dbt.contracts.jsonschema import dbtClassMixin
+from dbt.contracts.jsonschema import dbtClassMixin, ValidatedStringMixin
 from mashumaro.types import SerializableType
 
 PIN_PACKAGE_URL = 'https://docs.getdbt.com/docs/package-management#section-specifying-package-versions' # noqa
 DEFAULT_SEND_ANONYMOUS_USAGE_STATS = True
 
 
-Name = NewType('Name', str)
-register_pattern(Name, r'^[^\d\W]\w*$')
+class Name(ValidatedStringMixin):
+    ValidationRegex = r'^[^\d\W]\w*$'
 
-# TODO : Validate
-# TODO : Make some sort of validated identifier class - couple other places we do this
-class Name(str, SerializableType):
-    def _serialize(self) -> str:
-        return self
-
-    @classmethod
-    def _deserialize(cls, value: str) -> 'Name':
-        return Name(value)
 
 # this does not support the full semver (does not allow a trailing -fooXYZ) and
 # is not restrictive enough for full semver, (allows '1.0'). But it's like

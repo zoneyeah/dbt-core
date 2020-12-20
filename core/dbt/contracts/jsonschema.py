@@ -4,6 +4,8 @@ from typing import (
     Optional, TypeVar, Generic, Dict, get_type_hints, List, Tuple
 )
 from mashumaro import DataClassDictMixin
+from mashumaro.types import SerializableType
+import re
 
 
 """
@@ -43,3 +45,22 @@ class dbtClassMixin(DataClassDictMixin):
 
         # TODO .... implement these?
         return cls.from_dict(data)
+
+
+class ValidatedStringMixin(str, SerializableType):
+    ValidationRegex = None
+
+    @classmethod
+    def _deserialize(cls, value: str) -> 'ValidatedStringMixin':
+        cls.validate(value)
+        return ValidatedStringMixin(value)
+
+    def _serialize(self) -> str:
+        return str(self)
+
+    @classmethod
+    def validate(cls, value) -> str:
+        res = re.match(cls.ValidationRegex, value)
+
+        if res is None:
+            raise ValidationError(f"Invalid value: {value}") # TODO

@@ -17,22 +17,12 @@ from dbt.utils import translate_aliases
 
 from dbt.logger import GLOBAL_LOGGER as logger
 
-from dbt.contracts.jsonschema import dbtClassMixin
+from dbt.contracts.jsonschema import dbtClassMixin, ValidatedStringMixin
 from mashumaro.types import SerializableType
 
-Identifier = NewType('Identifier', str)
-register_pattern(Identifier, r'^[A-Za-z_][A-Za-z0-9_]+$')
 
-# TODO?
-class Identifier(str, SerializableType):
-    @classmethod
-    def _deserialize(cls, value: str) -> 'Identifier':
-        # TODO : Validate here?
-        return Identifier(value)
-
-    def _serialize(self) -> str:
-        # TODO : Validate here?
-        return self
+class Identifier(ValidatedStringMixin):
+    ValidationRegex = r'^[A-Za-z_][A-Za-z0-9_]+$'
 
 
 class ConnectionState(StrEnum):
