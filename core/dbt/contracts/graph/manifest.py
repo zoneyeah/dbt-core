@@ -381,6 +381,14 @@ class NameSearcher(Generic[N]):
                 return model
         return None
 
+    def search_many(self, haystack: Iterable[N]) -> List[N]:
+        """Find multiple entries in the given iterable by name."""
+        found = []
+        for model in haystack:
+            if self._matches(model):
+                found.append(model)
+        return found
+
 
 D = TypeVar('D')
 
@@ -514,6 +522,16 @@ class Manifest:
                 k: v.to_dict(omit_none=False) for k, v in self.sources.items()
             }
         }
+
+    def find_nodes_by_name(
+        self, name: str, package: Optional[str] = None
+    ) -> Optional[ManifestNode]:
+        searcher: NameSearcher = NameSearcher(
+            name, package, NodeType.refable()
+        )
+
+        result = searcher.search_many(self.nodes.values())
+        return result
 
     def find_disabled_by_name(
         self, name: str, package: Optional[str] = None
