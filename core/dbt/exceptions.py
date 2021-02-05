@@ -769,7 +769,7 @@ def raise_ambiguous_ref(node_1, node_2):
         f'The reference {get_func} is ambiguous because there are two nodes '
         f'with the name "{duped_name}". To fix this, either change the name '
         'of one of these nodes, or use the two-argument version of ref() '
-        'to specify the package that contains the intended node. Found nodes:\n'
+        'to specify the package that contains the intended node. Found:\n'
         f'- {node_1.unique_id} ({node_1.original_file_path})\n'
         f'- {node_2.unique_id} ({node_2.original_file_path})\n\n'
         f'Example: {{{{ ref("{node_1.package_name}", "{node_1.name}") }}}}'

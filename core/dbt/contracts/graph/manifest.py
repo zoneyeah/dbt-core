@@ -525,7 +525,7 @@ class Manifest:
 
     def find_nodes_by_name(
         self, name: str, package: Optional[str] = None
-    ) -> Optional[ManifestNode]:
+    ) -> List[ManifestNode]:
         searcher: NameSearcher = NameSearcher(
             name, package, NodeType.refable()
         )
