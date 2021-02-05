@@ -1,0 +1,14 @@
+[package]
+name = "tracking"
+version = "0.1.0"
+edition = "2018"
+
+[lib]
+name = "string_sum"
+crate-type = ["cdylib"]
+# to also make this library accesible to other rust code change to this line instead:
+# crate-type = ["cdylib", "rlib"]
+
+[dependencies.pyo3]
+version = "0.13.1"
+features = ["extension-module"]
