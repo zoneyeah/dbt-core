@@ -1,4 +1,5 @@
 use pyo3::prelude::*;
+use pyo3::wrap_pyfunction;
 
 #[pyfunction]
 pub fn collector_url() -> PyResult<String> { Ok("fishtownanalytics.sinter-collect.com".to_owned().to_owned()) }
@@ -24,3 +25,21 @@ pub fn load_all_timing_spec() -> PyResult<String> { Ok("iglu:com.dbt/load_all_ti
 
 #[pyfunction]
 pub fn dbt_invocation_env() -> PyResult<String> { Ok("DBT_INVOCATION_ENV".to_owned()) }
+
+
+/// This module is a python module implemented in Rust.
+/// the function name must match the library name in Cargo.toml
+#[pymodule]
+fn tracking(_: Python, m: &PyModule) -> PyResult<()> {
+    m.add_wrapped(wrap_pyfunction!(collector_url))?;
+    m.add_wrapped(wrap_pyfunction!(collector_protocol))?;
+    m.add_wrapped(wrap_pyfunction!(invocation_spec))?;
+    m.add_wrapped(wrap_pyfunction!(platform_spec))?;
+    m.add_wrapped(wrap_pyfunction!(run_model_spec))?;
+    m.add_wrapped(wrap_pyfunction!(invocation_new_spec))?;
+    m.add_wrapped(wrap_pyfunction!(package_install_spec))?;
+    m.add_wrapped(wrap_pyfunction!(deprecation_warn_spec))?;
+    m.add_wrapped(wrap_pyfunction!(load_all_timing_spec))?;
+    m.add_wrapped(wrap_pyfunction!(dbt_invocation_env))?;
+    Ok(())
+}
