@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2018"
 
 [lib]
-name = "string_sum"
+name = "tracking"
 crate-type = ["cdylib"]
 # to also make this library accesible to other rust code change to this line instead:
 # crate-type = ["cdylib", "rlib"]
