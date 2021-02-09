@@ -1,0 +1,15 @@
+[package]
+name = "extensions-tracking"
+version = "0.1.0"
+publish = false
+edition = "2018"
+workspace = "../.."
+
+[lib]
+crate-type = [ "cdylib",]
+name = "extensions_tracking"
+path = "lib.rs"
+
+[dependencies.pyo3]
+version = "0.13.1"
+features = [ "extension-module",]

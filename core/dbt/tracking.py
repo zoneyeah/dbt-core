@@ -15,23 +15,36 @@ import platform
 import uuid
 import requests
 import os
+from extensions import tracking
 
 sp_logger.setLevel(100)
 
-COLLECTOR_URL = "fishtownanalytics.sinter-collect.com"
-COLLECTOR_PROTOCOL = "https"
+# COLLECTOR_URL = "fishtownanalytics.sinter-collect.com"
+# COLLECTOR_PROTOCOL = "https"
 
-INVOCATION_SPEC = 'iglu:com.dbt/invocation/jsonschema/1-0-1'
-PLATFORM_SPEC = 'iglu:com.dbt/platform/jsonschema/1-0-0'
-RUN_MODEL_SPEC = 'iglu:com.dbt/run_model/jsonschema/1-0-1'
-INVOCATION_ENV_SPEC = 'iglu:com.dbt/invocation_env/jsonschema/1-0-0'
-PACKAGE_INSTALL_SPEC = 'iglu:com.dbt/package_install/jsonschema/1-0-0'
-RPC_REQUEST_SPEC = 'iglu:com.dbt/rpc_request/jsonschema/1-0-1'
-DEPRECATION_WARN_SPEC = 'iglu:com.dbt/deprecation_warn/jsonschema/1-0-0'
-LOAD_ALL_TIMING_SPEC = 'iglu:com.dbt/load_all_timing/jsonschema/1-0-0'
+# INVOCATION_SPEC = 'iglu:com.dbt/invocation/jsonschema/1-0-1'
+# PLATFORM_SPEC = 'iglu:com.dbt/platform/jsonschema/1-0-0'
+# RUN_MODEL_SPEC = 'iglu:com.dbt/run_model/jsonschema/1-0-1'
+# INVOCATION_ENV_SPEC = 'iglu:com.dbt/invocation_env/jsonschema/1-0-0'
+# PACKAGE_INSTALL_SPEC = 'iglu:com.dbt/package_install/jsonschema/1-0-0'
+# RPC_REQUEST_SPEC = 'iglu:com.dbt/rpc_request/jsonschema/1-0-1'
+# DEPRECATION_WARN_SPEC = 'iglu:com.dbt/deprecation_warn/jsonschema/1-0-0'
+# LOAD_ALL_TIMING_SPEC = 'iglu:com.dbt/load_all_timing/jsonschema/1-0-0'
 
-DBT_INVOCATION_ENV = 'DBT_INVOCATION_ENV'
+# DBT_INVOCATION_ENV = 'DBT_INVOCATION_ENV'
+COLLECTOR_URL = tracking.connector_url()
+COLLECTOR_PROTOCOL = tracking.collector_protocol()
 
+INVOCATION_SPEC = tracking.invocation_spec()
+PLATFORM_SPEC = tracking.platform_spec()
+RUN_MODEL_SPEC = tracking.run_model_spec()
+INVOCATION_ENV_SPEC = tracking.invocation_env_spec()
+PACKAGE_INSTALL_SPEC = tracking.package_install_spec()
+RPC_REQUEST_SPEC = tracking.rpc_request_spec()
+DEPRECATION_WARN_SPEC = tracking.deprecation_warn_spec()
+LOAD_ALL_TIMING_SPEC = tracking.load_all_timing_spec()
+
+DBT_INVOCATION_ENV = tracking.dbt_invocation_env()
 
 class TimeoutEmitter(Emitter):
     def __init__(self):
