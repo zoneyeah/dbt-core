@@ -1,1 +1,3 @@
 recursive-include dbt/include *.py *.sql *.yml *.html *.md
+recursive-include extensions *
+include Cargo.toml
