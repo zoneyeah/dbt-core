@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import os
 import sys
-import setuptools_rust as rust
 
 
 if sys.version_info < (3, 6):
@@ -41,9 +40,6 @@ setup(
     author="Fishtown Analytics",
     author_email="info@fishtownanalytics.com",
     url="https://github.com/fishtown-analytics/dbt",
-    rust_extensions=rust.find_rust_extensions(
-        binding=rust.Binding.PyO3, strip=rust.Strip.Debug
-    ),
     install_requires=[
         'dbt-core=={}'.format(package_version),
         'dbt-postgres=={}'.format(package_version),

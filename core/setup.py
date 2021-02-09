@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 import os
 import sys
+import setuptools_rust as rust
 
 if sys.version_info < (3, 6):
     print('Error: dbt does not support this version of Python.')
@@ -37,6 +38,9 @@ setup(
     author="Fishtown Analytics",
     author_email="info@fishtownanalytics.com",
     url="https://github.com/fishtown-analytics/dbt",
+    rust_extensions=rust.find_rust_extensions(
+        binding=rust.Binding.PyO3, strip=rust.Strip.Debug
+    ),
     packages=find_namespace_packages(include=['dbt', 'dbt.*']),
     package_data={
         'dbt': [
