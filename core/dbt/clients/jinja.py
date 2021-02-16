@@ -566,6 +566,8 @@ def get_rendered(
     # If this is desirable in the native env as well, we could handle the
     # native=True case by passing the input string to ast.literal_eval, like
     # the native renderer does.
+    #
+    # this optimization has been benchmarked and is worth it.
     if (
         not native and
         isinstance(string, str) and
