@@ -248,7 +248,6 @@ class Compiler:
     def _get_dbt_test_name(self) -> str:
         return 'dbt__CTE__INTERNAL_test'
 
-
     def _recursively_prepend_ctes(
         self,
         model: NonSourceCompiledNode,
@@ -325,7 +324,9 @@ class Compiler:
                 _extend_prepended_ctes(prepended_ctes, new_prepended_ctes)
 
                 new_cte_name = self.add_ephemeral_prefix(cte_model.name)
-                rendered_sql = cte_model._pre_injected_sql or cte_model.compiled_sql
+                rendered_sql = (
+                    cte_model._pre_injected_sql or cte_model.compiled_sql
+                )
                 sql = f' {new_cte_name} as (\n{rendered_sql}\n)'
 
             _add_prepended_cte(prepended_ctes, InjectedCTE(id=cte.id, sql=sql))
