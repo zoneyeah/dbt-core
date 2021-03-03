@@ -3,6 +3,10 @@
 ### Under the hood
 - Update code to use Mashumaro 2.0 ([#3138](https://github.com/fishtown-analytics/dbt/pull/3138))
 
+### Fixes
+
+- Fix compiled sql for ephemeral models ([#3139](https://github.com/fishtown-analytics/dbt/pull/3139), [#3056](https://github.com/fishtown-analytics/dbt/pull/3056))
+
 ## dbt 0.19.1b2 (February 15, 2021)
 
 ## dbt 0.19.1b1 (February 12, 2021)
