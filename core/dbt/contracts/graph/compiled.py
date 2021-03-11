@@ -56,8 +56,8 @@ class CompiledNode(ParsedNode, CompiledNodeMixin):
         else:
             self.extra_ctes.append(InjectedCTE(id=cte_id, sql=sql))
 
-    def __post_serialize__(self, dct, options=None):
-        dct = super().__post_serialize__(dct, options=options)
+    def __post_serialize__(self, dct):
+        dct = super().__post_serialize__(dct)
         if '_pre_injected_sql' in dct:
             del dct['_pre_injected_sql']
         return dct
