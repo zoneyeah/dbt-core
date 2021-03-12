@@ -1,5 +1,8 @@
 ## dbt 0.18.2 (Release TBD)
 
+## dbt 0.18.2rc1 (March 12, 2021)
+
+
 ### Under the hood
 - Pin `agate<1.6.2` to avoid installation errors relating to its new dependency
   `PyICU` ([#3160](https://github.com/fishtown-analytics/dbt/issues/3160),
