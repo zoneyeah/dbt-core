@@ -4,6 +4,10 @@
 - Update code to use Mashumaro 2.0 ([#3138](https://github.com/fishtown-analytics/dbt/pull/3138))
 - Pin `agate<1.6.2` to avoid installation errors relating to its new dependency `PyICU` ([#3160](https://github.com/fishtown-analytics/dbt/issues/3160), [#3161](https://github.com/fishtown-analytics/dbt/pull/3161))
 
+### Fixes
+
+- Fix compiled sql for ephemeral models ([#3139](https://github.com/fishtown-analytics/dbt/pull/3139), [#3056](https://github.com/fishtown-analytics/dbt/pull/3056))
+
 ## dbt 0.19.1b2 (February 15, 2021)
 
 ## dbt 0.19.1b1 (February 12, 2021)
