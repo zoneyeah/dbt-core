@@ -1,5 +1,8 @@
 ## dbt 0.19.1 (Release TBD)
 
+## dbt 0.19.1rc1 (March 15, 2021)
+
+
 ### Under the hood
 - Update code to use Mashumaro 2.0 ([#3138](https://github.com/fishtown-analytics/dbt/pull/3138))
 - Pin `agate<1.6.2` to avoid installation errors relating to its new dependency `PyICU` ([#3160](https://github.com/fishtown-analytics/dbt/issues/3160), [#3161](https://github.com/fishtown-analytics/dbt/pull/3161))
