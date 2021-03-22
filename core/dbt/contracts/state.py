@@ -9,7 +9,7 @@ class PreviousState:
         self.path: Path = path
         self.manifest: Optional[WritableManifest] = None
 
-        manifest_path = self.path / 'manifest.json'
+        manifest_path = self.path / "manifest.json"
         if manifest_path.exists() and manifest_path.is_file():
             try:
                 self.manifest = WritableManifest.read(str(manifest_path))

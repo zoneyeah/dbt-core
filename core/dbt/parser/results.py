@@ -25,9 +25,13 @@ from dbt.contracts.graph.parsed import (
 from dbt.contracts.graph.unparsed import SourcePatch
 from dbt.contracts.util import Writable, Replaceable, MacroKey, SourceKey
 from dbt.exceptions import (
-    raise_duplicate_resource_name, raise_duplicate_patch_name,
-    raise_duplicate_macro_patch_name, CompilationException, InternalException,
-    raise_compiler_error, raise_duplicate_source_patch_name
+    raise_duplicate_resource_name,
+    raise_duplicate_patch_name,
+    raise_duplicate_macro_patch_name,
+    CompilationException,
+    InternalException,
+    raise_compiler_error,
+    raise_duplicate_source_patch_name,
 )
 from dbt.node_types import NodeType
 from dbt.ui import line_wrap_message
@@ -35,12 +39,10 @@ from dbt.version import __version__
 
 
 # Parsers can return anything as long as it's a unique ID
-ParsedValueType = TypeVar('ParsedValueType', bound=HasUniqueID)
+ParsedValueType = TypeVar("ParsedValueType", bound=HasUniqueID)
 
 
-def _check_duplicates(
-    value: HasUniqueID, src: Mapping[str, HasUniqueID]
-):
+def _check_duplicates(value: HasUniqueID, src: Mapping[str, HasUniqueID]):
     if value.unique_id in src:
         raise_duplicate_resource_name(value, src[value.unique_id])
 
@@ -86,9 +88,7 @@ class ParseResult(dbtClassMixin, Writable, Replaceable):
             self.files[key] = source_file
         return self.files[key]
 
-    def add_source(
-        self, source_file: SourceFile, source: UnpatchedSourceDefinition
-    ):
+    def add_source(self, source_file: SourceFile, source: UnpatchedSourceDefinition):
         # sources can't be overwritten!
         _check_duplicates(source, self.sources)
         self.sources[source.unique_id] = source
@@ -126,7 +126,7 @@ class ParseResult(dbtClassMixin, Writable, Replaceable):
             # note that the line wrap eats newlines, so if you want newlines,
             # this is the result :(
             msg = line_wrap_message(
-                f'''\
+                f"""\
                 dbt found two macros named "{macro.name}" in the project
                 "{macro.package_name}".
 
@@ -137,8 +137,8 @@ class ParseResult(dbtClassMixin, Writable, Replaceable):
                     - {macro.original_file_path}
 
                     - {other_path}
-                ''',
-                subtract=2
+                """,
+                subtract=2,
             )
             raise_compiler_error(msg)
 
@@ -150,18 +150,14 @@ class ParseResult(dbtClassMixin, Writable, Replaceable):
         self.docs[doc.unique_id] = doc
         self.get_file(source_file).docs.append(doc.unique_id)
 
-    def add_patch(
-        self, source_file: SourceFile, patch: ParsedNodePatch
-    ) -> None:
+    def add_patch(self, source_file: SourceFile, patch: ParsedNodePatch) -> None:
         # patches can't be overwritten
         if patch.name in self.patches:
             raise_duplicate_patch_name(patch, self.patches[patch.name])
         self.patches[patch.name] = patch
         self.get_file(source_file).patches.append(patch.name)
 
-    def add_macro_patch(
-        self, source_file: SourceFile, patch: ParsedMacroPatch
-    ) -> None:
+    def add_macro_patch(self, source_file: SourceFile, patch: ParsedMacroPatch) -> None:
         # macros are fully namespaced
         key = (patch.package_name, patch.name)
         if key in self.macro_patches:
@@ -169,9 +165,7 @@ class ParseResult(dbtClassMixin, Writable, Replaceable):
         self.macro_patches[key] = patch
         self.get_file(source_file).macro_patches.append(key)
 
-    def add_source_patch(
-        self, source_file: SourceFile, patch: SourcePatch
-    ) -> None:
+    def add_source_patch(self, source_file: SourceFile, patch: SourcePatch) -> None:
         # source patches must be unique
         key = (patch.overrides, patch.name)
         if key in self.source_patches:
@@ -186,11 +180,13 @@ class ParseResult(dbtClassMixin, Writable, Replaceable):
     ) -> List[CompileResultNode]:
         if unique_id not in self.disabled:
             raise InternalException(
-                'called _get_disabled with id={}, but it does not exist'
-                .format(unique_id)
+                "called _get_disabled with id={}, but it does not exist".format(
+                    unique_id
+                )
             )
         return [
-            n for n in self.disabled[unique_id]
+            n
+            for n in self.disabled[unique_id]
             if n.original_file_path == match_file.path.original_file_path
         ]
 
@@ -199,7 +195,7 @@ class ParseResult(dbtClassMixin, Writable, Replaceable):
         node_id: str,
         source_file: SourceFile,
         old_file: SourceFile,
-        old_result: 'ParseResult',
+        old_result: "ParseResult",
     ) -> None:
         """Nodes are a special kind of complicated - there can be multiple
         with the same name, as long as all but one are disabled.
@@ -224,14 +220,15 @@ class ParseResult(dbtClassMixin, Writable, Replaceable):
         if not found:
             raise CompilationException(
                 'Expected to find "{}" in cached "manifest.nodes" or '
-                '"manifest.disabled" based on cached file information: {}!'
-                .format(node_id, old_file)
+                '"manifest.disabled" based on cached file information: {}!'.format(
+                    node_id, old_file
+                )
             )
 
     def sanitized_update(
         self,
         source_file: SourceFile,
-        old_result: 'ParseResult',
+        old_result: "ParseResult",
         resource_type: NodeType,
     ) -> bool:
         """Perform a santized update. If the file can't be updated, invalidate
@@ -246,15 +243,11 @@ class ParseResult(dbtClassMixin, Writable, Replaceable):
             self.add_doc(source_file, doc)
 
         for macro_id in old_file.macros:
-            macro = _expect_value(
-                macro_id, old_result.macros, old_file, "macros"
-            )
+            macro = _expect_value(macro_id, old_result.macros, old_file, "macros")
             self.add_macro(source_file, macro)
 
         for source_id in old_file.sources:
-            source = _expect_value(
-                source_id, old_result.sources, old_file, "sources"
-            )
+            source = _expect_value(source_id, old_result.sources, old_file, "sources")
             self.add_source(source_file, source)
 
         # because we know this is how we _parsed_ the node, we can safely
@@ -265,7 +258,7 @@ class ParseResult(dbtClassMixin, Writable, Replaceable):
         for node_id in old_file.nodes:
             # cheat: look at the first part of the node ID and compare it to
             # the parser resource type. On a mismatch, bail out.
-            if resource_type != node_id.split('.')[0]:
+            if resource_type != node_id.split(".")[0]:
                 continue
             self._process_node(node_id, source_file, old_file, old_result)
 
@@ -277,9 +270,7 @@ class ParseResult(dbtClassMixin, Writable, Replaceable):
 
         patched = False
         for name in old_file.patches:
-            patch = _expect_value(
-                name, old_result.patches, old_file, "patches"
-            )
+            patch = _expect_value(name, old_result.patches, old_file, "patches")
             self.add_patch(source_file, patch)
             patched = True
         if patched:
@@ -312,8 +303,8 @@ class ParseResult(dbtClassMixin, Writable, Replaceable):
         return cls(FileHash.empty(), FileHash.empty(), {})
 
 
-K_T = TypeVar('K_T')
-V_T = TypeVar('V_T')
+K_T = TypeVar("K_T")
+V_T = TypeVar("V_T")
 
 
 def _expect_value(
@@ -322,7 +313,6 @@ def _expect_value(
     if key not in src:
         raise CompilationException(
             'Expected to find "{}" in cached "result.{}" based '
-            'on cached file information: {}!'
-            .format(key, name, old_file)
+            "on cached file information: {}!".format(key, name, old_file)
         )
     return src[key]

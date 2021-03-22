@@ -1,7 +1,7 @@
 from test.integration.base import DBTIntegrationTest, use_profile
 
-class TestSnowflakeLateBindingViewDependency(DBTIntegrationTest):
 
+class TestSnowflakeLateBindingViewDependency(DBTIntegrationTest):
     @property
     def schema(self):
         return "snowflake_view_dependency_test_036"
@@ -13,15 +13,12 @@ class TestSnowflakeLateBindingViewDependency(DBTIntegrationTest):
     @property
     def project_config(self):
         return {
-            'config-version': 2,
-            'data-paths': ['data'],
-            'seeds': {
-                'quote_columns': False,
+            "config-version": 2,
+            "data-paths": ["data"],
+            "seeds": {
+                "quote_columns": False,
             },
-            'quoting': {
-                'schema': False,
-                'identifier': False
-            }
+            "quoting": {"schema": False, "identifier": False},
         }
 
     """
@@ -36,18 +33,20 @@ class TestSnowflakeLateBindingViewDependency(DBTIntegrationTest):
     correctly in various different scenarios
     """
 
-    @use_profile('snowflake')
+    @use_profile("snowflake")
     def test__snowflake__changed_table_schema_for_downstream_view(self):
         results = self.run_dbt(["seed"])
-        self.assertEqual(len(results),  1)
+        self.assertEqual(len(results), 1)
 
         results = self.run_dbt(["run"])
-        self.assertEqual(len(results),  2)
+        self.assertEqual(len(results), 2)
         self.assertManyTablesEqual(["PEOPLE", "BASE_TABLE", "DEPENDENT_MODEL"])
 
         # Change the schema of base_table, assert that dependent_model doesn't fail
-        results = self.run_dbt(["run", "--vars", "{add_table_field: true, dependent_type: view}"])
-        self.assertEqual(len(results),  2)
+        results = self.run_dbt(
+            ["run", "--vars", "{add_table_field: true, dependent_type: view}"]
+        )
+        self.assertEqual(len(results), 2)
         self.assertManyTablesEqual(["BASE_TABLE", "DEPENDENT_MODEL"])
 
     """
@@ -55,80 +54,77 @@ class TestSnowflakeLateBindingViewDependency(DBTIntegrationTest):
     then is changed to be a table. This checks that the table materialization does not
     errantly rename a view that might have an invalid definition, which would cause an error
     """
-    @use_profile('snowflake')
-    def test__snowflake__changed_table_schema_for_downstream_view_changed_to_table(self):
+
+    @use_profile("snowflake")
+    def test__snowflake__changed_table_schema_for_downstream_view_changed_to_table(
+        self,
+    ):
         results = self.run_dbt(["seed"])
-        self.assertEqual(len(results),  1)
+        self.assertEqual(len(results), 1)
 
         results = self.run_dbt(["run"])
-        self.assertEqual(len(results),  2)
+        self.assertEqual(len(results), 2)
         self.assertManyTablesEqual(["PEOPLE", "BASE_TABLE", "DEPENDENT_MODEL"])
 
-        expected_types = {
-            'base_table': 'table',
-            'dependent_model': 'view'
-        }
+        expected_types = {"base_table": "table", "dependent_model": "view"}
 
         # ensure that the model actually was materialized as a table
         for result in results:
             node_name = result.node.name
             self.assertEqual(result.node.config.materialized, expected_types[node_name])
 
-        results = self.run_dbt(["run", "--vars", "{add_table_field: true, dependent_type: table}"])
-        self.assertEqual(len(results),  2)
+        results = self.run_dbt(
+            ["run", "--vars", "{add_table_field: true, dependent_type: table}"]
+        )
+        self.assertEqual(len(results), 2)
         self.assertManyTablesEqual(["BASE_TABLE", "DEPENDENT_MODEL"])
 
-        expected_types = {
-            'base_table': 'table',
-            'dependent_model': 'table'
-        }
+        expected_types = {"base_table": "table", "dependent_model": "table"}
 
         # ensure that the model actually was materialized as a table
         for result in results:
             node_name = result.node.name
             self.assertEqual(result.node.config.materialized, expected_types[node_name])
 
-    @use_profile('presto')
+    @use_profile("presto")
     def test__presto__changed_table_schema_for_downstream_view(self):
         results = self.run_dbt(["seed"])
-        self.assertEqual(len(results),  1)
+        self.assertEqual(len(results), 1)
 
         results = self.run_dbt(["run"])
-        self.assertEqual(len(results),  2)
+        self.assertEqual(len(results), 2)
         self.assertManyTablesEqual(["people", "base_table", "dependent_model"])
 
         # Change the schema of base_table, assert that dependent_model doesn't fail
-        results = self.run_dbt(["run", "--vars", "{add_table_field: true, dependent_type: view}"])
-        self.assertEqual(len(results),  2)
+        results = self.run_dbt(
+            ["run", "--vars", "{add_table_field: true, dependent_type: view}"]
+        )
+        self.assertEqual(len(results), 2)
         self.assertManyTablesEqual(["base_table", "dependent_model"])
 
-    @use_profile('presto')
+    @use_profile("presto")
     def test__presto__changed_table_schema_for_downstream_view_changed_to_table(self):
         results = self.run_dbt(["seed"])
-        self.assertEqual(len(results),  1)
+        self.assertEqual(len(results), 1)
 
         results = self.run_dbt(["run"])
-        self.assertEqual(len(results),  2)
+        self.assertEqual(len(results), 2)
         self.assertManyTablesEqual(["people", "base_table", "dependent_model"])
 
-        expected_types = {
-            'base_table': 'table',
-            'dependent_model': 'view'
-        }
+        expected_types = {"base_table": "table", "dependent_model": "view"}
 
         # ensure that the model actually was materialized as a table
         for result in results:
             node_name = result.node.name
             self.assertEqual(result.node.config.materialized, expected_types[node_name])
 
-        results = self.run_dbt(["run", "--vars", "{add_table_field: true, dependent_type: table}"])
-        self.assertEqual(len(results),  2)
+        results = self.run_dbt(
+            ["run", "--vars", "{add_table_field: true, dependent_type: table}"]
+        )
+        self.assertEqual(len(results), 2)
         self.assertManyTablesEqual(["base_table", "dependent_model"])
 
-        expected_types = {
-            'base_table': 'table',
-            'dependent_model': 'table'
-        }
+        expected_types = {"base_table": "table", "dependent_model": "table"}
 
         # ensure that the model actually was materialized as a table
         for result in results:

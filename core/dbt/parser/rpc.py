@@ -38,11 +38,11 @@ class RPCCallParser(SimpleSQLParser[ParsedRPCNode]):
         # we do it this way to make mypy happy
         if not isinstance(block, RPCBlock):
             raise InternalException(
-                'While parsing RPC calls, got an actual file block instead of '
-                'an RPC block: {}'.format(block)
+                "While parsing RPC calls, got an actual file block instead of "
+                "an RPC block: {}".format(block)
             )
 
-        return os.path.join('rpc', block.name)
+        return os.path.join("rpc", block.name)
 
     def parse_remote(self, sql: str, name: str) -> ParsedRPCNode:
         source_file = SourceFile.remote(contents=sql)
@@ -53,8 +53,8 @@ class RPCCallParser(SimpleSQLParser[ParsedRPCNode]):
 class RPCMacroParser(MacroParser):
     def parse_remote(self, contents) -> Iterable[ParsedMacro]:
         base = UnparsedMacro(
-            path='from remote system',
-            original_file_path='from remote system',
+            path="from remote system",
+            original_file_path="from remote system",
             package_name=self.project.project_name,
             raw_sql=contents,
             root_path=self.project.project_root,

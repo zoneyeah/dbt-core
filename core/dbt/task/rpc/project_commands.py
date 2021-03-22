@@ -19,9 +19,7 @@ from dbt.contracts.rpc import (
     RPCSnapshotParameters,
     RPCSourceFreshnessParameters,
 )
-from dbt.rpc.method import (
-    Parameters, RemoteManifestMethod
-)
+from dbt.rpc.method import Parameters, RemoteManifestMethod
 
 from dbt.task.base import BaseTask
 from dbt.task.compile import CompileTask
@@ -43,9 +41,7 @@ class RPCCommandTask(
     BaseTask,
 ):
     @staticmethod
-    def _listify(
-        value: Optional[Union[str, List[str]]]
-    ) -> Optional[List[str]]:
+    def _listify(value: Optional[Union[str, List[str]]]) -> Optional[List[str]]:
         if value is None:
             return None
         elif isinstance(value, str):
@@ -66,10 +62,8 @@ def state_path(state: Optional[str]) -> Optional[Path]:
         return None
 
 
-class RemoteCompileProjectTask(
-    RPCCommandTask[RPCCompileParameters], CompileTask
-):
-    METHOD_NAME = 'compile'
+class RemoteCompileProjectTask(RPCCommandTask[RPCCompileParameters], CompileTask):
+    METHOD_NAME = "compile"
 
     def set_args(self, params: RPCCompileParameters) -> None:
         self.args.models = self._listify(params.models)
@@ -84,7 +78,7 @@ class RemoteCompileProjectTask(
 
 
 class RemoteRunProjectTask(RPCCommandTask[RPCRunParameters], RunTask):
-    METHOD_NAME = 'run'
+    METHOD_NAME = "run"
 
     def set_args(self, params: RPCRunParameters) -> None:
         self.args.models = self._listify(params.models)
@@ -103,7 +97,7 @@ class RemoteRunProjectTask(RPCCommandTask[RPCRunParameters], RunTask):
 
 
 class RemoteSeedProjectTask(RPCCommandTask[RPCSeedParameters], SeedTask):
-    METHOD_NAME = 'seed'
+    METHOD_NAME = "seed"
 
     def set_args(self, params: RPCSeedParameters) -> None:
         # select has an argparse `dest` value of `models`.
@@ -119,7 +113,7 @@ class RemoteSeedProjectTask(RPCCommandTask[RPCSeedParameters], SeedTask):
 
 
 class RemoteTestProjectTask(RPCCommandTask[RPCTestParameters], TestTask):
-    METHOD_NAME = 'test'
+    METHOD_NAME = "test"
 
     def set_args(self, params: RPCTestParameters) -> None:
         self.args.models = self._listify(params.models)
@@ -142,7 +136,7 @@ class RemoteDocsGenerateProjectTask(
     RPCCommandTask[RPCDocsGenerateParameters],
     GenerateTask,
 ):
-    METHOD_NAME = 'docs.generate'
+    METHOD_NAME = "docs.generate"
 
     def set_args(self, params: RPCDocsGenerateParameters) -> None:
         self.args.models = None
@@ -170,13 +164,11 @@ class RemoteRunOperationTask(
     RemoteManifestMethod[RPCRunOperationParameters, RemoteRunOperationResult],
     HasCLI[RPCRunOperationParameters, RemoteRunOperationResult],
 ):
-    METHOD_NAME = 'run-operation'
+    METHOD_NAME = "run-operation"
 
     def __init__(self, args, config, manifest):
         super().__init__(args, config)
-        RemoteManifestMethod.__init__(
-            self, args, config, manifest  # type: ignore
-        )
+        RemoteManifestMethod.__init__(self, args, config, manifest)  # type: ignore
 
     def load_manifest(self):
         # we started out with a manifest!
@@ -205,7 +197,7 @@ class RemoteRunOperationTask(
 
 
 class RemoteSnapshotTask(RPCCommandTask[RPCSnapshotParameters], SnapshotTask):
-    METHOD_NAME = 'snapshot'
+    METHOD_NAME = "snapshot"
 
     def set_args(self, params: RPCSnapshotParameters) -> None:
         # select has an argparse `dest` value of `models`.
@@ -220,10 +212,9 @@ class RemoteSnapshotTask(RPCCommandTask[RPCSnapshotParameters], SnapshotTask):
 
 
 class RemoteSourceFreshnessTask(
-    RPCCommandTask[RPCSourceFreshnessParameters],
-    FreshnessTask
+    RPCCommandTask[RPCSourceFreshnessParameters], FreshnessTask
 ):
-    METHOD_NAME = 'snapshot-freshness'
+    METHOD_NAME = "snapshot-freshness"
 
     def set_args(self, params: RPCSourceFreshnessParameters) -> None:
         self.args.selected = self._listify(params.select)
@@ -233,10 +224,8 @@ class RemoteSourceFreshnessTask(
 
 
 # this is a weird and special method.
-class GetManifest(
-    RemoteManifestMethod[GetManifestParameters, GetManifestResult]
-):
-    METHOD_NAME = 'get-manifest'
+class GetManifest(RemoteManifestMethod[GetManifestParameters, GetManifestResult]):
+    METHOD_NAME = "get-manifest"
 
     def set_args(self, params: GetManifestParameters) -> None:
         self.args.models = None

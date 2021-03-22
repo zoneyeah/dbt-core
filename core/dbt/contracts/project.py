@@ -5,24 +5,26 @@ from dbt.logger import GLOBAL_LOGGER as logger  # noqa
 from dbt import tracking
 from dbt import ui
 from dbt.dataclass_schema import (
-    dbtClassMixin, ValidationError,
+    dbtClassMixin,
+    ValidationError,
     HyphenatedDbtClassMixin,
     ExtensibleDbtClassMixin,
-    register_pattern, ValidatedStringMixin
+    register_pattern,
+    ValidatedStringMixin,
 )
 from dataclasses import dataclass, field
 from typing import Optional, List, Dict, Union, Any
 from mashumaro.types import SerializableType
 
-PIN_PACKAGE_URL = 'https://docs.getdbt.com/docs/package-management#section-specifying-package-versions'  # noqa
+PIN_PACKAGE_URL = "https://docs.getdbt.com/docs/package-management#section-specifying-package-versions"  # noqa
 DEFAULT_SEND_ANONYMOUS_USAGE_STATS = True
 
 
 class Name(ValidatedStringMixin):
-    ValidationRegex = r'^[^\d\W]\w*$'
+    ValidationRegex = r"^[^\d\W]\w*$"
 
 
-register_pattern(Name, r'^[^\d\W]\w*$')
+register_pattern(Name, r"^[^\d\W]\w*$")
 
 
 class SemverString(str, SerializableType):
@@ -30,7 +32,7 @@ class SemverString(str, SerializableType):
         return self
 
     @classmethod
-    def _deserialize(cls, value: str) -> 'SemverString':
+    def _deserialize(cls, value: str) -> "SemverString":
         return SemverString(value)
 
 
@@ -39,7 +41,7 @@ class SemverString(str, SerializableType):
 # 'semver lite'.
 register_pattern(
     SemverString,
-    r'^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(\.(?:0|[1-9]\d*))?$',
+    r"^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(\.(?:0|[1-9]\d*))?$",
 )
 
 
@@ -105,8 +107,7 @@ class ProjectPackageMetadata:
 
     @classmethod
     def from_project(cls, project):
-        return cls(name=project.project_name,
-                   packages=project.packages.packages)
+        return cls(name=project.project_name, packages=project.packages.packages)
 
 
 @dataclass
@@ -124,46 +125,46 @@ class RegistryPackageMetadata(
 
 # A list of all the reserved words that packages may not have as names.
 BANNED_PROJECT_NAMES = {
-    '_sql_results',
-    'adapter',
-    'api',
-    'column',
-    'config',
-    'context',
-    'database',
-    'env',
-    'env_var',
-    'exceptions',
-    'execute',
-    'flags',
-    'fromjson',
-    'fromyaml',
-    'graph',
-    'invocation_id',
-    'load_agate_table',
-    'load_result',
-    'log',
-    'model',
-    'modules',
-    'post_hooks',
-    'pre_hooks',
-    'ref',
-    'render',
-    'return',
-    'run_started_at',
-    'schema',
-    'source',
-    'sql',
-    'sql_now',
-    'store_result',
-    'store_raw_result',
-    'target',
-    'this',
-    'tojson',
-    'toyaml',
-    'try_or_compiler_error',
-    'var',
-    'write',
+    "_sql_results",
+    "adapter",
+    "api",
+    "column",
+    "config",
+    "context",
+    "database",
+    "env",
+    "env_var",
+    "exceptions",
+    "execute",
+    "flags",
+    "fromjson",
+    "fromyaml",
+    "graph",
+    "invocation_id",
+    "load_agate_table",
+    "load_result",
+    "log",
+    "model",
+    "modules",
+    "post_hooks",
+    "pre_hooks",
+    "ref",
+    "render",
+    "return",
+    "run_started_at",
+    "schema",
+    "source",
+    "sql",
+    "sql_now",
+    "store_result",
+    "store_raw_result",
+    "target",
+    "this",
+    "tojson",
+    "toyaml",
+    "try_or_compiler_error",
+    "var",
+    "write",
 }
 
 
@@ -198,7 +199,7 @@ class Project(HyphenatedDbtClassMixin, Replaceable):
     vars: Optional[Dict[str, Any]] = field(
         default=None,
         metadata=dict(
-            description='map project names to their vars override dicts',
+            description="map project names to their vars override dicts",
         ),
     )
     packages: List[PackageSpec] = field(default_factory=list)
@@ -207,7 +208,7 @@ class Project(HyphenatedDbtClassMixin, Replaceable):
     @classmethod
     def validate(cls, data):
         super().validate(data)
-        if data['name'] in BANNED_PROJECT_NAMES:
+        if data["name"] in BANNED_PROJECT_NAMES:
             raise ValidationError(
                 f"Invalid project name: {data['name']} is a reserved word"
             )
@@ -235,8 +236,8 @@ class UserConfig(ExtensibleDbtClassMixin, Replaceable, UserConfigContract):
 
 @dataclass
 class ProfileConfig(HyphenatedDbtClassMixin, Replaceable):
-    profile_name: str = field(metadata={'preserve_underscore': True})
-    target_name: str = field(metadata={'preserve_underscore': True})
+    profile_name: str = field(metadata={"preserve_underscore": True})
+    target_name: str = field(metadata={"preserve_underscore": True})
     config: UserConfig
     threads: int
     # TODO: make this a dynamic union of some kind?
@@ -255,7 +256,7 @@ class ConfiguredQuoting(Quoting, Replaceable):
 class Configuration(Project, ProfileConfig):
     cli_vars: Dict[str, Any] = field(
         default_factory=dict,
-        metadata={'preserve_underscore': True},
+        metadata={"preserve_underscore": True},
     )
     quoting: Optional[ConfiguredQuoting] = None
 

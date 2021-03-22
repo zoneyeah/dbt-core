@@ -8,9 +8,7 @@ from dbt.parser.search import FileBlock, FilesystemSearcher
 
 class SeedParser(SimpleSQLParser[ParsedSeedNode]):
     def get_paths(self):
-        return FilesystemSearcher(
-            self.project, self.project.data_paths, '.csv'
-        )
+        return FilesystemSearcher(self.project, self.project.data_paths, ".csv")
 
     def parse_from_dict(self, dct, validate=True) -> ParsedSeedNode:
         if validate:
@@ -30,9 +28,7 @@ class SeedParser(SimpleSQLParser[ParsedSeedNode]):
     ) -> None:
         """Seeds don't need to do any rendering."""
 
-    def load_file(
-        self, match: FilePath, *, set_contents: bool = False
-    ) -> SourceFile:
+    def load_file(self, match: FilePath, *, set_contents: bool = False) -> SourceFile:
         if match.seed_too_large():
             # We don't want to calculate a hash of this file. Use the path.
             return SourceFile.big_seed(match)

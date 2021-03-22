@@ -7,11 +7,14 @@ from dbt.contracts.graph.parsed import ParsedDocumentation
 from dbt.node_types import NodeType
 from dbt.parser.base import Parser
 from dbt.parser.search import (
-    BlockContents, FileBlock, FilesystemSearcher, BlockSearcher
+    BlockContents,
+    FileBlock,
+    FilesystemSearcher,
+    BlockSearcher,
 )
 
 
-SHOULD_PARSE_RE = re.compile(r'{[{%]')
+SHOULD_PARSE_RE = re.compile(r"{[{%]")
 
 
 class DocumentationParser(Parser[ParsedDocumentation]):
@@ -19,7 +22,7 @@ class DocumentationParser(Parser[ParsedDocumentation]):
         return FilesystemSearcher(
             project=self.project,
             relative_dirs=self.project.docs_paths,
-            extension='.md',
+            extension=".md",
         )
 
     @property
@@ -33,11 +36,9 @@ class DocumentationParser(Parser[ParsedDocumentation]):
     def generate_unique_id(self, resource_name: str) -> str:
         # because docs are in their own graph namespace, node type doesn't
         # need to be part of the unique ID.
-        return '{}.{}'.format(self.project.project_name, resource_name)
+        return "{}.{}".format(self.project.project_name, resource_name)
 
-    def parse_block(
-        self, block: BlockContents
-    ) -> Iterable[ParsedDocumentation]:
+    def parse_block(self, block: BlockContents) -> Iterable[ParsedDocumentation]:
         unique_id = self.generate_unique_id(block.name)
         contents = get_rendered(block.contents, {}).strip()
 
@@ -55,7 +56,7 @@ class DocumentationParser(Parser[ParsedDocumentation]):
     def parse_file(self, file_block: FileBlock):
         searcher: Iterable[BlockContents] = BlockSearcher(
             source=[file_block],
-            allowed_blocks={'docs'},
+            allowed_blocks={"docs"},
             source_tag_factory=BlockContents,
         )
         for block in searcher:

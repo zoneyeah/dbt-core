@@ -40,12 +40,12 @@ def env_set_truthy(key):
     otherwise.
     """
     value = os.getenv(key)
-    if not value or value.lower() in ('0', 'false', 'f'):
+    if not value or value.lower() in ("0", "false", "f"):
         return None
     return value
 
 
-OAUTH_TESTS_DISABLED = env_set_truthy('DBT_INTEGRATION_TEST_SNOWFLAKE_OAUTH_DISABLED')
+OAUTH_TESTS_DISABLED = env_set_truthy("DBT_INTEGRATION_TEST_SNOWFLAKE_OAUTH_DISABLED")
 
 
 class TestSnowflakeOauth(DBTIntegrationTest):
@@ -55,7 +55,7 @@ class TestSnowflakeOauth(DBTIntegrationTest):
 
     @staticmethod
     def dir(path):
-        return path.lstrip('/')
+        return path.lstrip("/")
 
     @property
     def models(self):
@@ -63,19 +63,20 @@ class TestSnowflakeOauth(DBTIntegrationTest):
 
     def snowflake_profile(self):
         profile = super().snowflake_profile()
-        profile['test']['target'] = 'oauth'
-        missing = ', '.join(
-            k for k in ('oauth_client_id', 'oauth_client_secret', 'token')
-            if k not in profile['test']['outputs']['oauth']
+        profile["test"]["target"] = "oauth"
+        missing = ", ".join(
+            k
+            for k in ("oauth_client_id", "oauth_client_secret", "token")
+            if k not in profile["test"]["outputs"]["oauth"]
         )
         if missing:
-            raise ValueError(f'Cannot run test - {missing} not configured')
-        del profile['test']['outputs']['default2']
-        del profile['test']['outputs']['noaccess']
+            raise ValueError(f"Cannot run test - {missing} not configured")
+        del profile["test"]["outputs"]["default2"]
+        del profile["test"]["outputs"]["noaccess"]
         return profile
 
-    @pytest.mark.skipif(OAUTH_TESTS_DISABLED, reason='oauth tests disabled')
-    @use_profile('snowflake')
+    @pytest.mark.skipif(OAUTH_TESTS_DISABLED, reason="oauth tests disabled")
+    @use_profile("snowflake")
     def test_snowflake_basic(self):
         self.run_dbt()
-        self.assertManyRelationsEqual([['MODEL_3'], ['MODEL_4']])
+        self.assertManyRelationsEqual([["MODEL_3"], ["MODEL_4"]])

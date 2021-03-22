@@ -35,7 +35,8 @@ class TestTracking(unittest.TestCase):
         assert dbt.tracking.active_user.invocation_id == invocation_id
         assert dbt.tracking.active_user.run_started_at == run_started_at
 
-        # this should generate a whole new user object -> new invocation_id/run_started_at
+        # this should generate a whole new user object -> new
+        # invocation_id/run_started_at
         dbt.tracking.do_not_track()
         assert isinstance(dbt.tracking.active_user, dbt.tracking.User)
 
@@ -50,7 +51,8 @@ class TestTracking(unittest.TestCase):
     def test_tracking_never_ok(self):
         assert dbt.tracking.active_user is None
 
-        # this should generate a whole new user object -> new invocation_id/run_started_at
+        # this should generate a whole new user object -> new
+        # invocation_id/run_started_at
         dbt.tracking.do_not_track()
         assert isinstance(dbt.tracking.active_user, dbt.tracking.User)
 
@@ -62,7 +64,8 @@ class TestTracking(unittest.TestCase):
     def test_disable_never_enabled(self):
         assert dbt.tracking.active_user is None
 
-        # this should generate a whole new user object -> new invocation_id/run_started_at
+        # this should generate a whole new user object -> new
+        # invocation_id/run_started_at
         dbt.tracking.disable_tracking()
         assert isinstance(dbt.tracking.active_user, dbt.tracking.User)
 

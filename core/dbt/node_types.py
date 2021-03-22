@@ -4,20 +4,20 @@ from dbt.dataclass_schema import StrEnum
 
 
 class NodeType(StrEnum):
-    Model = 'model'
-    Analysis = 'analysis'
-    Test = 'test'
-    Snapshot = 'snapshot'
-    Operation = 'operation'
-    Seed = 'seed'
-    RPCCall = 'rpc'
-    Documentation = 'docs'
-    Source = 'source'
-    Macro = 'macro'
-    Exposure = 'exposure'
+    Model = "model"
+    Analysis = "analysis"
+    Test = "test"
+    Snapshot = "snapshot"
+    Operation = "operation"
+    Seed = "seed"
+    RPCCall = "rpc"
+    Documentation = "docs"
+    Source = "source"
+    Macro = "macro"
+    Exposure = "exposure"
 
     @classmethod
-    def executable(cls) -> List['NodeType']:
+    def executable(cls) -> List["NodeType"]:
         return [
             cls.Model,
             cls.Test,
@@ -30,7 +30,7 @@ class NodeType(StrEnum):
         ]
 
     @classmethod
-    def refable(cls) -> List['NodeType']:
+    def refable(cls) -> List["NodeType"]:
         return [
             cls.Model,
             cls.Seed,
@@ -38,7 +38,7 @@ class NodeType(StrEnum):
         ]
 
     @classmethod
-    def documentable(cls) -> List['NodeType']:
+    def documentable(cls) -> List["NodeType"]:
         return [
             cls.Model,
             cls.Seed,
@@ -46,16 +46,16 @@ class NodeType(StrEnum):
             cls.Source,
             cls.Macro,
             cls.Analysis,
-            cls.Exposure
+            cls.Exposure,
         ]
 
     def pluralize(self) -> str:
-        if self == 'analysis':
-            return 'analyses'
+        if self == "analysis":
+            return "analyses"
         else:
-            return f'{self}s'
+            return f"{self}s"
 
 
 class RunHookType(StrEnum):
-    Start = 'on-run-start'
-    End = 'on-run-end'
+    Start = "on-run-start"
+    End = "on-run-end"

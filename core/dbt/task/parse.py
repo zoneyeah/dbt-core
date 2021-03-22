@@ -8,9 +8,7 @@
 # snakeviz dbt.cprof
 from dbt.task.base import ConfiguredTask
 from dbt.adapters.factory import get_adapter
-from dbt.parser.manifest import (
-    Manifest, MacroManifest, ManifestLoader, _check_manifest
-)
+from dbt.parser.manifest import Manifest, MacroManifest, ManifestLoader, _check_manifest
 from dbt.logger import DbtProcessState, print_timestamped_line
 from dbt.clients.system import write_file
 from dbt.graph import Graph
@@ -20,9 +18,9 @@ import os
 import json
 import dbt.utils
 
-MANIFEST_FILE_NAME = 'manifest.json'
-PERF_INFO_FILE_NAME = 'perf_info.json'
-PARSING_STATE = DbtProcessState('parsing')
+MANIFEST_FILE_NAME = "manifest.json"
+PERF_INFO_FILE_NAME = "perf_info.json"
+PARSING_STATE = DbtProcessState("parsing")
 
 
 class ParseTask(ConfiguredTask):
@@ -38,8 +36,10 @@ class ParseTask(ConfiguredTask):
 
     def write_perf_info(self):
         path = os.path.join(self.config.target_path, PERF_INFO_FILE_NAME)
-        write_file(path, json.dumps(self.loader._perf_info,
-                                    cls=dbt.utils.JSONEncoder, indent=4))
+        write_file(
+            path,
+            json.dumps(self.loader._perf_info, cls=dbt.utils.JSONEncoder, indent=4),
+        )
         print_timestamped_line(f"Performance info: {path}")
 
     # This method takes code that normally exists in other files
@@ -73,9 +73,7 @@ class ParseTask(ConfiguredTask):
             print_timestamped_line("Manifest checked")
             manifest.build_flat_graph()
             print_timestamped_line("Flat graph built")
-            loader._perf_info.load_all_elapsed = (
-                time.perf_counter() - start_load_all
-            )
+            loader._perf_info.load_all_elapsed = time.perf_counter() - start_load_all
 
         self.loader = loader
         self.manifest = manifest
@@ -87,13 +85,13 @@ class ParseTask(ConfiguredTask):
         self.graph = compiler.compile(self.manifest)
 
     def run(self):
-        print_timestamped_line('Start parsing.')
+        print_timestamped_line("Start parsing.")
         self.get_full_manifest()
         if self.args.compile:
-            print_timestamped_line('Compiling.')
+            print_timestamped_line("Compiling.")
             self.compile_manifest()
         if self.args.write_manifest:
-            print_timestamped_line('Writing manifest.')
+            print_timestamped_line("Writing manifest.")
             self.write_manifest()
         self.write_perf_info()
-        print_timestamped_line('Done.')
+        print_timestamped_line("Done.")

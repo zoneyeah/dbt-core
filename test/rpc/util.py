@@ -1,7 +1,6 @@
 import base64
 import json
 import os
-import pytest
 import random
 import signal
 import socket
@@ -20,7 +19,7 @@ from dbt.config import RuntimeConfig
 
 
 def query_url(url, query: Dict[str, Any]):
-    headers = {'content-type': 'application/json'}
+    headers = {"content-type": "application/json"}
     return requests.post(url, headers=headers, data=json.dumps(query))
 
 
@@ -35,7 +34,7 @@ class ServerProcess(dbt.flags.MP_CONTEXT.Process):
         port,
         profiles_dir,
         cli_vars=None,
-        criteria=('ready',),
+        criteria=("ready",),
         target=None,
     ):
         self.cwd = cwd
@@ -43,19 +42,22 @@ class ServerProcess(dbt.flags.MP_CONTEXT.Process):
         self.criteria = criteria
         self.error = None
         handle_and_check_args = [
-            'rpc', '--log-cache-events',
-            '--port', str(self.port),
-            '--profiles-dir', profiles_dir
+            "rpc",
+            "--log-cache-events",
+            "--port",
+            str(self.port),
+            "--profiles-dir",
+            profiles_dir,
         ]
         if cli_vars:
-            handle_and_check_args.extend(['--vars', cli_vars])
+            handle_and_check_args.extend(["--vars", cli_vars])
         if target is not None:
-            handle_and_check_args.extend(['--target', target])
+            handle_and_check_args.extend(["--target", target])
 
         super().__init__(
             target=handle_and_check,
             args=(handle_and_check_args,),
-            name='ServerProcess',
+            name="ServerProcess",
         )
 
     def run(self):
@@ -68,19 +70,17 @@ class ServerProcess(dbt.flags.MP_CONTEXT.Process):
     def can_connect(self):
         sock = socket.socket()
         try:
-            sock.connect(('localhost', self.port))
+            sock.connect(("localhost", self.port))
         except socket.error:
             return False
         sock.close()
         return True
 
     def _compare_result(self, result):
-        return result['result']['state'] in self.criteria
+        return result["result"]["state"] in self.criteria
 
     def status_ok(self):
-        result = self.query(
-            {'method': 'status', 'id': 1, 'jsonrpc': '2.0'}
-        ).json()
+        result = self.query({"method": "status", "id": 1, "jsonrpc": "2.0"}).json()
         return self._compare_result(result)
 
     def is_up(self):
@@ -95,21 +95,21 @@ class ServerProcess(dbt.flags.MP_CONTEXT.Process):
                 break
             time.sleep(0.5)
         if not self.can_connect():
-            raise NoServerException('server never appeared!')
+            raise NoServerException("server never appeared!")
         status_result = self.query(
-            {'method': 'status', 'id': 1, 'jsonrpc': '2.0'}
+            {"method": "status", "id": 1, "jsonrpc": "2.0"}
         ).json()
         if not self._compare_result(status_result):
             raise NoServerException(
-                'Got invalid status result: {}'.format(status_result)
+                "Got invalid status result: {}".format(status_result)
             )
 
     @property
     def url(self):
-        return 'http://localhost:{}/jsonrpc'.format(self.port)
+        return "http://localhost:{}/jsonrpc".format(self.port)
 
     def query(self, query):
-        headers = {'content-type': 'application/json'}
+        headers = {"content-type": "application/json"}
         return requests.post(self.url, headers=headers, data=json.dumps(query))
 
 
@@ -122,10 +122,10 @@ class Querier:
 
     def build_request_data(self, method, params, request_id):
         return {
-            'jsonrpc': '2.0',
-            'method': method,
-            'params': params,
-            'id': request_id,
+            "jsonrpc": "2.0",
+            "method": method,
+            "params": params,
+            "id": request_id,
         }
 
     def request(self, method, params=None, request_id=1):
@@ -136,34 +136,32 @@ class Querier:
             method=method, params=params, request_id=request_id
         )
         response = self.server.query(data)
-        assert response.ok, f'invalid response from server: {response.text}'
+        assert response.ok, f"invalid response from server: {response.text}"
         return response.json()
 
     def status(self, request_id: int = 1):
-        return self.request(method='status', request_id=request_id)
+        return self.request(method="status", request_id=request_id)
 
     def wait_for_status(self, expected, times=120) -> bool:
         for _ in range(times):
             time.sleep(0.5)
             status = self.is_result(self.status())
-            if status['state'] == expected:
+            if status["state"] == expected:
                 return True
         return False
 
     def ps(self, active=True, completed=False, request_id=1):
         params = {}
         if active is not None:
-            params['active'] = active
+            params["active"] = active
         if completed is not None:
-            params['completed'] = completed
+            params["completed"] = completed
 
-        return self.request(method='ps', params=params, request_id=request_id)
+        return self.request(method="ps", params=params, request_id=request_id)
 
     def kill(self, task_id: str, request_id: int = 1):
-        params = {'task_id': task_id}
-        return self.request(
-            method='kill', params=params, request_id=request_id
-        )
+        params = {"task_id": task_id}
+        return self.request(method="kill", params=params, request_id=request_id)
 
     def poll(
         self,
@@ -173,15 +171,13 @@ class Querier:
         request_id: int = 1,
     ):
         params = {
-            'request_token': request_token,
+            "request_token": request_token,
         }
         if logs is not None:
-            params['logs'] = logs
+            params["logs"] = logs
         if logs_start is not None:
-            params['logs_start'] = logs_start
-        return self.request(
-            method='poll', params=params, request_id=request_id
-        )
+            params["logs_start"] = logs_start
+        return self.request(method="poll", params=params, request_id=request_id)
 
     def gc(
         self,
@@ -192,22 +188,20 @@ class Querier:
     ):
         params = {}
         if task_ids is not None:
-            params['task_ids'] = task_ids
+            params["task_ids"] = task_ids
         if before is not None:
-            params['before'] = before
+            params["before"] = before
         if settings is not None:
-            params['settings'] = settings
-        return self.request(
-            method='gc', params=params, request_id=request_id
-        )
+            params["settings"] = settings
+        return self.request(method="gc", params=params, request_id=request_id)
 
     def cli_args(self, cli: str, request_id: int = 1):
         return self.request(
-            method='cli_args', params={'cli': cli}, request_id=request_id
+            method="cli_args", params={"cli": cli}, request_id=request_id
         )
 
     def deps(self, request_id: int = 1):
-        return self.request(method='deps', request_id=request_id)
+        return self.request(method="deps", request_id=request_id)
 
     def compile(
         self,
@@ -219,16 +213,14 @@ class Querier:
     ):
         params = {}
         if models is not None:
-            params['models'] = models
+            params["models"] = models
         if exclude is not None:
-            params['exclude'] = exclude
+            params["exclude"] = exclude
         if threads is not None:
-            params['threads'] = threads
+            params["threads"] = threads
         if state is not None:
-            params['state'] = state
-        return self.request(
-            method='compile', params=params, request_id=request_id
-        )
+            params["state"] = state
+        return self.request(method="compile", params=params, request_id=request_id)
 
     def run(
         self,
@@ -241,18 +233,16 @@ class Querier:
     ):
         params = {}
         if models is not None:
-            params['models'] = models
+            params["models"] = models
         if exclude is not None:
-            params['exclude'] = exclude
+            params["exclude"] = exclude
         if threads is not None:
-            params['threads'] = threads
+            params["threads"] = threads
         if defer is not None:
-            params['defer'] = defer
+            params["defer"] = defer
         if state is not None:
-            params['state'] = state
-        return self.request(
-            method='run', params=params, request_id=request_id
-        )
+            params["state"] = state
+        return self.request(method="run", params=params, request_id=request_id)
 
     def run_operation(
         self,
@@ -260,11 +250,11 @@ class Querier:
         args: Optional[Dict[str, Any]],
         request_id: int = 1,
     ):
-        params = {'macro': macro}
+        params = {"macro": macro}
         if args is not None:
-            params['args'] = args
+            params["args"] = args
         return self.request(
-            method='run-operation', params=params, request_id=request_id
+            method="run-operation", params=params, request_id=request_id
         )
 
     def seed(
@@ -278,18 +268,16 @@ class Querier:
     ):
         params = {}
         if select is not None:
-            params['select'] = select
+            params["select"] = select
         if exclude is not None:
-            params['exclude'] = exclude
+            params["exclude"] = exclude
         if show is not None:
-            params['show'] = show
+            params["show"] = show
         if threads is not None:
-            params['threads'] = threads
+            params["threads"] = threads
         if state is not None:
-            params['state'] = state
-        return self.request(
-            method='seed', params=params, request_id=request_id
-        )
+            params["state"] = state
+        return self.request(method="seed", params=params, request_id=request_id)
 
     def snapshot(
         self,
@@ -301,16 +289,14 @@ class Querier:
     ):
         params = {}
         if select is not None:
-            params['select'] = select
+            params["select"] = select
         if exclude is not None:
-            params['exclude'] = exclude
+            params["exclude"] = exclude
         if threads is not None:
-            params['threads'] = threads
+            params["threads"] = threads
         if state is not None:
-            params['state'] = state
-        return self.request(
-            method='snapshot', params=params, request_id=request_id
-        )
+            params["state"] = state
+        return self.request(method="snapshot", params=params, request_id=request_id)
 
     def snapshot_freshness(
         self,
@@ -320,11 +306,11 @@ class Querier:
     ):
         params = {}
         if select is not None:
-            params['select'] = select
+            params["select"] = select
         if threads is not None:
-            params['threads'] = threads
+            params["threads"] = threads
         return self.request(
-            method='snapshot-freshness', params=params, request_id=request_id
+            method="snapshot-freshness", params=params, request_id=request_id
         )
 
     def test(
@@ -340,116 +326,109 @@ class Querier:
     ):
         params = {}
         if models is not None:
-            params['models'] = models
+            params["models"] = models
         if exclude is not None:
-            params['exclude'] = exclude
+            params["exclude"] = exclude
         if data is not None:
-            params['data'] = data
+            params["data"] = data
         if schema is not None:
-            params['schema'] = schema
+            params["schema"] = schema
         if threads is not None:
-            params['threads'] = threads
+            params["threads"] = threads
         if defer is not None:
-            params['defer'] = defer
+            params["defer"] = defer
         if state is not None:
-            params['state'] = state
-        return self.request(
-            method='test', params=params, request_id=request_id
-        )
+            params["state"] = state
+        return self.request(method="test", params=params, request_id=request_id)
 
     def docs_generate(self, compile: bool = None, request_id: int = 1):
         params = {}
         if compile is not None:
-            params['compile'] = True
+            params["compile"] = True
         return self.request(
-            method='docs.generate', params=params, request_id=request_id
+            method="docs.generate", params=params, request_id=request_id
         )
 
     def compile_sql(
         self,
         sql: str,
-        name: str = 'test_compile',
+        name: str = "test_compile",
         macros: Optional[str] = None,
         request_id: int = 1,
     ):
-        sql = base64.b64encode(sql.encode('utf-8')).decode('utf-8')
+        sql = base64.b64encode(sql.encode("utf-8")).decode("utf-8")
         params = {
-            'name': name,
-            'sql': sql,
-            'macros': macros,
+            "name": name,
+            "sql": sql,
+            "macros": macros,
         }
-        return self.request(
-            method='compile_sql', params=params, request_id=request_id
-        )
+        return self.request(method="compile_sql", params=params, request_id=request_id)
 
     def run_sql(
         self,
         sql: str,
-        name: str = 'test_run',
+        name: str = "test_run",
         macros: Optional[str] = None,
         request_id: int = 1,
     ):
-        sql = base64.b64encode(sql.encode('utf-8')).decode('utf-8')
+        sql = base64.b64encode(sql.encode("utf-8")).decode("utf-8")
         params = {
-            'name': name,
-            'sql': sql,
-            'macros': macros,
+            "name": name,
+            "sql": sql,
+            "macros": macros,
         }
-        return self.request(
-            method='run_sql', params=params, request_id=request_id
-        )
+        return self.request(method="run_sql", params=params, request_id=request_id)
 
     def get_manifest(self, request_id=1):
-        return self.request(
-            method='get-manifest', params={}, request_id=request_id
-        )
+        return self.request(method="get-manifest", params={}, request_id=request_id)
 
     def is_result(self, data: Dict[str, Any], id=None) -> Dict[str, Any]:
 
         if id is not None:
-            assert data['id'] == id
-        assert data['jsonrpc'] == '2.0'
-        if 'error' in data:
-            print(data['error']['message'])
-        assert 'error' not in data
-        assert 'result' in data
-        return data['result']
+            assert data["id"] == id
+        assert data["jsonrpc"] == "2.0"
+        if "error" in data:
+            print(data["error"]["message"])
+        assert "error" not in data
+        assert "result" in data
+        return data["result"]
 
     def is_async_result(self, data: Dict[str, Any], id=None) -> str:
         result = self.is_result(data, id)
-        assert 'request_token' in result
-        return result['request_token']
+        assert "request_token" in result
+        return result["request_token"]
 
     def is_error(self, data: Dict[str, Any], id=None) -> Dict[str, Any]:
         if id is not None:
-            assert data['id'] == id
-        assert data['jsonrpc'] == '2.0'
-        assert 'result' not in data
-        assert 'error' in data
-        return data['error']
+            assert data["id"] == id
+        assert data["jsonrpc"] == "2.0"
+        assert "result" not in data
+        assert "error" in data
+        return data["error"]
 
     def async_wait(
-        self, token: str, timeout: int = 60, state='success'
+        self, token: str, timeout: int = 60, state="success"
     ) -> Dict[str, Any]:
         start = time.time()
         while True:
             time.sleep(0.5)
             response = self.poll(token)
-            if 'error' in response:
+            if "error" in response:
                 return response
             result = self.is_result(response)
-            assert 'state' in result
-            if result['state'] == state:
+            assert "state" in result
+            if result["state"] == state:
                 return response
-            delta = (time.time() - start)
-            assert timeout > delta, \
-                f'At time {delta}, never saw {state}.\nLast response: {result}'
+            delta = time.time() - start
+            assert (
+                timeout > delta
+            ), f"At time {delta}, never saw {state}.\nLast response: {result}"
 
-    def async_wait_for_result(self, data: Dict[str, Any], state='success'):
+    def async_wait_for_result(self, data: Dict[str, Any], state="success"):
         token = self.is_async_result(data)
         return self.is_result(self.async_wait(token, state=state))
 
-    def async_wait_for_error(self, data: Dict[str, Any], state='success'):
+    def async_wait_for_error(self, data: Dict[str, Any], state="success"):
         token = self.is_async_result(data)
         return self.is_error(self.async_wait(token, state=state))
 
@@ -478,15 +457,13 @@ def _first_server(cwd, cli_vars, profiles_dir, criteria, target):
 
 
 @contextmanager
-def rpc_server(
-    project_dir, schema, profiles_dir, criteria='ready', target=None
-):
+def rpc_server(project_dir, schema, profiles_dir, criteria="ready", target=None):
     if isinstance(criteria, str):
         criteria = (criteria,)
     else:
         criteria = tuple(criteria)
 
-    cli_vars = '{{test_run_schema: {}}}'.format(schema)
+    cli_vars = "{{test_run_schema: {}}}".format(schema)
 
     proc = _first_server(project_dir, cli_vars, profiles_dir, criteria, target)
     yield proc
@@ -498,9 +475,9 @@ def rpc_server(
 class ProjectDefinition:
     def __init__(
         self,
-        name='test',
-        version='0.1.0',
-        profile='test',
+        name="test",
+        version="0.1.0",
+        profile="test",
         project_data=None,
         packages=None,
         models=None,
@@ -509,10 +486,10 @@ class ProjectDefinition:
         seeds=None,
     ):
         self.project = {
-            'config-version': 2,
-            'name': name,
-            'version': version,
-            'profile': profile,
+            "config-version": 2,
+            "name": name,
+            "version": version,
+            "profile": profile,
         }
         if project_data:
             self.project.update(project_data)
@@ -524,9 +501,9 @@ class ProjectDefinition:
 
     def _write_recursive(self, path, inputs):
         for name, value in inputs.items():
-            if name.endswith('.sql') or name.endswith('.csv') or name.endswith('.md'):
+            if name.endswith(".sql") or name.endswith(".csv") or name.endswith(".md"):
                 path.join(name).write(value)
-            elif name.endswith('.yml'):
+            elif name.endswith(".yml"):
                 if isinstance(value, str):
                     data = value
                 else:
@@ -537,16 +514,16 @@ class ProjectDefinition:
 
     def write_packages(self, project_dir, remove=False):
         if remove:
-            project_dir.join('packages.yml').remove()
+            project_dir.join("packages.yml").remove()
         if self.packages is not None:
             if isinstance(self.packages, str):
                 data = self.packages
             else:
                 data = yaml.safe_dump(self.packages)
-            project_dir.join('packages.yml').write(data)
+            project_dir.join("packages.yml").write(data)
 
     def write_config(self, project_dir, remove=False):
-        cfg = project_dir.join('dbt_project.yml')
+        cfg = project_dir.join("dbt_project.yml")
         if remove:
             cfg.remove()
         cfg.write(yaml.safe_dump(self.project))
@@ -559,16 +536,16 @@ class ProjectDefinition:
             self._write_recursive(project_dir.mkdir(name), value)
 
     def write_models(self, project_dir, remove=False):
-        self._write_values(project_dir, remove, 'models', self.models)
+        self._write_values(project_dir, remove, "models", self.models)
 
     def write_macros(self, project_dir, remove=False):
-        self._write_values(project_dir, remove, 'macros', self.macros)
+        self._write_values(project_dir, remove, "macros", self.macros)
 
     def write_snapshots(self, project_dir, remove=False):
-        self._write_values(project_dir, remove, 'snapshots', self.snapshots)
+        self._write_values(project_dir, remove, "snapshots", self.snapshots)
 
     def write_seeds(self, project_dir, remove=False):
-        self._write_values(project_dir, remove, 'data', self.seeds)
+        self._write_values(project_dir, remove, "data", self.seeds)
 
     def write_to(self, project_dir, remove=False):
         if remove:
@@ -583,7 +560,7 @@ class ProjectDefinition:
 
 
 class TestArgs:
-    def __init__(self, profiles_dir, which='run-operation', kwargs={}):
+    def __init__(self, profiles_dir, which="run-operation", kwargs={}):
         self.which = which
         self.single_threaded = False
         self.profiles_dir = profiles_dir
@@ -594,7 +571,7 @@ class TestArgs:
 
 
 def execute(adapter, sql):
-    with adapter.connection_named('rpc-tests'):
+    with adapter.connection_named("rpc-tests"):
         conn = adapter.connections.get_thread_connection()
         with conn.handle.cursor() as cursor:
             try:
@@ -625,12 +602,12 @@ def built_schema(project_dir, schema, profiles_dir, test_kwargs, project_def):
         os.chdir(start)
     register_adapter(cfg)
     adapter = get_adapter(cfg)
-    execute(adapter, 'drop schema if exists {} cascade'.format(schema))
-    execute(adapter, 'create schema {}'.format(schema))
+    execute(adapter, "drop schema if exists {} cascade".format(schema))
+    execute(adapter, "create schema {}".format(schema))
     yield
     adapter = get_adapter(cfg)
     adapter.cleanup_connections()
-    execute(adapter, 'drop schema if exists {} cascade'.format(schema))
+    execute(adapter, "drop schema if exists {} cascade".format(schema))
 
 
 @contextmanager
@@ -640,33 +617,38 @@ def get_querier(
     profiles_dir,
     schema,
     test_kwargs,
-    criteria='ready',
+    criteria="ready",
     target=None,
 ):
     server_ctx = rpc_server(
-        project_dir=project_dir, schema=schema, profiles_dir=profiles_dir,
-        criteria=criteria, target=target,
+        project_dir=project_dir,
+        schema=schema,
+        profiles_dir=profiles_dir,
+        criteria=criteria,
+        target=target,
     )
     schema_ctx = built_schema(
-        project_dir=project_dir, schema=schema, profiles_dir=profiles_dir,
-        test_kwargs={}, project_def=project_def,
+        project_dir=project_dir,
+        schema=schema,
+        profiles_dir=profiles_dir,
+        test_kwargs={},
+        project_def=project_def,
     )
     with schema_ctx, server_ctx as server:
         yield Querier(server)
 
 
 def assert_has_threads(results, num_threads):
-    assert 'logs' in results
-    c_logs = [l for l in results['logs'] if 'Concurrency' in l['message']]
-    assert len(c_logs) == 1, \
-        f'Got invalid number of concurrency logs ({len(c_logs)})'
-    assert 'message' in c_logs[0]
-    assert f'Concurrency: {num_threads} threads' in c_logs[0]['message']
+    assert "logs" in results
+    c_logs = [log for log in results["logs"] if "Concurrency" in log["message"]]
+    assert len(c_logs) == 1, f"Got invalid number of concurrency logs ({len(c_logs)})"
+    assert "message" in c_logs[0]
+    assert f"Concurrency: {num_threads} threads" in c_logs[0]["message"]
 
 
 def get_write_manifest(querier, dest):
     result = querier.async_wait_for_result(querier.get_manifest())
-    manifest = result['manifest']
+    manifest = result["manifest"]
 
-    with open(dest, 'w') as fp:
+    with open(dest, "w") as fp:
         json.dump(manifest, fp)

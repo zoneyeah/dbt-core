@@ -6,9 +6,7 @@ from dbt.parser.search import FilesystemSearcher, FileBlock
 
 class ModelParser(SimpleSQLParser[ParsedModelNode]):
     def get_paths(self):
-        return FilesystemSearcher(
-            self.project, self.project.source_paths, '.sql'
-        )
+        return FilesystemSearcher(self.project, self.project.source_paths, ".sql")
 
     def parse_from_dict(self, dct, validate=True) -> ParsedModelNode:
         if validate:

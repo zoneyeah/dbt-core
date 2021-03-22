@@ -4,7 +4,6 @@ import os
 
 
 class TestRpcExecuteReturnsResults(DBTIntegrationTest):
-
     @property
     def schema(self):
         return "rpc_test_100"
@@ -16,14 +15,14 @@ class TestRpcExecuteReturnsResults(DBTIntegrationTest):
     @property
     def project_config(self):
         return {
-            'config-version': 2,
-            'macro-paths': ['macros'],
+            "config-version": 2,
+            "macro-paths": ["macros"],
         }
 
     def do_test_pickle(self, agate_table):
         table = {
-            'column_names': list(agate_table.column_names),
-            'rows': [list(row) for row in agate_table]
+            "column_names": list(agate_table.column_names),
+            "rows": [list(row) for row in agate_table],
         }
 
         pickle.dumps(table)
@@ -33,21 +32,21 @@ class TestRpcExecuteReturnsResults(DBTIntegrationTest):
         with open(file_path) as fh:
             query = fh.read()
 
-        with self.adapter.connection_named('master'):
+        with self.adapter.connection_named("master"):
             status, table = self.adapter.execute(query, auto_begin=False, fetch=True)
         self.assertTrue(len(table.columns) > 0, "agate table had no columns")
         self.assertTrue(len(table.rows) > 0, "agate table had no rows")
 
         self.do_test_pickle(table)
 
-    @use_profile('bigquery')
+    @use_profile("bigquery")
     def test__bigquery_fetch_and_serialize(self):
-        self.do_test_file('bigquery.sql')
+        self.do_test_file("bigquery.sql")
 
-    @use_profile('snowflake')
+    @use_profile("snowflake")
     def test__snowflake_fetch_and_serialize(self):
-        self.do_test_file('snowflake.sql')
+        self.do_test_file("snowflake.sql")
 
-    @use_profile('redshift')
+    @use_profile("redshift")
     def test__redshift_fetch_and_serialize(self):
-        self.do_test_file('redshift.sql')
+        self.do_test_file("redshift.sql")

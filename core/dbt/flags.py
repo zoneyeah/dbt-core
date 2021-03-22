@@ -1,6 +1,7 @@
 import os
 import multiprocessing
-if os.name != 'nt':
+
+if os.name != "nt":
     # https://bugs.python.org/issue41567
     import multiprocessing.popen_spawn_posix  # type: ignore
 from pathlib import Path
@@ -23,7 +24,7 @@ def env_set_truthy(key: str) -> Optional[str]:
     otherwise.
     """
     value = os.getenv(key)
-    if not value or value.lower() in ('0', 'false', 'f'):
+    if not value or value.lower() in ("0", "false", "f"):
         return None
     return value
 
@@ -36,24 +37,23 @@ def env_set_path(key: str) -> Optional[Path]:
         return Path(value)
 
 
-SINGLE_THREADED_WEBSERVER = env_set_truthy('DBT_SINGLE_THREADED_WEBSERVER')
-SINGLE_THREADED_HANDLER = env_set_truthy('DBT_SINGLE_THREADED_HANDLER')
-MACRO_DEBUGGING = env_set_truthy('DBT_MACRO_DEBUGGING')
-DEFER_MODE = env_set_truthy('DBT_DEFER_TO_STATE')
-ARTIFACT_STATE_PATH = env_set_path('DBT_ARTIFACT_STATE_PATH')
+SINGLE_THREADED_WEBSERVER = env_set_truthy("DBT_SINGLE_THREADED_WEBSERVER")
+SINGLE_THREADED_HANDLER = env_set_truthy("DBT_SINGLE_THREADED_HANDLER")
+MACRO_DEBUGGING = env_set_truthy("DBT_MACRO_DEBUGGING")
+DEFER_MODE = env_set_truthy("DBT_DEFER_TO_STATE")
+ARTIFACT_STATE_PATH = env_set_path("DBT_ARTIFACT_STATE_PATH")
 
 
 def _get_context():
     # TODO: change this back to use fork() on linux when we have made that safe
-    return multiprocessing.get_context('spawn')
+    return multiprocessing.get_context("spawn")
 
 
 MP_CONTEXT = _get_context()
 
 
 def reset():
-    global STRICT_MODE, FULL_REFRESH, USE_CACHE, WARN_ERROR, TEST_NEW_PARSER, \
-        WRITE_JSON, PARTIAL_PARSE, MP_CONTEXT, USE_COLORS
+    global STRICT_MODE, FULL_REFRESH, USE_CACHE, WARN_ERROR, TEST_NEW_PARSER, WRITE_JSON, PARTIAL_PARSE, MP_CONTEXT, USE_COLORS
 
     STRICT_MODE = False
     FULL_REFRESH = False
@@ -67,26 +67,22 @@ def reset():
 
 
 def set_from_args(args):
-    global STRICT_MODE, FULL_REFRESH, USE_CACHE, WARN_ERROR, TEST_NEW_PARSER, \
-        WRITE_JSON, PARTIAL_PARSE, MP_CONTEXT, USE_COLORS
+    global STRICT_MODE, FULL_REFRESH, USE_CACHE, WARN_ERROR, TEST_NEW_PARSER, WRITE_JSON, PARTIAL_PARSE, MP_CONTEXT, USE_COLORS
 
-    USE_CACHE = getattr(args, 'use_cache', USE_CACHE)
+    USE_CACHE = getattr(args, "use_cache", USE_CACHE)
 
-    FULL_REFRESH = getattr(args, 'full_refresh', FULL_REFRESH)
-    STRICT_MODE = getattr(args, 'strict', STRICT_MODE)
-    WARN_ERROR = (
-        STRICT_MODE or
-        getattr(args, 'warn_error', STRICT_MODE or WARN_ERROR)
-    )
+    FULL_REFRESH = getattr(args, "full_refresh", FULL_REFRESH)
+    STRICT_MODE = getattr(args, "strict", STRICT_MODE)
+    WARN_ERROR = STRICT_MODE or getattr(args, "warn_error", STRICT_MODE or WARN_ERROR)
 
-    TEST_NEW_PARSER = getattr(args, 'test_new_parser', TEST_NEW_PARSER)
-    WRITE_JSON = getattr(args, 'write_json', WRITE_JSON)
-    PARTIAL_PARSE = getattr(args, 'partial_parse', None)
+    TEST_NEW_PARSER = getattr(args, "test_new_parser", TEST_NEW_PARSER)
+    WRITE_JSON = getattr(args, "write_json", WRITE_JSON)
+    PARTIAL_PARSE = getattr(args, "partial_parse", None)
     MP_CONTEXT = _get_context()
 
     # The use_colors attribute will always have a value because it is assigned
     # None by default from the add_mutually_exclusive_group function
-    use_colors_override = getattr(args, 'use_colors')
+    use_colors_override = getattr(args, "use_colors")
 
     if use_colors_override is not None:
         USE_COLORS = use_colors_override

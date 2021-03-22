@@ -1,10 +1,5 @@
 .PHONY: install test test-unit test-integration
 
-changed_tests := `git status --porcelain | grep '^\(M\| M\|A\| A\)' | awk '{ print $$2 }' | grep '\/test_[a-zA-Z_\-\.]\+.py'`
-
-install:
-	pip install -e .
-
 test: .env
 	@echo "Full test run starting..."
 	@time docker-compose run --rm test tox
@@ -18,7 +13,7 @@ test-integration: .env
 	@time docker-compose run --rm test tox -e integration-postgres-py36,integration-redshift-py36,integration-snowflake-py36,integration-bigquery-py36
 
 test-quick: .env
-	@echo "Integration test run starting..."
+	@echo "Integration test run starting, will exit on first failure..."
 	@time docker-compose run --rm test tox -e integration-postgres-py36 -- -x
 
 # This rule creates a file named .env that is used by docker-compose for passing

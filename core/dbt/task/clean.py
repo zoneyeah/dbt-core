@@ -11,21 +11,17 @@ class CleanTask(BaseTask):
     ConfigType = UnsetProfileConfig
 
     def __is_project_path(self, path):
-        proj_path = os.path.abspath('.')
-        return not os.path.commonprefix(
-            [proj_path, os.path.abspath(path)]
-        ) == proj_path
+        proj_path = os.path.abspath(".")
+        return not os.path.commonprefix([proj_path, os.path.abspath(path)]) == proj_path
 
     def __is_protected_path(self, path):
         """
         This function identifies protected paths, so as not to clean them.
         """
         abs_path = os.path.abspath(path)
-        protected_paths = self.config.source_paths + \
-            self.config.test_paths + ['.']
+        protected_paths = self.config.source_paths + self.config.test_paths + ["."]
         protected_abs_paths = [os.path.abspath(p) for p in protected_paths]
-        return abs_path in set(protected_abs_paths) or \
-            self.__is_project_path(abs_path)
+        return abs_path in set(protected_abs_paths) or self.__is_project_path(abs_path)
 
     def run(self):
         """
@@ -39,6 +35,7 @@ class CleanTask(BaseTask):
                 shutil.rmtree(path, True)
                 logger.info(" Cleaned {}/*".format(path))
             else:
-                logger.info("ERROR: not cleaning {}/* because it is "
-                            "protected".format(path))
+                logger.info(
+                    "ERROR: not cleaning {}/* because it is " "protected".format(path)
+                )
         logger.info("Finished cleaning all paths.")

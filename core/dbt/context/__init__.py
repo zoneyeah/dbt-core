@@ -1,14 +1,16 @@
 import json
 import os
-from typing import (
-    Any, Dict, NoReturn, Optional, Mapping
-)
+from typing import Any, Dict, NoReturn, Optional, Mapping
 
 from dbt import flags
 from dbt import tracking
 from dbt.clients.jinja import undefined_error, get_rendered
 from dbt.clients.yaml_helper import (  # noqa: F401
-    yaml, safe_load, SafeLoader, Loader, Dumper
+    yaml,
+    safe_load,
+    SafeLoader,
+    Loader,
+    Dumper,
 )
 from dbt.contracts.graph.compiled import CompiledResource
 from dbt.exceptions import raise_compiler_error, MacroReturn
@@ -25,38 +27,26 @@ import re
 def get_pytz_module_context() -> Dict[str, Any]:
     context_exports = pytz.__all__  # type: ignore
 
-    return {
-        name: getattr(pytz, name) for name in context_exports
-    }
+    return {name: getattr(pytz, name) for name in context_exports}
 
 
 def get_datetime_module_context() -> Dict[str, Any]:
-    context_exports = [
-        'date',
-        'datetime',
-        'time',
-        'timedelta',
-        'tzinfo'
-    ]
+    context_exports = ["date", "datetime", "time", "timedelta", "tzinfo"]
 
-    return {
-        name: getattr(datetime, name) for name in context_exports
-    }
+    return {name: getattr(datetime, name) for name in context_exports}
 
 
 def get_re_module_context() -> Dict[str, Any]:
     context_exports = re.__all__
 
-    return {
-        name: getattr(re, name) for name in context_exports
-    }
+    return {name: getattr(re, name) for name in context_exports}
 
 
 def get_context_modules() -> Dict[str, Dict[str, Any]]:
     return {
-        'pytz': get_pytz_module_context(),
-        'datetime': get_datetime_module_context(),
-        're': get_re_module_context(),
+        "pytz": get_pytz_module_context(),
+        "datetime": get_datetime_module_context(),
+        "re": get_re_module_context(),
     }
 
 
@@ -90,8 +80,8 @@ class ContextMeta(type):
         new_dct = {}
 
         for base in bases:
-            context_members.update(getattr(base, '_context_members_', {}))
-            context_attrs.update(getattr(base, '_context_attrs_', {}))
+            context_members.update(getattr(base, "_context_members_", {}))
+            context_attrs.update(getattr(base, "_context_attrs_", {}))
 
         for key, value in dct.items():
             if isinstance(value, ContextMember):
@@ -100,21 +90,22 @@ class ContextMeta(type):
                 context_attrs[context_key] = key
                 value = value.inner
             new_dct[key] = value
-        new_dct['_context_members_'] = context_members
-        new_dct['_context_attrs_'] = context_attrs
+        new_dct["_context_members_"] = context_members
+        new_dct["_context_attrs_"] = context_attrs
         return type.__new__(mcls, name, bases, new_dct)
 
 
 class Var:
-    UndefinedVarError = "Required var '{}' not found in config:\nVars "\
-                        "supplied to {} = {}"
+    UndefinedVarError = (
+        "Required var '{}' not found in config:\nVars " "supplied to {} = {}"
+    )
     _VAR_NOTSET = object()
 
     def __init__(
         self,
         context: Mapping[str, Any],
         cli_vars: Mapping[str, Any],
-        node: Optional[CompiledResource] = None
+        node: Optional[CompiledResource] = None,
     ) -> None:
         self._context: Mapping[str, Any] = context
         self._cli_vars: Mapping[str, Any] = cli_vars
@@ -129,14 +120,12 @@ class Var:
         if self._node is not None:
             return self._node.name
         else:
-            return '<Configuration>'
+            return "<Configuration>"
 
     def get_missing_var(self, var_name):
         dct = {k: self._merged[k] for k in self._merged}
         pretty_vars = json.dumps(dct, sort_keys=True, indent=4)
-        msg = self.UndefinedVarError.format(
-            var_name, self.node_name, pretty_vars
-        )
+        msg = self.UndefinedVarError.format(var_name, self.node_name, pretty_vars)
         raise_compiler_error(msg, self._node)
 
     def has_var(self, var_name: str):
@@ -167,7 +156,7 @@ class BaseContext(metaclass=ContextMeta):
     def generate_builtins(self):
         builtins: Dict[str, Any] = {}
         for key, value in self._context_members_.items():
-            if hasattr(value, '__get__'):
+            if hasattr(value, "__get__"):
                 # handle properties, bound methods, etc
                 value = value.__get__(self)
             builtins[key] = value
@@ -175,9 +164,9 @@ class BaseContext(metaclass=ContextMeta):
 
     # no dbtClassMixin so this is not an actual override
     def to_dict(self):
-        self._ctx['context'] = self._ctx
+        self._ctx["context"] = self._ctx
         builtins = self.generate_builtins()
-        self._ctx['builtins'] = builtins
+        self._ctx["builtins"] = builtins
         self._ctx.update(builtins)
         return self._ctx
 
@@ -286,18 +275,20 @@ class BaseContext(metaclass=ContextMeta):
             msg = f"Env var required but not provided: '{var}'"
             undefined_error(msg)
 
-    if os.environ.get('DBT_MACRO_DEBUGGING'):
+    if os.environ.get("DBT_MACRO_DEBUGGING"):
+
         @contextmember
         @staticmethod
         def debug():
             """Enter a debugger at this line in the compiled jinja code."""
             import sys
             import ipdb  # type: ignore
+
             frame = sys._getframe(3)
             ipdb.set_trace(frame)
-            return ''
+            return ""
 
-    @contextmember('return')
+    @contextmember("return")
     @staticmethod
     def _return(data: Any) -> NoReturn:
         """The `return` function can be used in macros to return data to the
@@ -348,9 +339,7 @@ class BaseContext(metaclass=ContextMeta):
 
     @contextmember
     @staticmethod
-    def tojson(
-        value: Any, default: Any = None, sort_keys: bool = False
-    ) -> Any:
+    def tojson(value: Any, default: Any = None, sort_keys: bool = False) -> Any:
         """The `tojson` context method can be used to serialize a Python
         object primitive, eg. a `dict` or `list` to a json string.
 
@@ -446,7 +435,7 @@ class BaseContext(metaclass=ContextMeta):
             logger.info(msg)
         else:
             logger.debug(msg)
-        return ''
+        return ""
 
     @contextproperty
     def run_started_at(self) -> Optional[datetime.datetime]:

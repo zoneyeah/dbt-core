@@ -14,8 +14,11 @@ import snowflake.connector
 import snowflake.connector.errors
 
 from dbt.exceptions import (
-    InternalException, RuntimeException, FailedToConnectException,
-    DatabaseException, warn_or_error
+    InternalException,
+    RuntimeException,
+    FailedToConnectException,
+    DatabaseException,
+    warn_or_error,
 )
 from dbt.adapters.base import Credentials
 from dbt.contracts.connection import AdapterResponse
@@ -23,7 +26,7 @@ from dbt.adapters.sql import SQLConnectionManager
 from dbt.logger import GLOBAL_LOGGER as logger
 
 
-_TOKEN_REQUEST_URL = 'https://{}.snowflakecomputing.com/oauth/token-request'
+_TOKEN_REQUEST_URL = "https://{}.snowflakecomputing.com/oauth/token-request"
 
 
 @dataclass
@@ -43,24 +46,28 @@ class SnowflakeCredentials(Credentials):
     client_session_keep_alive: bool = False
 
     def __post_init__(self):
-        if (
-            self.authenticator != 'oauth' and
-            (self.oauth_client_secret or self.oauth_client_id or self.token)
+        if self.authenticator != "oauth" and (
+            self.oauth_client_secret or self.oauth_client_id or self.token
         ):
             # the user probably forgot to set 'authenticator' like I keep doing
             warn_or_error(
-                'Authenticator is not set to oauth, but an oauth-only '
-                'parameter is set! Did you mean to set authenticator: oauth?'
+                "Authenticator is not set to oauth, but an oauth-only "
+                "parameter is set! Did you mean to set authenticator: oauth?"
             )
 
     @property
     def type(self):
-        return 'snowflake'
+        return "snowflake"
 
     def _connection_keys(self):
         return (
-            'account', 'user', 'database', 'schema', 'warehouse', 'role',
-            'client_session_keep_alive'
+            "account",
+            "user",
+            "database",
+            "schema",
+            "warehouse",
+            "role",
+            "client_session_keep_alive",
         )
 
     def auth_args(self):
@@ -68,10 +75,10 @@ class SnowflakeCredentials(Credentials):
         # let connector handle the actual arg validation
         result = {}
         if self.password:
-            result['password'] = self.password
+            result["password"] = self.password
         if self.authenticator:
-            result['authenticator'] = self.authenticator
-            if self.authenticator == 'oauth':
+            result["authenticator"] = self.authenticator
+            if self.authenticator == "oauth":
                 token = self.token
                 # if we have a client ID/client secret, the token is a refresh
                 # token, not an access token
@@ -79,57 +86,56 @@ class SnowflakeCredentials(Credentials):
                     token = self._get_access_token()
                 elif self.oauth_client_id:
                     warn_or_error(
-                        'Invalid profile: got an oauth_client_id, but not an '
-                        'oauth_client_secret!'
+                        "Invalid profile: got an oauth_client_id, but not an "
+                        "oauth_client_secret!"
                     )
                 elif self.oauth_client_secret:
                     warn_or_error(
-                        'Invalid profile: got an oauth_client_secret, but not '
-                        'an oauth_client_id!'
+                        "Invalid profile: got an oauth_client_secret, but not "
+                        "an oauth_client_id!"
                     )
 
-                result['token'] = token
+                result["token"] = token
             # enable the token cache
-            result['client_store_temporary_credential'] = True
-        result['private_key'] = self._get_private_key()
+            result["client_store_temporary_credential"] = True
+        result["private_key"] = self._get_private_key()
         return result
 
     def _get_access_token(self) -> str:
-        if self.authenticator != 'oauth':
-            raise InternalException('Can only get access tokens for oauth')
+        if self.authenticator != "oauth":
+            raise InternalException("Can only get access tokens for oauth")
         missing = any(
-            x is None for x in
-            (self.oauth_client_id, self.oauth_client_secret, self.token)
+            x is None
+            for x in (self.oauth_client_id, self.oauth_client_secret, self.token)
         )
         if missing:
             raise InternalException(
-                'need a client ID a client secret, and a refresh token to get '
-                'an access token'
+                "need a client ID a client secret, and a refresh token to get "
+                "an access token"
             )
         # should the full url be a config item?
         token_url = _TOKEN_REQUEST_URL.format(self.account)
         # I think this is only used to redirect on success, which we ignore
         # (it does not have to match the integration's settings in snowflake)
-        redirect_uri = 'http://localhost:9999'
+        redirect_uri = "http://localhost:9999"
         data = {
-            'grant_type': 'refresh_token',
-            'refresh_token': self.token,
-            'redirect_uri': redirect_uri
+            "grant_type": "refresh_token",
+            "refresh_token": self.token,
+            "redirect_uri": redirect_uri,
         }
 
         auth = base64.b64encode(
-            f'{self.oauth_client_id}:{self.oauth_client_secret}'
-            .encode('ascii')
-        ).decode('ascii')
+            f"{self.oauth_client_id}:{self.oauth_client_secret}".encode("ascii")
+        ).decode("ascii")
         headers = {
-            'Authorization': f'Basic {auth}',
-            'Content-type': 'application/x-www-form-urlencoded;charset=utf-8'
+            "Authorization": f"Basic {auth}",
+            "Content-type": "application/x-www-form-urlencoded;charset=utf-8",
         }
         result = requests.post(token_url, headers=headers, data=data)
         result_json = result.json()
-        if 'access_token' not in result_json:
-            raise DatabaseException(f'Did not get a token: {result_json}')
-        return result_json['access_token']
+        if "access_token" not in result_json:
+            raise DatabaseException(f"Did not get a token: {result_json}")
+        return result_json["access_token"]
 
     def _get_private_key(self):
         """Get Snowflake private key by path or None."""
@@ -141,20 +147,20 @@ class SnowflakeCredentials(Credentials):
         else:
             encoded_passphrase = None
 
-        with open(self.private_key_path, 'rb') as key:
+        with open(self.private_key_path, "rb") as key:
             p_key = serialization.load_pem_private_key(
-                key.read(),
-                password=encoded_passphrase,
-                backend=default_backend())
+                key.read(), password=encoded_passphrase, backend=default_backend()
+            )
 
         return p_key.private_bytes(
             encoding=serialization.Encoding.DER,
             format=serialization.PrivateFormat.PKCS8,
-            encryption_algorithm=serialization.NoEncryption())
+            encryption_algorithm=serialization.NoEncryption(),
+        )
 
 
 class SnowflakeConnectionManager(SQLConnectionManager):
-    TYPE = 'snowflake'
+    TYPE = "snowflake"
 
     @contextmanager
     def exception_handler(self, sql):
@@ -163,23 +169,25 @@ class SnowflakeConnectionManager(SQLConnectionManager):
         except snowflake.connector.errors.ProgrammingError as e:
             msg = str(e)
 
-            logger.debug('Snowflake query id: {}'.format(e.sfqid))
-            logger.debug('Snowflake error: {}'.format(msg))
+            logger.debug("Snowflake query id: {}".format(e.sfqid))
+            logger.debug("Snowflake error: {}".format(msg))
 
-            if 'Empty SQL statement' in msg:
+            if "Empty SQL statement" in msg:
                 logger.debug("got empty sql statement, moving on")
-            elif 'This session does not have a current database' in msg:
+            elif "This session does not have a current database" in msg:
                 raise FailedToConnectException(
-                    ('{}\n\nThis error sometimes occurs when invalid '
-                     'credentials are provided, or when your default role '
-                     'does not have access to use the specified database. '
-                     'Please double check your profile and try again.')
-                    .format(msg))
+                    (
+                        "{}\n\nThis error sometimes occurs when invalid "
+                        "credentials are provided, or when your default role "
+                        "does not have access to use the specified database. "
+                        "Please double check your profile and try again."
+                    ).format(msg)
+                )
             else:
                 raise DatabaseException(msg)
         except Exception as e:
             if isinstance(e, snowflake.connector.errors.Error):
-                logger.debug('Snowflake query id: {}'.format(e.sfqid))
+                logger.debug("Snowflake query id: {}".format(e.sfqid))
 
             logger.debug("Error running SQL: {}", sql)
             logger.debug("Rolling back transaction.")
@@ -193,8 +201,8 @@ class SnowflakeConnectionManager(SQLConnectionManager):
 
     @classmethod
     def open(cls, connection):
-        if connection.state == 'open':
-            logger.debug('Connection is already open, skipping open.')
+        if connection.state == "open":
+            logger.debug("Connection is already open, skipping open.")
             return connection
 
         try:
@@ -209,24 +217,25 @@ class SnowflakeConnectionManager(SQLConnectionManager):
                 role=creds.role,
                 autocommit=False,
                 client_session_keep_alive=creds.client_session_keep_alive,
-                application='dbt',
-                **creds.auth_args()
+                application="dbt",
+                **creds.auth_args(),
             )
 
             if creds.query_tag:
                 handle.cursor().execute(
-                    ("alter session set query_tag = '{}'")
-                    .format(creds.query_tag))
+                    ("alter session set query_tag = '{}'").format(creds.query_tag)
+                )
 
             connection.handle = handle
-            connection.state = 'open'
+            connection.state = "open"
         except snowflake.connector.errors.Error as e:
-            logger.debug("Got an error when attempting to open a snowflake "
-                         "connection: '{}'"
-                         .format(e))
+            logger.debug(
+                "Got an error when attempting to open a snowflake "
+                "connection: '{}'".format(e)
+            )
 
             connection.handle = None
-            connection.state = 'fail'
+            connection.state = "fail"
 
             raise FailedToConnectException(str(e))
 
@@ -236,7 +245,7 @@ class SnowflakeConnectionManager(SQLConnectionManager):
 
         connection_name = connection.name
 
-        sql = 'select system$abort_session({})'.format(sid)
+        sql = "select system$abort_session({})".format(sid)
 
         logger.debug("Cancelling query '{}' ({})".format(connection_name, sid))
 
@@ -250,12 +259,12 @@ class SnowflakeConnectionManager(SQLConnectionManager):
         code = cursor.sqlstate
 
         if code is None:
-            code = 'SUCCESS'
+            code = "SUCCESS"
 
         return AdapterResponse(
             _message="{} {}".format(code, cursor.rowcount),
             rows_affected=cursor.rowcount,
-            code=code
+            code=code,
         )
 
     @classmethod
@@ -287,8 +296,7 @@ class SnowflakeConnectionManager(SQLConnectionManager):
 
         return super().process_results(column_names, fixed)
 
-    def add_query(self, sql, auto_begin=True,
-                  bindings=None, abridge_sql_log=False):
+    def add_query(self, sql, auto_begin=True, bindings=None, abridge_sql_log=False):
 
         connection = None
         cursor = None
@@ -305,24 +313,25 @@ class SnowflakeConnectionManager(SQLConnectionManager):
             # empty queries. this avoids using exceptions as flow control,
             # and also allows us to return the status of the last cursor
             without_comments = re.sub(
-                re.compile(
-                    r'(\".*?\"|\'.*?\')|(/\*.*?\*/|--[^\r\n]*$)', re.MULTILINE
-                ),
-                '', individual_query).strip()
+                re.compile(r"(\".*?\"|\'.*?\')|(/\*.*?\*/|--[^\r\n]*$)", re.MULTILINE),
+                "",
+                individual_query,
+            ).strip()
 
             if without_comments == "":
                 continue
 
             connection, cursor = super().add_query(
-                individual_query, auto_begin,
+                individual_query,
+                auto_begin,
                 bindings=bindings,
-                abridge_sql_log=abridge_sql_log
+                abridge_sql_log=abridge_sql_log,
             )
 
         if cursor is None:
             conn = self.get_thread_connection()
             if conn is None or conn.name is None:
-                conn_name = '<None>'
+                conn_name = "<None>"
             else:
                 conn_name = conn.name
 
@@ -330,8 +339,7 @@ class SnowflakeConnectionManager(SQLConnectionManager):
                 "Tried to run an empty query on model '{}'. If you are "
                 "conditionally running\nsql, eg. in a model hook, make "
                 "sure your `else` clause contains valid sql!\n\n"
-                "Provided SQL:\n{}"
-                .format(conn_name, sql)
+                "Provided SQL:\n{}".format(conn_name, sql)
             )
 
         return connection, cursor
@@ -345,5 +353,5 @@ class SnowflakeConnectionManager(SQLConnectionManager):
             connection.handle.rollback()
         except snowflake.connector.errors.ProgrammingError as e:
             msg = str(e)
-            if 'Session no longer exists' not in msg:
+            if "Session no longer exists" not in msg:
                 raise

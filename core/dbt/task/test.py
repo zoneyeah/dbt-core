@@ -34,8 +34,7 @@ class TestRunner(CompileRunner):
 
     def print_result_line(self, result):
         schema_name = self.node.schema
-        print_test_result_line(result, schema_name, self.node_index,
-                               self.num_nodes)
+        print_test_result_line(result, schema_name, self.node_index, self.num_nodes)
 
     def print_start_line(self):
         description = self.describe_node()
@@ -85,8 +84,8 @@ class TestRunner(CompileRunner):
             failed_rows = self.execute_schema_test(test)
         else:
             raise InternalException(
-                f'Expected compiled schema test or compiled data test, got '
-                f'{type(test)}'
+                f"Expected compiled schema test or compiled data test, got "
+                f"{type(test)}"
             )
 
         severity = test.config.severity.upper()
@@ -94,7 +93,7 @@ class TestRunner(CompileRunner):
         status = None
         if failed_rows == 0:
             status = TestStatus.Pass
-        elif severity == 'ERROR' or flags.WARN_ERROR:
+        elif severity == "ERROR" or flags.WARN_ERROR:
             status = TestStatus.Fail
         else:
             status = TestStatus.Warn
@@ -106,7 +105,7 @@ class TestRunner(CompileRunner):
             thread_id=thread_id,
             execution_time=0,
             message=int(failed_rows),
-            adapter_response={}
+            adapter_response={},
         )
 
     def after_execute(self, result):
@@ -157,15 +156,13 @@ class TestTask(RunTask):
     def get_selection_spec(self) -> SelectionSpec:
         base_spec = super().get_selection_spec()
         return parse_test_selectors(
-            data=self.args.data,
-            schema=self.args.schema,
-            base=base_spec
+            data=self.args.data, schema=self.args.schema, base=base_spec
         )
 
     def get_node_selector(self) -> TestSelector:
         if self.manifest is None or self.graph is None:
             raise InternalException(
-                'manifest and graph must be set to get perform node selection'
+                "manifest and graph must be set to get perform node selection"
             )
         return TestSelector(
             graph=self.graph,

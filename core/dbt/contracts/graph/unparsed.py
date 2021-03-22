@@ -4,13 +4,12 @@ from dbt.contracts.util import (
     Mergeable,
     Replaceable,
 )
+
 # trigger the PathEncoder
 import dbt.helper_types  # noqa:F401
 from dbt.exceptions import CompilationException
 
-from dbt.dataclass_schema import (
-    dbtClassMixin, StrEnum, ExtensibleDbtClassMixin
-)
+from dbt.dataclass_schema import dbtClassMixin, StrEnum, ExtensibleDbtClassMixin
 
 from dataclasses import dataclass, field
 from datetime import timedelta
@@ -37,21 +36,25 @@ class HasSQL:
 
 @dataclass
 class UnparsedMacro(UnparsedBaseNode, HasSQL):
-    resource_type: NodeType = field(metadata={'restrict': [NodeType.Macro]})
+    resource_type: NodeType = field(metadata={"restrict": [NodeType.Macro]})
 
 
 @dataclass
 class UnparsedNode(UnparsedBaseNode, HasSQL):
     name: str
-    resource_type: NodeType = field(metadata={'restrict': [
-        NodeType.Model,
-        NodeType.Analysis,
-        NodeType.Test,
-        NodeType.Snapshot,
-        NodeType.Operation,
-        NodeType.Seed,
-        NodeType.RPCCall,
-    ]})
+    resource_type: NodeType = field(
+        metadata={
+            "restrict": [
+                NodeType.Model,
+                NodeType.Analysis,
+                NodeType.Test,
+                NodeType.Snapshot,
+                NodeType.Operation,
+                NodeType.Seed,
+                NodeType.RPCCall,
+            ]
+        }
+    )
 
     @property
     def search_name(self):
@@ -60,9 +63,7 @@ class UnparsedNode(UnparsedBaseNode, HasSQL):
 
 @dataclass
 class UnparsedRunHook(UnparsedNode):
-    resource_type: NodeType = field(
-        metadata={'restrict': [NodeType.Operation]}
-    )
+    resource_type: NodeType = field(metadata={"restrict": [NodeType.Operation]})
     index: Optional[int] = None
 
 
@@ -72,10 +73,9 @@ class Docs(dbtClassMixin, Replaceable):
 
 
 @dataclass
-class HasDocs(AdditionalPropertiesMixin, ExtensibleDbtClassMixin,
-              Replaceable):
+class HasDocs(AdditionalPropertiesMixin, ExtensibleDbtClassMixin, Replaceable):
     name: str
-    description: str = ''
+    description: str = ""
     meta: Dict[str, Any] = field(default_factory=dict)
     data_type: Optional[str] = None
     docs: Docs = field(default_factory=Docs)
@@ -131,7 +131,7 @@ class UnparsedNodeUpdate(HasColumnTests, HasTests, HasYamlMetadata):
 class MacroArgument(dbtClassMixin):
     name: str
     type: Optional[str] = None
-    description: str = ''
+    description: str = ""
 
 
 @dataclass
@@ -140,12 +140,12 @@ class UnparsedMacroUpdate(HasDocs, HasYamlMetadata):
 
 
 class TimePeriod(StrEnum):
-    minute = 'minute'
-    hour = 'hour'
-    day = 'day'
+    minute = "minute"
+    hour = "hour"
+    day = "day"
 
     def plural(self) -> str:
-        return str(self) + 's'
+        return str(self) + "s"
 
 
 @dataclass
@@ -167,6 +167,7 @@ class FreshnessThreshold(dbtClassMixin, Mergeable):
 
     def status(self, age: float) -> "dbt.contracts.results.FreshnessStatus":
         from dbt.contracts.results import FreshnessStatus
+
         if self.error_after and self.error_after.exceeded(age):
             return FreshnessStatus.Error
         elif self.warn_after and self.warn_after.exceeded(age):
@@ -179,24 +180,21 @@ class FreshnessThreshold(dbtClassMixin, Mergeable):
 
 
 @dataclass
-class AdditionalPropertiesAllowed(
-    AdditionalPropertiesMixin,
-    ExtensibleDbtClassMixin
-):
+class AdditionalPropertiesAllowed(AdditionalPropertiesMixin, ExtensibleDbtClassMixin):
     _extra: Dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class ExternalPartition(AdditionalPropertiesAllowed, Replaceable):
-    name: str = ''
-    description: str = ''
-    data_type: str = ''
+    name: str = ""
+    description: str = ""
+    data_type: str = ""
     meta: Dict[str, Any] = field(default_factory=dict)
 
     def __post_init__(self):
-        if self.name == '' or self.data_type == '':
+        if self.name == "" or self.data_type == "":
             raise CompilationException(
-                'External partition columns must have names and data types'
+                "External partition columns must have names and data types"
             )
 
 
@@ -225,43 +223,39 @@ class UnparsedSourceTableDefinition(HasColumnTests, HasTests):
     loaded_at_field: Optional[str] = None
     identifier: Optional[str] = None
     quoting: Quoting = field(default_factory=Quoting)
-    freshness: Optional[FreshnessThreshold] = field(
-        default_factory=FreshnessThreshold
-    )
+    freshness: Optional[FreshnessThreshold] = field(default_factory=FreshnessThreshold)
     external: Optional[ExternalTable] = None
     tags: List[str] = field(default_factory=list)
 
     def __post_serialize__(self, dct):
         dct = super().__post_serialize__(dct)
-        if 'freshness' not in dct and self.freshness is None:
-            dct['freshness'] = None
+        if "freshness" not in dct and self.freshness is None:
+            dct["freshness"] = None
         return dct
 
 
 @dataclass
 class UnparsedSourceDefinition(dbtClassMixin, Replaceable):
     name: str
-    description: str = ''
+    description: str = ""
     meta: Dict[str, Any] = field(default_factory=dict)
     database: Optional[str] = None
     schema: Optional[str] = None
-    loader: str = ''
+    loader: str = ""
     quoting: Quoting = field(default_factory=Quoting)
-    freshness: Optional[FreshnessThreshold] = field(
-        default_factory=FreshnessThreshold
-    )
+    freshness: Optional[FreshnessThreshold] = field(default_factory=FreshnessThreshold)
     loaded_at_field: Optional[str] = None
     tables: List[UnparsedSourceTableDefinition] = field(default_factory=list)
     tags: List[str] = field(default_factory=list)
 
     @property
-    def yaml_key(self) -> 'str':
-        return 'sources'
+    def yaml_key(self) -> "str":
+        return "sources"
 
     def __post_serialize__(self, dct):
         dct = super().__post_serialize__(dct)
-        if 'freshnewss' not in dct and self.freshness is None:
-            dct['freshness'] = None
+        if "freshnewss" not in dct and self.freshness is None:
+            dct["freshness"] = None
         return dct
 
 
@@ -275,9 +269,7 @@ class SourceTablePatch(dbtClassMixin):
     loaded_at_field: Optional[str] = None
     identifier: Optional[str] = None
     quoting: Quoting = field(default_factory=Quoting)
-    freshness: Optional[FreshnessThreshold] = field(
-        default_factory=FreshnessThreshold
-    )
+    freshness: Optional[FreshnessThreshold] = field(default_factory=FreshnessThreshold)
     external: Optional[ExternalTable] = None
     tags: Optional[List[str]] = None
     tests: Optional[List[TestDef]] = None
@@ -285,13 +277,13 @@ class SourceTablePatch(dbtClassMixin):
 
     def to_patch_dict(self) -> Dict[str, Any]:
         dct = self.to_dict(omit_none=True)
-        remove_keys = ('name')
+        remove_keys = "name"
         for key in remove_keys:
             if key in dct:
                 del dct[key]
 
         if self.freshness is None:
-            dct['freshness'] = None
+            dct["freshness"] = None
 
         return dct
 
@@ -299,13 +291,13 @@ class SourceTablePatch(dbtClassMixin):
 @dataclass
 class SourcePatch(dbtClassMixin, Replaceable):
     name: str = field(
-        metadata=dict(description='The name of the source to override'),
+        metadata=dict(description="The name of the source to override"),
     )
     overrides: str = field(
-        metadata=dict(description='The package of the source to override'),
+        metadata=dict(description="The package of the source to override"),
     )
     path: Path = field(
-        metadata=dict(description='The path to the patch-defining yml file'),
+        metadata=dict(description="The path to the patch-defining yml file"),
     )
     description: Optional[str] = None
     meta: Optional[Dict[str, Any]] = None
@@ -322,13 +314,13 @@ class SourcePatch(dbtClassMixin, Replaceable):
 
     def to_patch_dict(self) -> Dict[str, Any]:
         dct = self.to_dict(omit_none=True)
-        remove_keys = ('name', 'overrides', 'tables', 'path')
+        remove_keys = ("name", "overrides", "tables", "path")
         for key in remove_keys:
             if key in dct:
                 del dct[key]
 
         if self.freshness is None:
-            dct['freshness'] = None
+            dct["freshness"] = None
 
         return dct
 
@@ -360,9 +352,9 @@ class UnparsedDocumentationFile(UnparsedDocumentation):
 # can't use total_ordering decorator here, as str provides an ordering already
 # and it's not the one we want.
 class Maturity(StrEnum):
-    low = 'low'
-    medium = 'medium'
-    high = 'high'
+    low = "low"
+    medium = "medium"
+    high = "high"
 
     def __lt__(self, other):
         if not isinstance(other, Maturity):
@@ -387,17 +379,17 @@ class Maturity(StrEnum):
 
 
 class ExposureType(StrEnum):
-    Dashboard = 'dashboard'
-    Notebook = 'notebook'
-    Analysis = 'analysis'
-    ML = 'ml'
-    Application = 'application'
+    Dashboard = "dashboard"
+    Notebook = "notebook"
+    Analysis = "analysis"
+    ML = "ml"
+    Application = "application"
 
 
 class MaturityType(StrEnum):
-    Low = 'low'
-    Medium = 'medium'
-    High = 'high'
+    Low = "low"
+    Medium = "medium"
+    High = "high"
 
 
 @dataclass
@@ -411,7 +403,7 @@ class UnparsedExposure(dbtClassMixin, Replaceable):
     name: str
     type: ExposureType
     owner: ExposureOwner
-    description: str = ''
+    description: str = ""
     maturity: Optional[MaturityType] = None
     url: Optional[str] = None
     depends_on: List[str] = field(default_factory=list)

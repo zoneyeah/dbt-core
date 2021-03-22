@@ -4,7 +4,6 @@ import yaml
 
 
 class TestBigqueryDatePartitioning(DBTIntegrationTest):
-
     @property
     def schema(self):
         return "bigquery_test_022"
@@ -19,7 +18,9 @@ class TestBigqueryDatePartitioning(DBTIntegrationTest):
 
     @property
     def project_config(self):
-        return yaml.safe_load(textwrap.dedent('''\
+        return yaml.safe_load(
+            textwrap.dedent(
+                """\
         config-version: 2
         models:
             test:
@@ -30,18 +31,20 @@ class TestBigqueryDatePartitioning(DBTIntegrationTest):
                         - 20180102
                         - 20180103
                     verbose: true
-        '''))
+        """
+            )
+        )
 
-    @use_profile('bigquery')
+    @use_profile("bigquery")
     def test__bigquery_date_partitioning(self):
         results = self.run_dbt()
         self.assertEqual(len(results), 8)
 
-        test_results = self.run_dbt(['test'])
+        test_results = self.run_dbt(["test"])
 
         self.assertTrue(len(test_results) > 0)
         for result in test_results:
-            self.assertEqual(result.status, 'pass')
+            self.assertEqual(result.status, "pass")
             self.assertFalse(result.skipped)
             # message = # of failing rows
             self.assertEqual(int(result.message), 0)

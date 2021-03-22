@@ -1,6 +1,4 @@
-from typing import (
-    Any, Dict, Union
-)
+from typing import Any, Dict, Union
 
 from dbt.exceptions import (
     doc_invalid_args,
@@ -11,7 +9,7 @@ from dbt.contracts.graph.compiled import CompileResultNode
 from dbt.contracts.graph.manifest import Manifest
 from dbt.contracts.graph.parsed import ParsedMacro
 
-from dbt.context.base import contextmember
+from dbt.context import contextmember
 from dbt.context.configured import SchemaYamlContext
 
 

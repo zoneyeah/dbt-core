@@ -2,25 +2,35 @@ import abc
 import itertools
 from dataclasses import dataclass, field
 from typing import (
-    Any, ClassVar, Dict, Tuple, Iterable, Optional, List, Callable,
+    Any,
+    ClassVar,
+    Dict,
+    Tuple,
+    Iterable,
+    Optional,
+    List,
+    Callable,
 )
 from dbt.exceptions import InternalException
 from dbt.utils import translate_aliases
 from dbt.logger import GLOBAL_LOGGER as logger
 from typing_extensions import Protocol
 from dbt.dataclass_schema import (
-    dbtClassMixin, StrEnum, ExtensibleDbtClassMixin,
-    ValidatedStringMixin, register_pattern
+    dbtClassMixin,
+    StrEnum,
+    ExtensibleDbtClassMixin,
+    ValidatedStringMixin,
+    register_pattern,
 )
 from dbt.contracts.util import Replaceable
 
 
 class Identifier(ValidatedStringMixin):
-    ValidationRegex = r'^[A-Za-z_][A-Za-z0-9_]+$'
+    ValidationRegex = r"^[A-Za-z_][A-Za-z0-9_]+$"
 
 
 # we need register_pattern for jsonschema validation
-register_pattern(Identifier, r'^[A-Za-z_][A-Za-z0-9_]+$')
+register_pattern(Identifier, r"^[A-Za-z_][A-Za-z0-9_]+$")
 
 
 @dataclass
@@ -34,10 +44,10 @@ class AdapterResponse(dbtClassMixin):
 
 
 class ConnectionState(StrEnum):
-    INIT = 'init'
-    OPEN = 'open'
-    CLOSED = 'closed'
-    FAIL = 'fail'
+    INIT = "init"
+    OPEN = "open"
+    CLOSED = "closed"
+    FAIL = "fail"
 
 
 @dataclass(init=False)
@@ -81,8 +91,7 @@ class Connection(ExtensibleDbtClassMixin, Replaceable):
                 self._handle.resolve(self)
             except RecursionError as exc:
                 raise InternalException(
-                    "A connection's open() method attempted to read the "
-                    "handle value"
+                    "A connection's open() method attempted to read the " "handle value"
                 ) from exc
         return self._handle
 
@@ -101,8 +110,7 @@ class LazyHandle:
 
     def resolve(self, connection: Connection) -> Connection:
         logger.debug(
-            'Opening a new connection, currently in state {}'
-            .format(connection.state)
+            "Opening a new connection, currently in state {}".format(connection.state)
         )
         return self.opener(connection)
 
@@ -112,33 +120,24 @@ class LazyHandle:
 # for why we have type: ignore. Maybe someday dataclasses + abstract classes
 # will work.
 @dataclass  # type: ignore
-class Credentials(
-    ExtensibleDbtClassMixin,
-    Replaceable,
-    metaclass=abc.ABCMeta
-):
+class Credentials(ExtensibleDbtClassMixin, Replaceable, metaclass=abc.ABCMeta):
     database: str
     schema: str
     _ALIASES: ClassVar[Dict[str, str]] = field(default={}, init=False)
 
     @abc.abstractproperty
     def type(self) -> str:
-        raise NotImplementedError(
-            'type not implemented for base credentials class'
-        )
+        raise NotImplementedError("type not implemented for base credentials class")
 
     def connection_info(
         self, *, with_aliases: bool = False
     ) -> Iterable[Tuple[str, Any]]:
-        """Return an ordered iterator of key/value pairs for pretty-printing.
-        """
+        """Return an ordered iterator of key/value pairs for pretty-printing."""
         as_dict = self.to_dict(omit_none=False)
         connection_keys = set(self._connection_keys())
         aliases: List[str] = []
         if with_aliases:
-            aliases = [
-                k for k, v in self._ALIASES.items() if v in connection_keys
-            ]
+            aliases = [k for k, v in self._ALIASES.items() if v in connection_keys]
         for key in itertools.chain(self._connection_keys(), aliases):
             if key in as_dict:
                 yield key, as_dict[key]
@@ -162,11 +161,13 @@ class Credentials(
     def __post_serialize__(self, dct):
         # no super() -- do we need it?
         if self._ALIASES:
-            dct.update({
-                new_name: dct[canonical_name]
-                for new_name, canonical_name in self._ALIASES.items()
-                if canonical_name in dct
-            })
+            dct.update(
+                {
+                    new_name: dct[canonical_name]
+                    for new_name, canonical_name in self._ALIASES.items()
+                    if canonical_name in dct
+                }
+            )
         return dct
 
 
@@ -188,10 +189,10 @@ class HasCredentials(Protocol):
     threads: int
 
     def to_target_dict(self):
-        raise NotImplementedError('to_target_dict not implemented')
+        raise NotImplementedError("to_target_dict not implemented")
 
 
-DEFAULT_QUERY_COMMENT = '''
+DEFAULT_QUERY_COMMENT = """
 {%- set comment_dict = {} -%}
 {%- do comment_dict.update(
     app='dbt',
@@ -208,7 +209,7 @@ DEFAULT_QUERY_COMMENT = '''
   {%- do comment_dict.update(connection_name=connection_name) -%}
 {%- endif -%}
 {{ return(tojson(comment_dict)) }}
-'''
+"""
 
 
 @dataclass

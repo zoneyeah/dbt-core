@@ -20,10 +20,8 @@ from dbt.utils import coerce_dict_str
 from .renderer import ProfileRenderer
 
 DEFAULT_THREADS = 1
-DEFAULT_PROFILES_DIR = os.path.join(os.path.expanduser('~'), '.dbt')
-PROFILES_DIR = os.path.expanduser(
-    os.getenv('DBT_PROFILES_DIR', DEFAULT_PROFILES_DIR)
-)
+DEFAULT_PROFILES_DIR = os.path.join(os.path.expanduser("~"), ".dbt")
+PROFILES_DIR = os.path.expanduser(os.getenv("DBT_PROFILES_DIR", DEFAULT_PROFILES_DIR))
 
 INVALID_PROFILE_MESSAGE = """
 dbt encountered an error while trying to read your profiles.yml file.
@@ -43,11 +41,13 @@ Here, [profile name] should be replaced with a profile name
 defined in your profiles.yml file. You can find profiles.yml here:
 
 {profiles_file}/profiles.yml
-""".format(profiles_file=PROFILES_DIR)
+""".format(
+    profiles_file=PROFILES_DIR
+)
 
 
 def read_profile(profiles_dir: str) -> Dict[str, Any]:
-    path = os.path.join(profiles_dir, 'profiles.yml')
+    path = os.path.join(profiles_dir, "profiles.yml")
 
     contents = None
     if os.path.isfile(path):
@@ -55,12 +55,8 @@ def read_profile(profiles_dir: str) -> Dict[str, Any]:
             contents = load_file_contents(path, strip=False)
             yaml_content = load_yaml_text(contents)
             if not yaml_content:
-                msg = f'The profiles.yml file at {path} is empty'
-                raise DbtProfileError(
-                    INVALID_PROFILE_MESSAGE.format(
-                        error_string=msg
-                    )
-                )
+                msg = f"The profiles.yml file at {path} is empty"
+                raise DbtProfileError(INVALID_PROFILE_MESSAGE.format(error_string=msg))
             return yaml_content
         except ValidationException as e:
             msg = INVALID_PROFILE_MESSAGE.format(error_string=e)
@@ -73,7 +69,7 @@ def read_user_config(directory: str) -> UserConfig:
     try:
         profile = read_profile(directory)
         if profile:
-            user_cfg = coerce_dict_str(profile.get('config', {}))
+            user_cfg = coerce_dict_str(profile.get("config", {}))
             if user_cfg is not None:
                 UserConfig.validate(user_cfg)
                 return UserConfig.from_dict(user_cfg)
@@ -92,9 +88,7 @@ class Profile(HasCredentials):
     threads: int
     credentials: Credentials
 
-    def to_profile_info(
-        self, serialize_credentials: bool = False
-    ) -> Dict[str, Any]:
+    def to_profile_info(self, serialize_credentials: bool = False) -> Dict[str, Any]:
         """Unlike to_project_config, this dict is not a mirror of any existing
         on-disk data structure. It's used when creating a new profile from an
         existing one.
@@ -104,34 +98,35 @@ class Profile(HasCredentials):
         :returns dict: The serialized profile.
         """
         result = {
-            'profile_name': self.profile_name,
-            'target_name': self.target_name,
-            'config': self.config,
-            'threads': self.threads,
-            'credentials': self.credentials,
+            "profile_name": self.profile_name,
+            "target_name": self.target_name,
+            "config": self.config,
+            "threads": self.threads,
+            "credentials": self.credentials,
         }
         if serialize_credentials:
-            result['config'] = self.config.to_dict(omit_none=True)
-            result['credentials'] = self.credentials.to_dict(omit_none=True)
+            result["config"] = self.config.to_dict(omit_none=True)
+            result["credentials"] = self.credentials.to_dict(omit_none=True)
         return result
 
     def to_target_dict(self) -> Dict[str, Any]:
-        target = dict(
-            self.credentials.connection_info(with_aliases=True)
+        target = dict(self.credentials.connection_info(with_aliases=True))
+        target.update(
+            {
+                "type": self.credentials.type,
+                "threads": self.threads,
+                "name": self.target_name,
+                "target_name": self.target_name,
+                "profile_name": self.profile_name,
+                "config": self.config.to_dict(omit_none=True),
+            }
         )
-        target.update({
-            'type': self.credentials.type,
-            'threads': self.threads,
-            'name': self.target_name,
-            'target_name': self.target_name,
-            'profile_name': self.profile_name,
-            'config': self.config.to_dict(omit_none=True),
-        })
         return target
 
     def __eq__(self, other: object) -> bool:
-        if not (isinstance(other, self.__class__) and
-                isinstance(self, other.__class__)):
+        if not (
+            isinstance(other, self.__class__) and isinstance(self, other.__class__)
+        ):
             return NotImplemented
         return self.to_profile_info() == other.to_profile_info()
 
@@ -151,14 +146,17 @@ class Profile(HasCredentials):
     ) -> Credentials:
         # avoid an import cycle
         from dbt.adapters.factory import load_plugin
+
         # credentials carry their 'type' in their actual type, not their
         # attributes. We do want this in order to pick our Credentials class.
-        if 'type' not in profile:
+        if "type" not in profile:
             raise DbtProfileError(
-                'required field "type" not found in profile {} and target {}'
-                .format(profile_name, target_name))
+                'required field "type" not found in profile {} and target {}'.format(
+                    profile_name, target_name
+                )
+            )
 
-        typename = profile.pop('type')
+        typename = profile.pop("type")
         try:
             cls = load_plugin(typename)
             data = cls.translate_aliases(profile)
@@ -167,8 +165,9 @@ class Profile(HasCredentials):
         except (RuntimeException, ValidationError) as e:
             msg = str(e) if isinstance(e, RuntimeException) else e.message
             raise DbtProfileError(
-                'Credentials in profile "{}", target "{}" invalid: {}'
-                .format(profile_name, target_name, msg)
+                'Credentials in profile "{}", target "{}" invalid: {}'.format(
+                    profile_name, target_name, msg
+                )
             ) from e
 
         return credentials
@@ -189,19 +188,21 @@ class Profile(HasCredentials):
     def _get_profile_data(
         profile: Dict[str, Any], profile_name: str, target_name: str
     ) -> Dict[str, Any]:
-        if 'outputs' not in profile:
+        if "outputs" not in profile:
             raise DbtProfileError(
                 "outputs not specified in profile '{}'".format(profile_name)
             )
-        outputs = profile['outputs']
+        outputs = profile["outputs"]
 
         if target_name not in outputs:
-            outputs = '\n'.join(' - {}'.format(output)
-                                for output in outputs)
-            msg = ("The profile '{}' does not have a target named '{}'. The "
-                   "valid target names for this profile are:\n{}"
-                   .format(profile_name, target_name, outputs))
-            raise DbtProfileError(msg, result_type='invalid_target')
+            outputs = "\n".join(" - {}".format(output) for output in outputs)
+            msg = (
+                "The profile '{}' does not have a target named '{}'. The "
+                "valid target names for this profile are:\n{}".format(
+                    profile_name, target_name, outputs
+                )
+            )
+            raise DbtProfileError(msg, result_type="invalid_target")
         profile_data = outputs[target_name]
 
         if not isinstance(profile_data, dict):
@@ -209,7 +210,7 @@ class Profile(HasCredentials):
                 f"output '{target_name}' of profile '{profile_name}' is "
                 f"misconfigured in profiles.yml"
             )
-            raise DbtProfileError(msg, result_type='invalid_target')
+            raise DbtProfileError(msg, result_type="invalid_target")
 
         return profile_data
 
@@ -220,8 +221,8 @@ class Profile(HasCredentials):
         threads: int,
         profile_name: str,
         target_name: str,
-        user_cfg: Optional[Dict[str, Any]] = None
-    ) -> 'Profile':
+        user_cfg: Optional[Dict[str, Any]] = None,
+    ) -> "Profile":
         """Create a profile from an existing set of Credentials and the
         remaining information.
 
@@ -244,7 +245,7 @@ class Profile(HasCredentials):
             target_name=target_name,
             config=config,
             threads=threads,
-            credentials=credentials
+            credentials=credentials,
         )
         profile.validate()
         return profile
@@ -269,19 +270,18 @@ class Profile(HasCredentials):
         # name to extract a profile that we can render.
         if target_override is not None:
             target_name = target_override
-        elif 'target' in raw_profile:
+        elif "target" in raw_profile:
             # render the target if it was parsed from yaml
-            target_name = renderer.render_value(raw_profile['target'])
+            target_name = renderer.render_value(raw_profile["target"])
         else:
-            target_name = 'default'
+            target_name = "default"
             logger.debug(
-                "target not specified in profile '{}', using '{}'"
-                .format(profile_name, target_name)
+                "target not specified in profile '{}', using '{}'".format(
+                    profile_name, target_name
+                )
             )
 
-        raw_profile_data = cls._get_profile_data(
-            raw_profile, profile_name, target_name
-        )
+        raw_profile_data = cls._get_profile_data(raw_profile, profile_name, target_name)
 
         try:
             profile_data = renderer.render_data(raw_profile_data)
@@ -298,7 +298,7 @@ class Profile(HasCredentials):
         user_cfg: Optional[Dict[str, Any]] = None,
         target_override: Optional[str] = None,
         threads_override: Optional[int] = None,
-    ) -> 'Profile':
+    ) -> "Profile":
         """Create a profile from its raw profile information.
 
          (this is an intermediate step, mostly useful for unit testing)
@@ -319,7 +319,7 @@ class Profile(HasCredentials):
         """
         # user_cfg is not rendered.
         if user_cfg is None:
-            user_cfg = raw_profile.get('config')
+            user_cfg = raw_profile.get("config")
         # TODO: should it be, and the values coerced to bool?
         target_name, profile_data = cls.render_profile(
             raw_profile, profile_name, target_override, renderer
@@ -327,7 +327,7 @@ class Profile(HasCredentials):
 
         # valid connections never include the number of threads, but it's
         # stored on a per-connection level in the raw configs
-        threads = profile_data.pop('threads', DEFAULT_THREADS)
+        threads = profile_data.pop("threads", DEFAULT_THREADS)
         if threads_override is not None:
             threads = threads_override
 
@@ -340,7 +340,7 @@ class Profile(HasCredentials):
             profile_name=profile_name,
             target_name=target_name,
             threads=threads,
-            user_cfg=user_cfg
+            user_cfg=user_cfg,
         )
 
     @classmethod
@@ -351,7 +351,7 @@ class Profile(HasCredentials):
         renderer: ProfileRenderer,
         target_override: Optional[str] = None,
         threads_override: Optional[int] = None,
-    ) -> 'Profile':
+    ) -> "Profile":
         """
         :param raw_profiles: The profile data, from disk as yaml.
         :param profile_name: The profile name to use.
@@ -375,15 +375,9 @@ class Profile(HasCredentials):
         # don't render keys, so we can pluck that out
         raw_profile = raw_profiles[profile_name]
         if not raw_profile:
-            msg = (
-                f'Profile {profile_name} in profiles.yml is empty'
-            )
-            raise DbtProfileError(
-                INVALID_PROFILE_MESSAGE.format(
-                    error_string=msg
-                )
-            )
-        user_cfg = raw_profiles.get('config')
+            msg = f"Profile {profile_name} in profiles.yml is empty"
+            raise DbtProfileError(INVALID_PROFILE_MESSAGE.format(error_string=msg))
+        user_cfg = raw_profiles.get("config")
 
         return cls.from_raw_profile_info(
             raw_profile=raw_profile,
@@ -400,7 +394,7 @@ class Profile(HasCredentials):
         args: Any,
         renderer: ProfileRenderer,
         project_profile_name: Optional[str],
-    ) -> 'Profile':
+    ) -> "Profile":
         """Given the raw profiles as read from disk and the name of the desired
         profile if specified, return the profile component of the runtime
         config.
@@ -415,15 +409,16 @@ class Profile(HasCredentials):
             target could not be found.
         :returns Profile: The new Profile object.
         """
-        threads_override = getattr(args, 'threads', None)
-        target_override = getattr(args, 'target', None)
+        threads_override = getattr(args, "threads", None)
+        target_override = getattr(args, "target", None)
         raw_profiles = read_profile(args.profiles_dir)
-        profile_name = cls.pick_profile_name(getattr(args, 'profile', None),
-                                             project_profile_name)
+        profile_name = cls.pick_profile_name(
+            getattr(args, "profile", None), project_profile_name
+        )
         return cls.from_raw_profiles(
             raw_profiles=raw_profiles,
             profile_name=profile_name,
             renderer=renderer,
             target_override=target_override,
-            threads_override=threads_override
+            threads_override=threads_override,
         )

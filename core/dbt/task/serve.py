@@ -16,24 +16,24 @@ class ServeTask(ConfiguredTask):
 
         port = self.args.port
 
-        shutil.copyfile(DOCS_INDEX_FILE_PATH, 'index.html')
+        shutil.copyfile(DOCS_INDEX_FILE_PATH, "index.html")
 
         logger.info("Serving docs at 0.0.0.0:{}".format(port))
         logger.info(
-            "To access from your browser, navigate to:  http://localhost:{}"
-            .format(port)
+            "To access from your browser, navigate to:  http://localhost:{}".format(
+                port
+            )
         )
         logger.info("Press Ctrl+C to exit.\n\n")
 
         # mypy doesn't think SimpleHTTPRequestHandler is ok here, but it is
         httpd = TCPServer(  # type: ignore
-            ('0.0.0.0', port),
-            SimpleHTTPRequestHandler  # type: ignore
+            ("0.0.0.0", port), SimpleHTTPRequestHandler  # type: ignore
         )  # type: ignore
 
         if self.args.open_browser:
             try:
-                webbrowser.open_new_tab(f'http://127.0.0.1:{port}')
+                webbrowser.open_new_tab(f"http://127.0.0.1:{port}")
             except webbrowser.Error:
                 pass
 

@@ -29,7 +29,7 @@ def add_new_refs(
     manifest: Manifest,
     config: RuntimeConfig,
     node: ParsedRPCNode,
-    macros: Dict[str, Any]
+    macros: Dict[str, Any],
 ) -> None:
     """Given a new node that is not in the manifest, insert the new node
     into it as if it were part of regular ref processing.
@@ -48,8 +48,7 @@ def add_new_refs(
 
 class RemoteRunSQLTask(RPCTask[RPCExecParameters]):
     def runtime_cleanup(self, selected_uids):
-        """Do some pre-run cleanup that is usually performed in Task __init__.
-        """
+        """Do some pre-run cleanup that is usually performed in Task __init__."""
         self.run_count = 0
         self.num_nodes = len(selected_uids)
         self.node_results = []
@@ -65,21 +64,21 @@ class RemoteRunSQLTask(RPCTask[RPCExecParameters]):
         """
         # JSON is defined as using "unicode", we'll go a step further and
         # mandate utf-8 (though for the base64 part, it doesn't really matter!)
-        base64_sql_bytes = str(sql).encode('utf-8')
+        base64_sql_bytes = str(sql).encode("utf-8")
 
         try:
             sql_bytes = base64.b64decode(base64_sql_bytes, validate=True)
         except ValueError:
             self.raise_invalid_base64(sql)
 
-        return sql_bytes.decode('utf-8')
+        return sql_bytes.decode("utf-8")
 
     @staticmethod
     def raise_invalid_base64(sql):
         raise invalid_params(
             data={
-                'message': 'invalid base64-encoded sql input',
-                'sql': str(sql),
+                "message": "invalid base64-encoded sql input",
+                "sql": str(sql),
             }
         )
 
@@ -88,19 +87,17 @@ class RemoteRunSQLTask(RPCTask[RPCExecParameters]):
         macro_blocks = []
         data_chunks = []
         for block in extract_toplevel_blocks(data):
-            if block.block_type_name == 'macro':
+            if block.block_type_name == "macro":
                 macro_blocks.append(block.full_block)
             else:
                 data_chunks.append(block.full_block)
-        macros = '\n'.join(macro_blocks)
-        sql = ''.join(data_chunks)
+        macros = "\n".join(macro_blocks)
+        sql = "".join(data_chunks)
         return sql, macros
 
     def _get_exec_node(self):
         if self.manifest is None:
-            raise InternalException(
-                'manifest not set in _get_exec_node'
-            )
+            raise InternalException("manifest not set in _get_exec_node")
 
         results = ParseResult.rpc()
         macro_overrides = {}
@@ -124,7 +121,7 @@ class RemoteRunSQLTask(RPCTask[RPCExecParameters]):
             manifest=self.manifest,
             config=self.config,
             node=rpc_node,
-            macros=macro_overrides
+            macros=macro_overrides,
         )
 
         # don't write our new, weird manifest!
@@ -144,7 +141,7 @@ class RemoteRunSQLTask(RPCTask[RPCExecParameters]):
         try:
             self.node_results.append(runner.safe_run(self.manifest))
         except Exception as exc:
-            logger.debug('Got exception {}'.format(exc), exc_info=True)
+            logger.debug("Got exception {}".format(exc), exc_info=True)
             self._raise_next_tick = exc
         finally:
             thread_done.set()
@@ -165,8 +162,7 @@ class RemoteRunSQLTask(RPCTask[RPCExecParameters]):
             self.runtime_cleanup(selected_uids)
 
             thread_done = threading.Event()
-            thread = threading.Thread(target=self._in_thread,
-                                      args=(node, thread_done))
+            thread = threading.Thread(target=self._in_thread, args=(node, thread_done))
             thread.start()
             thread_done.wait()
         except KeyboardInterrupt:
@@ -174,13 +170,15 @@ class RemoteRunSQLTask(RPCTask[RPCExecParameters]):
             if adapter.is_cancelable():
 
                 for conn_name in adapter.cancel_open_connections():
-                    logger.debug('canceled query {}'.format(conn_name))
+                    logger.debug("canceled query {}".format(conn_name))
                 if thread:
                     thread.join()
             else:
-                msg = ("The {} adapter does not support query "
-                       "cancellation. Some queries may still be "
-                       "running!".format(adapter.type()))
+                msg = (
+                    "The {} adapter does not support query "
+                    "cancellation. Some queries may still be "
+                    "running!".format(adapter.type())
+                )
 
                 logger.debug(msg)
 
@@ -201,14 +199,14 @@ class RemoteRunSQLTask(RPCTask[RPCExecParameters]):
 
 
 class RemoteCompileTask(RemoteRunSQLTask, CompileTask):
-    METHOD_NAME = 'compile_sql'
+    METHOD_NAME = "compile_sql"
 
     def get_runner_type(self):
         return RPCCompileRunner
 
 
 class RemoteRunTask(RemoteRunSQLTask, RunTask):
-    METHOD_NAME = 'run_sql'
+    METHOD_NAME = "run_sql"
 
     def get_runner_type(self):
         return RPCExecuteRunner

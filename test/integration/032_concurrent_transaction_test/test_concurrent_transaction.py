@@ -10,11 +10,10 @@ def get_adapter_standalone(config):
 
 
 class BaseTestConcurrentTransaction(DBTIntegrationTest):
-
     def reset(self):
         self.query_state = {
-            'view_model': 'wait',
-            'model_1': 'wait',
+            "view_model": "wait",
+            "model_1": "wait",
         }
 
     def setUp(self):
@@ -33,7 +32,7 @@ class BaseTestConcurrentTransaction(DBTIntegrationTest):
     @property
     def project_config(self):
         return {
-            'config-version': 2,
+            "config-version": 2,
             "macro-paths": ["macros"],
             "on-run-start": [
                 "{{ create_udfs() }}",
@@ -41,23 +40,23 @@ class BaseTestConcurrentTransaction(DBTIntegrationTest):
         }
 
     def run_select_and_check(self, rel, sql):
-        connection_name = '__test_{}'.format(id(threading.current_thread()))
+        connection_name = "__test_{}".format(id(threading.current_thread()))
         try:
             with self._secret_adapter.connection_named(connection_name):
                 conn = self._secret_adapter.connections.get_thread_connection()
-                res = self.run_sql_common(self.transform_sql(sql), 'one', conn)
+                res = self.run_sql_common(self.transform_sql(sql), "one", conn)
 
             # The result is the output of f_sleep(), which is True
             if res[0]:
-                self.query_state[rel] = 'good'
+                self.query_state[rel] = "good"
             else:
-                self.query_state[rel] = 'bad'
+                self.query_state[rel] = "bad"
 
         except Exception as e:
-            if 'concurrent transaction' in str(e):
-                self.query_state[rel] = 'error: {}'.format(e)
+            if "concurrent transaction" in str(e):
+                self.query_state[rel] = "error: {}".format(e)
             else:
-                self.query_state[rel] = 'error: {}'.format(e)
+                self.query_state[rel] = "error: {}".format(e)
 
     def async_select(self, rel, sleep=10):
         # Run the select statement in a thread. When the query returns, the global
@@ -65,13 +64,12 @@ class BaseTestConcurrentTransaction(DBTIntegrationTest):
         # error will be reported if one was raised.
 
         schema = self.unique_schema()
-        query = '''
+        query = """
         -- async_select: {rel}
         select {schema}.f_sleep({sleep}) from {schema}.{rel}
-        '''.format(
-                schema=schema,
-                sleep=sleep,
-                rel=rel)
+        """.format(
+            schema=schema, sleep=sleep, rel=rel
+        )
 
         thread = threading.Thread(target=self.run_select_and_check, args=(rel, query))
         thread.start()
@@ -81,15 +79,15 @@ class BaseTestConcurrentTransaction(DBTIntegrationTest):
         self.use_profile("redshift")
 
         # First run the project to make sure the models exist
-        results = self.run_dbt(args=['run'])
+        results = self.run_dbt(args=["run"])
         self.assertEqual(len(results), 2)
 
         # Execute long-running queries in threads
-        t1 = self.async_select('view_model', 10)
-        t2 = self.async_select('model_1', 5)
+        t1 = self.async_select("view_model", 10)
+        t2 = self.async_select("model_1", 5)
 
         # While the queries are executing, re-run the project
-        res = self.run_dbt(args=['run', '--threads', '8'])
+        res = self.run_dbt(args=["run", "--threads", "8"])
         self.assertEqual(len(res), 2)
 
         # Finally, wait for these threads to finish
@@ -99,8 +97,8 @@ class BaseTestConcurrentTransaction(DBTIntegrationTest):
         self.assertTrue(len(res) > 0)
 
         # If the query succeeded, the global query_state should be 'good'
-        self.assertEqual(self.query_state['view_model'], 'good')
-        self.assertEqual(self.query_state['model_1'], 'good')
+        self.assertEqual(self.query_state["view_model"], "good")
+        self.assertEqual(self.query_state["model_1"], "good")
 
 
 class TableTestConcurrentTransaction(BaseTestConcurrentTransaction):

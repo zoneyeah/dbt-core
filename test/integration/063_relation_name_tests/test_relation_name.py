@@ -1,6 +1,5 @@
 from test.integration.base import DBTIntegrationTest, use_profile
 from pytest import mark
-import dbt.exceptions
 
 
 class TestAdapterDDL(DBTIntegrationTest):

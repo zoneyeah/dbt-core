@@ -8,12 +8,12 @@ from typing import Type, Union, Dict, Any, Optional
 from dbt import tracking
 from dbt import ui
 from dbt.contracts.graph.manifest import Manifest
-from dbt.contracts.results import (
-    NodeStatus, RunResult, collect_timing_info, RunStatus
-)
+from dbt.contracts.results import NodeStatus, RunResult, collect_timing_info, RunStatus
 from dbt.exceptions import (
-    NotImplementedException, CompilationException, RuntimeException,
-    InternalException
+    NotImplementedException,
+    CompilationException,
+    RuntimeException,
+    InternalException,
 )
 from dbt.logger import GLOBAL_LOGGER as logger, log_manager
 from .printer import print_skip_caused_by_error, print_skip_line
@@ -41,7 +41,7 @@ def read_profiles(profiles_dir=None):
     if raw_profiles is None:
         profiles = {}
     else:
-        profiles = {k: v for (k, v) in raw_profiles.items() if k != 'config'}
+        profiles = {k: v for (k, v) in raw_profiles.items() if k != "config"}
 
     return profiles
 
@@ -63,7 +63,7 @@ class BaseTask(metaclass=ABCMeta):
     @classmethod
     def pre_init_hook(cls, args):
         """A hook called before the task is initialized."""
-        if args.log_format == 'json':
+        if args.log_format == "json":
             log_manager.format_json()
         else:
             log_manager.format_text()
@@ -76,10 +76,8 @@ class BaseTask(metaclass=ABCMeta):
             logger.error("Encountered an error while reading the project:")
             logger.error("  ERROR: {}".format(str(exc)))
 
-            tracking.track_invalid_invocation(
-                args=args,
-                result_type=exc.result_type)
-            raise dbt.exceptions.RuntimeException('Could not run dbt') from exc
+            tracking.track_invalid_invocation(args=args, result_type=exc.result_type)
+            raise dbt.exceptions.RuntimeException("Could not run dbt") from exc
         except dbt.exceptions.DbtProfileError as exc:
             logger.error("Encountered an error while reading profiles:")
             logger.error("  ERROR {}".format(str(exc)))
@@ -91,20 +89,19 @@ class BaseTask(metaclass=ABCMeta):
                 for profile in all_profiles:
                     logger.info(" - {}".format(profile))
             else:
-                logger.info("There are no profiles defined in your "
-                            "profiles.yml file")
+                logger.info(
+                    "There are no profiles defined in your " "profiles.yml file"
+                )
 
             logger.info(PROFILES_HELP_MESSAGE)
 
-            tracking.track_invalid_invocation(
-                args=args,
-                result_type=exc.result_type)
-            raise dbt.exceptions.RuntimeException('Could not run dbt') from exc
+            tracking.track_invalid_invocation(args=args, result_type=exc.result_type)
+            raise dbt.exceptions.RuntimeException("Could not run dbt") from exc
         return cls(args, config)
 
     @abstractmethod
     def run(self):
-        raise dbt.exceptions.NotImplementedException('Not Implemented')
+        raise dbt.exceptions.NotImplementedException("Not Implemented")
 
     def interpret_results(self, results):
         return True
@@ -188,15 +185,15 @@ class BaseRunner(metaclass=ABCMeta):
 
     def get_result_status(self, result) -> Dict[str, str]:
         if result.status == NodeStatus.Error:
-            return {'node_status': 'error', 'node_error': str(result.message)}
+            return {"node_status": "error", "node_error": str(result.message)}
         elif result.status == NodeStatus.Skipped:
-            return {'node_status': 'skipped'}
+            return {"node_status": "skipped"}
         elif result.status == NodeStatus.Fail:
-            return {'node_status': 'failed'}
+            return {"node_status": "failed"}
         elif result.status == NodeStatus.Warn:
-            return {'node_status': 'warn'}
+            return {"node_status": "warn"}
         else:
-            return {'node_status': 'passed'}
+            return {"node_status": "passed"}
 
     def run_with_hooks(self, manifest):
         if self.skip:
@@ -213,8 +210,16 @@ class BaseRunner(metaclass=ABCMeta):
 
         return result
 
-    def _build_run_result(self, node, start_time, status, timing_info, message,
-                          agate_table=None, adapter_response=None):
+    def _build_run_result(
+        self,
+        node,
+        start_time,
+        status,
+        timing_info,
+        message,
+        agate_table=None,
+        adapter_response=None,
+    ):
         execution_time = time.time() - start_time
         thread_id = threading.current_thread().name
         if adapter_response is None:
@@ -227,7 +232,7 @@ class BaseRunner(metaclass=ABCMeta):
             message=message,
             node=node,
             agate_table=agate_table,
-            adapter_response=adapter_response
+            adapter_response=adapter_response,
         )
 
     def error_result(self, node, message, start_time, timing_info):
@@ -245,7 +250,7 @@ class BaseRunner(metaclass=ABCMeta):
             start_time=start_time,
             status=RunStatus.Success,
             timing_info=timing_info,
-            message=None
+            message=None,
         )
 
     def from_run_result(self, result, start_time, timing_info):
@@ -256,7 +261,7 @@ class BaseRunner(metaclass=ABCMeta):
             timing_info=timing_info,
             message=result.message,
             agate_table=result.agate_table,
-            adapter_response=result.adapter_response
+            adapter_response=result.adapter_response,
         )
 
     def skip_result(self, node, message):
@@ -268,13 +273,13 @@ class BaseRunner(metaclass=ABCMeta):
             timing=[],
             message=message,
             node=node,
-            adapter_response={}
+            adapter_response={},
         )
 
     def compile_and_execute(self, manifest, ctx):
         result = None
         with self.adapter.connection_for(self.node):
-            with collect_timing_info('compile') as timing_info:
+            with collect_timing_info("compile") as timing_info:
                 # if we fail here, we still have a compiled node to return
                 # this has the benefit of showing a build path for the errant
                 # model
@@ -283,7 +288,7 @@ class BaseRunner(metaclass=ABCMeta):
 
             # for ephemeral nodes, we only want to compile, not run
             if not ctx.node.is_ephemeral_model:
-                with collect_timing_info('execute') as timing_info:
+                with collect_timing_info("execute") as timing_info:
                     result = self.run(ctx.node, manifest)
                     ctx.node = result.node
 
@@ -300,12 +305,10 @@ class BaseRunner(metaclass=ABCMeta):
 
     def _handle_internal_exception(self, e, ctx):
         build_path = self.node.build_path
-        prefix = 'Internal error executing {}'.format(build_path)
+        prefix = "Internal error executing {}".format(build_path)
 
         error = "{prefix}\n{error}\n\n{note}".format(
-            prefix=ui.red(prefix),
-            error=str(e).strip(),
-            note=INTERNAL_ERROR_STRING
+            prefix=ui.red(prefix), error=str(e).strip(), note=INTERNAL_ERROR_STRING
         )
         logger.debug(error, exc_info=True)
         return str(e)
@@ -315,13 +318,10 @@ class BaseRunner(metaclass=ABCMeta):
         if node_description is None:
             node_description = self.node.unique_id
         prefix = "Unhandled error while executing {}".format(node_description)
-        error = "{prefix}\n{error}".format(
-            prefix=ui.red(prefix),
-            error=str(e).strip()
-        )
+        error = "{prefix}\n{error}".format(prefix=ui.red(prefix), error=str(e).strip())
 
         logger.error(error)
-        logger.debug('', exc_info=True)
+        logger.debug("", exc_info=True)
         return str(e)
 
     def handle_exception(self, e, ctx):
@@ -350,8 +350,10 @@ class BaseRunner(metaclass=ABCMeta):
             # if releasing failed and the result doesn't have an error yet, set
             # an error
             if (
-                exc_str is not None and result is not None and
-                result.status != NodeStatus.Error and error is None
+                exc_str is not None
+                and result is not None
+                and result.status != NodeStatus.Error
+                and error is None
             ):
                 error = exc_str
 
@@ -372,8 +374,9 @@ class BaseRunner(metaclass=ABCMeta):
             self.adapter.release_connection()
         except Exception as exc:
             logger.debug(
-                'Error releasing connection for node {}: {!s}\n{}'
-                .format(self.node.name, exc, traceback.format_exc())
+                "Error releasing connection for node {}: {!s}\n{}".format(
+                    self.node.name, exc, traceback.format_exc()
+                )
             )
             return str(exc)
 
@@ -411,27 +414,23 @@ class BaseRunner(metaclass=ABCMeta):
                     node_name,
                     self.node_index,
                     self.num_nodes,
-                    self.skip_cause
+                    self.skip_cause,
                 )
                 if self.skip_cause is None:  # mypy appeasement
                     raise InternalException(
-                        'Skip cause not set but skip was somehow caused by '
-                        'an ephemeral failure'
+                        "Skip cause not set but skip was somehow caused by "
+                        "an ephemeral failure"
                     )
                 # set an error so dbt will exit with an error code
                 error_message = (
-                    'Compilation Error in {}, caused by compilation error '
-                    'in referenced ephemeral model {}'
-                    .format(self.node.unique_id,
-                            self.skip_cause.node.unique_id)
+                    "Compilation Error in {}, caused by compilation error "
+                    "in referenced ephemeral model {}".format(
+                        self.node.unique_id, self.skip_cause.node.unique_id
+                    )
                 )
             else:
                 print_skip_line(
-                    self.node,
-                    schema_name,
-                    node_name,
-                    self.node_index,
-                    self.num_nodes
+                    self.node, schema_name, node_name, self.node_index, self.num_nodes
                 )
 
         node_result = self.skip_result(self.node, error_message)

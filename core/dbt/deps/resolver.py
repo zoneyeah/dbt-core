@@ -6,7 +6,7 @@ from dbt.exceptions import raise_dependency_error, InternalException
 from dbt.context.target import generate_target_context
 from dbt.config import Project, RuntimeConfig
 from dbt.config.renderer import DbtProjectYamlRenderer
-from dbt.deps.base import BasePackage, PinnedPackage, UnpinnedPackage
+from dbt.deps import BasePackage, PinnedPackage, UnpinnedPackage
 from dbt.deps.local import LocalUnpinnedPackage
 from dbt.deps.git import GitUnpinnedPackage
 from dbt.deps.registry import RegistryUnpinnedPackage
@@ -49,12 +49,10 @@ class PackageListing:
         key_str: str = self._pick_key(key)
         self.packages[key_str] = value
 
-    def _mismatched_types(
-        self, old: UnpinnedPackage, new: UnpinnedPackage
-    ) -> NoReturn:
+    def _mismatched_types(self, old: UnpinnedPackage, new: UnpinnedPackage) -> NoReturn:
         raise_dependency_error(
-            f'Cannot incorporate {new} ({new.__class__.__name__}) in {old} '
-            f'({old.__class__.__name__}): mismatched types'
+            f"Cannot incorporate {new} ({new.__class__.__name__}) in {old} "
+            f"({old.__class__.__name__}): mismatched types"
         )
 
     def incorporate(self, package: UnpinnedPackage):
@@ -78,14 +76,14 @@ class PackageListing:
                 pkg = RegistryUnpinnedPackage.from_contract(contract)
             else:
                 raise InternalException(
-                    'Invalid package type {}'.format(type(contract))
+                    "Invalid package type {}".format(type(contract))
                 )
             self.incorporate(pkg)
 
     @classmethod
     def from_contracts(
-        cls: Type['PackageListing'], src: List[PackageContract]
-    ) -> 'PackageListing':
+        cls: Type["PackageListing"], src: List[PackageContract]
+    ) -> "PackageListing":
         self = cls({})
         self.update_from(src)
         return self
@@ -108,14 +106,14 @@ def _check_for_duplicate_project_names(
         if project_name in seen:
             raise_dependency_error(
                 f'Found duplicate project "{project_name}". This occurs when '
-                'a dependency has the same project name as some other '
-                'dependency.'
+                "a dependency has the same project name as some other "
+                "dependency."
             )
         elif project_name == config.project_name:
             raise_dependency_error(
-                'Found a dependency with the same name as the root project '
+                "Found a dependency with the same name as the root project "
                 f'"{project_name}". Package names must be unique in a project.'
-                ' Please rename one of these packages.'
+                " Please rename one of these packages."
             )
         seen.add(project_name)
 

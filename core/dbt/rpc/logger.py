@@ -16,10 +16,10 @@ from dbt.utils import restrict_to
 
 
 class QueueMessageType(StrEnum):
-    Error = 'error'
-    Result = 'result'
-    Timeout = 'timeout'
-    Log = 'log'
+    Error = "error"
+    Result = "result"
+    Timeout = "timeout"
+    Log = "log"
 
     terminating = frozenset((Error, Result, Timeout))
 
@@ -34,9 +34,7 @@ class QueueMessage:
 
 @dataclass
 class QueueLogMessage(QueueMessage):
-    message_type: QueueMessageType = field(
-        metadata=restrict_to(QueueMessageType.Log)
-    )
+    message_type: QueueMessageType = field(metadata=restrict_to(QueueMessageType.Log))
     record: logbook.LogRecord
 
     @classmethod
@@ -49,9 +47,7 @@ class QueueLogMessage(QueueMessage):
 
 @dataclass
 class QueueErrorMessage(QueueMessage):
-    message_type: QueueMessageType = field(
-        metadata=restrict_to(QueueMessageType.Error)
-    )
+    message_type: QueueMessageType = field(metadata=restrict_to(QueueMessageType.Error))
     error: JSONRPCError
 
     @classmethod
@@ -59,7 +55,6 @@ class QueueErrorMessage(QueueMessage):
         return QueueErrorMessage(
             message_type=QueueMessageType.Error,
             error=error,
-
         )
 
 
@@ -127,25 +122,17 @@ class QueueSubscriber(logbook.queues.MultiProcessingSubscriber):
         except Empty:
             return QueueTimeoutMessage.create()
 
-    def recv(
-        self,
-        timeout: Optional[float] = None
-    ) -> QueueMessage:
+    def recv(self, timeout: Optional[float] = None) -> QueueMessage:
         """Receives one record from the socket, loads it and dispatches it.
         Returns the message type if something was dispatched or `None` if it
         timed out.
         """
         rv = self._recv_raw(timeout)
         if not isinstance(rv, QueueMessage):
-            raise InternalException(
-                'Got invalid queue message: {}'.format(rv)
-            )
+            raise InternalException("Got invalid queue message: {}".format(rv))
         return rv
 
-    def handle_message(
-        self,
-        timeout: Optional[float]
-    ) -> QueueMessage:
+    def handle_message(self, timeout: Optional[float]) -> QueueMessage:
         msg = self.recv(timeout)
         if isinstance(msg, QueueLogMessage):
             logbook.dispatch_record(msg.record)
@@ -154,13 +141,11 @@ class QueueSubscriber(logbook.queues.MultiProcessingSubscriber):
             return msg
         else:
             raise InternalException(
-                'Got invalid queue message type {}'.format(msg.message_type)
+                "Got invalid queue message type {}".format(msg.message_type)
             )
 
     def dispatch_until_exit(
-        self,
-        started: datetime,
-        timeout: Optional[float] = None
+        self, started: datetime, timeout: Optional[float] = None
     ) -> QueueMessage:
         while True:
             message_timeout = _next_timeout(started, timeout)
@@ -174,8 +159,8 @@ class ServerContext(logbook.Processor):
     def process(self, record):
         # the server context is the last processor in the stack, so it should
         # not overwrite a context if it's already been set.
-        if not record.extra['context']:
-            record.extra['context'] = 'server'
+        if not record.extra["context"]:
+            record.extra["context"] = "server"
 
 
 class HTTPRequest(logbook.Processor):
@@ -183,8 +168,8 @@ class HTTPRequest(logbook.Processor):
         self.request = request
 
     def process(self, record):
-        record.extra['addr'] = self.request.remote_addr
-        record.extra['http_method'] = self.request.method
+        record.extra["addr"] = self.request.remote_addr
+        record.extra["http_method"] = self.request.method
 
 
 class RPCRequest(logbook.Processor):
@@ -193,8 +178,8 @@ class RPCRequest(logbook.Processor):
         super().__init__()
 
     def process(self, record):
-        record.extra['request_id'] = self.request._id
-        record.extra['method'] = self.request.method
+        record.extra["request_id"] = self.request._id
+        record.extra["method"] = self.request.method
 
 
 class RPCResponse(logbook.Processor):
@@ -203,14 +188,12 @@ class RPCResponse(logbook.Processor):
         super().__init__()
 
     def process(self, record):
-        record.extra['response_code'] = 200
+        record.extra["response_code"] = 200
         # the request_id could be None if the request was bad
-        record.extra['request_id'] = getattr(
-            self.response.request, '_id', None
-        )
+        record.extra["request_id"] = getattr(self.response.request, "_id", None)
 
 
 class RequestContext(RPCRequest):
     def process(self, record):
         super().process(record)
-        record.extra['context'] = 'request'
+        record.extra["context"] = "request"

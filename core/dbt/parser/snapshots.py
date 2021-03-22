@@ -3,27 +3,22 @@ from typing import List
 
 from dbt.dataclass_schema import ValidationError
 
-from dbt.contracts.graph.parsed import (
-    IntermediateSnapshotNode, ParsedSnapshotNode
-)
-from dbt.exceptions import (
-    CompilationException, validator_error_message
-)
+from dbt.contracts.graph.parsed import IntermediateSnapshotNode, ParsedSnapshotNode
+from dbt.exceptions import CompilationException, validator_error_message
 from dbt.node_types import NodeType
 from dbt.parser.base import SQLParser
 from dbt.parser.search import (
-    FilesystemSearcher, BlockContents, BlockSearcher, FileBlock
+    FilesystemSearcher,
+    BlockContents,
+    BlockSearcher,
+    FileBlock,
 )
 from dbt.utils import split_path
 
 
-class SnapshotParser(
-    SQLParser[IntermediateSnapshotNode, ParsedSnapshotNode]
-):
+class SnapshotParser(SQLParser[IntermediateSnapshotNode, ParsedSnapshotNode]):
     def get_paths(self):
-        return FilesystemSearcher(
-            self.project, self.project.snapshot_paths, '.sql'
-        )
+        return FilesystemSearcher(self.project, self.project.snapshot_paths, ".sql")
 
     def parse_from_dict(self, dct, validate=True) -> IntermediateSnapshotNode:
         if validate:
@@ -78,7 +73,7 @@ class SnapshotParser(
     def parse_file(self, file_block: FileBlock) -> None:
         blocks = BlockSearcher(
             source=[file_block],
-            allowed_blocks={'snapshot'},
+            allowed_blocks={"snapshot"},
             source_tag_factory=BlockContents,
         )
         for block in blocks:

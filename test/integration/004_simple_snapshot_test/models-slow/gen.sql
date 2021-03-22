@@ -36,7 +36,7 @@ with gen as (
 
 )
 
-select 
+select
     id,
     updated_at,
     extract(seconds from updated_at)::int as seconds

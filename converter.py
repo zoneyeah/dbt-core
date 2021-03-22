@@ -63,11 +63,13 @@ def main():
     packages = registry.packages()
     project_json = init_project_in_packages(args, packages)
     if args.project["version"] in project_json["versions"]:
-        raise Exception("Version {} already in packages JSON"
-                        .format(args.project["version"]),
-                        file=sys.stderr)
+        raise Exception(
+            "Version {} already in packages JSON".format(args.project["version"]),
+            file=sys.stderr,
+        )
     add_version_to_package(args, project_json)
     print(json.dumps(packages, indent=2))
+
 
 if __name__ == "__main__":
     main()

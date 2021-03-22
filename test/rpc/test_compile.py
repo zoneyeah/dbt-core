@@ -8,13 +8,9 @@ from .util import (
 )
 
 
-@pytest.mark.supported('postgres')
-def test_rpc_compile_threads(
-    project_root, profiles_root, dbt_profile, unique_schema
-):
-    project = ProjectDefinition(
-        models={'my_model.sql': 'select 1 as id'}
-    )
+@pytest.mark.supported("postgres")
+def test_rpc_compile_threads(project_root, profiles_root, dbt_profile, unique_schema):
+    project = ProjectDefinition(models={"my_model.sql": "select 1 as id"})
     querier_ctx = get_querier(
         project_def=project,
         project_dir=project_root,
@@ -26,17 +22,13 @@ def test_rpc_compile_threads(
         results = querier.async_wait_for_result(querier.compile(threads=5))
         assert_has_threads(results, 5)
 
-        results = querier.async_wait_for_result(
-            querier.cli_args('compile --threads=7')
-        )
+        results = querier.async_wait_for_result(querier.cli_args("compile --threads=7"))
         assert_has_threads(results, 7)
 
 
-@pytest.mark.supported('postgres')
-def test_rpc_compile_state(
-    project_root, profiles_root, dbt_profile, unique_schema
-):
-    project = ProjectDefinition(models={'my_model.sql': 'select 1 as id'})
+@pytest.mark.supported("postgres")
+def test_rpc_compile_state(project_root, profiles_root, dbt_profile, unique_schema):
+    project = ProjectDefinition(models={"my_model.sql": "select 1 as id"})
     querier_ctx = get_querier(
         project_def=project,
         project_dir=project_root,
@@ -45,30 +37,28 @@ def test_rpc_compile_state(
         test_kwargs={},
     )
     with querier_ctx as querier:
-        state_dir = os.path.join(project_root, 'state')
+        state_dir = os.path.join(project_root, "state")
         os.makedirs(state_dir)
 
-        results = querier.async_wait_for_result(
-            querier.compile()
-        )
-        assert len(results['results']) == 1
+        results = querier.async_wait_for_result(querier.compile())
+        assert len(results["results"]) == 1
 
-        get_write_manifest(querier, os.path.join(state_dir, 'manifest.json'))
+        get_write_manifest(querier, os.path.join(state_dir, "manifest.json"))
 
-        project.models['my_model.sql'] = 'select 2 as id'
+        project.models["my_model.sql"] = "select 2 as id"
         project.write_models(project_root, remove=True)
 
         querier.sighup()
-        assert querier.wait_for_status('ready') is True
+        assert querier.wait_for_status("ready") is True
 
         results = querier.async_wait_for_result(
-            querier.compile(state='./state', models=['state:modified'])
+            querier.compile(state="./state", models=["state:modified"])
         )
-        assert len(results['results']) == 1
+        assert len(results["results"]) == 1
 
-        get_write_manifest(querier, os.path.join(state_dir, 'manifest.json'))
+        get_write_manifest(querier, os.path.join(state_dir, "manifest.json"))
 
         results = querier.async_wait_for_result(
-            querier.compile(state='./state', models=['state:modified']),
+            querier.compile(state="./state", models=["state:modified"]),
         )
-        assert len(results['results']) == 0
+        assert len(results["results"]) == 0

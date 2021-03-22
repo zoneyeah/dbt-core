@@ -7,4 +7,4 @@ mkvirtualenv dbt
 cd /usr/src/app
 
 pip install -r requirements.txt
-pip install -r dev_requirements.txt
+pip install -r requirements-dev.txt

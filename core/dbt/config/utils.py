@@ -15,9 +15,8 @@ def parse_cli_vars(var_string: str) -> Dict[str, Any]:
             type_name = var_type.__name__
             raise_compiler_error(
                 "The --vars argument must be a YAML dictionary, but was "
-                "of type '{}'".format(type_name))
+                "of type '{}'".format(type_name)
+            )
     except ValidationException:
-        logger.error(
-            "The YAML provided in the --vars argument is not valid.\n"
-        )
+        logger.error("The YAML provided in the --vars argument is not valid.\n")
         raise

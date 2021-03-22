@@ -8,5 +8,3 @@ union all
 {{
     test.do_something2("arg3", "arg4")
 }}
-
-

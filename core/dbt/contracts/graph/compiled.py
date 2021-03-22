@@ -58,31 +58,29 @@ class CompiledNode(ParsedNode, CompiledNodeMixin):
 
 @dataclass
 class CompiledAnalysisNode(CompiledNode):
-    resource_type: NodeType = field(metadata={'restrict': [NodeType.Analysis]})
+    resource_type: NodeType = field(metadata={"restrict": [NodeType.Analysis]})
 
 
 @dataclass
 class CompiledHookNode(CompiledNode):
-    resource_type: NodeType = field(
-        metadata={'restrict': [NodeType.Operation]}
-    )
+    resource_type: NodeType = field(metadata={"restrict": [NodeType.Operation]})
     index: Optional[int] = None
 
 
 @dataclass
 class CompiledModelNode(CompiledNode):
-    resource_type: NodeType = field(metadata={'restrict': [NodeType.Model]})
+    resource_type: NodeType = field(metadata={"restrict": [NodeType.Model]})
 
 
 @dataclass
 class CompiledRPCNode(CompiledNode):
-    resource_type: NodeType = field(metadata={'restrict': [NodeType.RPCCall]})
+    resource_type: NodeType = field(metadata={"restrict": [NodeType.RPCCall]})
 
 
 @dataclass
 class CompiledSeedNode(CompiledNode):
     # keep this in sync with ParsedSeedNode!
-    resource_type: NodeType = field(metadata={'restrict': [NodeType.Seed]})
+    resource_type: NodeType = field(metadata={"restrict": [NodeType.Seed]})
     config: SeedConfig = field(default_factory=SeedConfig)
 
     @property
@@ -96,26 +94,25 @@ class CompiledSeedNode(CompiledNode):
 
 @dataclass
 class CompiledSnapshotNode(CompiledNode):
-    resource_type: NodeType = field(metadata={'restrict': [NodeType.Snapshot]})
+    resource_type: NodeType = field(metadata={"restrict": [NodeType.Snapshot]})
 
 
 @dataclass
 class CompiledDataTestNode(CompiledNode):
-    resource_type: NodeType = field(metadata={'restrict': [NodeType.Test]})
+    resource_type: NodeType = field(metadata={"restrict": [NodeType.Test]})
     config: TestConfig = field(default_factory=TestConfig)
 
 
 @dataclass
 class CompiledSchemaTestNode(CompiledNode, HasTestMetadata):
     # keep this in sync with ParsedSchemaTestNode!
-    resource_type: NodeType = field(metadata={'restrict': [NodeType.Test]})
+    resource_type: NodeType = field(metadata={"restrict": [NodeType.Test]})
     column_name: Optional[str] = None
     config: TestConfig = field(default_factory=TestConfig)
 
     def same_config(self, other) -> bool:
-        return (
-            self.unrendered_config.get('severity') ==
-            other.unrendered_config.get('severity')
+        return self.unrendered_config.get("severity") == other.unrendered_config.get(
+            "severity"
         )
 
     def same_column_name(self, other) -> bool:
@@ -125,11 +122,7 @@ class CompiledSchemaTestNode(CompiledNode, HasTestMetadata):
         if other is None:
             return False
 
-        return (
-            self.same_config(other) and
-            self.same_fqn(other) and
-            True
-        )
+        return self.same_config(other) and self.same_fqn(other) and True
 
 
 CompiledTestNode = Union[CompiledDataTestNode, CompiledSchemaTestNode]
@@ -175,8 +168,7 @@ def parsed_instance_for(compiled: CompiledNode) -> ParsedResource:
     cls = PARSED_TYPES.get(type(compiled))
     if cls is None:
         # how???
-        raise ValueError('invalid resource_type: {}'
-                         .format(compiled.resource_type))
+        raise ValueError("invalid resource_type: {}".format(compiled.resource_type))
 
     return cls.from_dict(compiled.to_dict(omit_none=True))
 

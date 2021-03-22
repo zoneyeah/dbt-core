@@ -10,7 +10,7 @@ import dbt.exceptions
 
 
 # note that this isn't an adapter macro, so just a single underscore
-GET_RELATIONS_MACRO_NAME = 'postgres_get_relations'
+GET_RELATIONS_MACRO_NAME = "postgres_get_relations"
 
 
 @dataclass
@@ -27,7 +27,7 @@ class PostgresAdapter(SQLAdapter):
 
     @classmethod
     def date_function(cls):
-        return 'now()'
+        return "now()"
 
     @available
     def verify_database(self, database):
@@ -36,11 +36,12 @@ class PostgresAdapter(SQLAdapter):
         expected = self.config.credentials.database
         if database.lower() != expected.lower():
             raise dbt.exceptions.NotImplementedException(
-                'Cross-db references not allowed in {} ({} vs {})'
-                .format(self.type(), database, expected)
+                "Cross-db references not allowed in {} ({} vs {})".format(
+                    self.type(), database, expected
+                )
             )
         # return an empty string on success so macros can call this
-        return ''
+        return ""
 
     def _link_cached_database_relations(self, schemas: Set[str]):
         """
@@ -51,14 +52,10 @@ class PostgresAdapter(SQLAdapter):
 
         for (dep_schema, dep_name, refed_schema, refed_name) in table:
             dependent = self.Relation.create(
-                database=database,
-                schema=dep_schema,
-                identifier=dep_name
+                database=database, schema=dep_schema, identifier=dep_name
             )
             referenced = self.Relation.create(
-                database=database,
-                schema=refed_schema,
-                identifier=refed_name
+                database=database, schema=refed_schema, identifier=refed_name
             )
 
             # don't record in cache if this relation isn't in a relevant
@@ -73,7 +70,7 @@ class PostgresAdapter(SQLAdapter):
             return schemas.flatten()
         except dbt.exceptions.RuntimeException as exc:
             dbt.exceptions.raise_compiler_error(
-                'Cross-db references not allowed in adapter {}: Got {}'.format(
+                "Cross-db references not allowed in adapter {}: Got {}".format(
                     self.type(), exc.msg
                 )
             )
@@ -92,6 +89,6 @@ class PostgresAdapter(SQLAdapter):
         self._link_cached_relations(manifest)
 
     def timestamp_add_sql(
-        self, add_to: str, number: int = 1, interval: str = 'hour'
+        self, add_to: str, number: int = 1, interval: str = "hour"
     ) -> str:
         return f"{add_to} + interval '{number} {interval}'"

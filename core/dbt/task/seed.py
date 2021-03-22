@@ -24,7 +24,7 @@ class SeedRunner(ModelRunner):
 
     def _build_run_model_result(self, model, context):
         result = super()._build_run_model_result(model, context)
-        agate_result = context['load_result']('agate_table')
+        agate_result = context["load_result"]("agate_table")
         result.agate_table = agate_result.table
         return result
 
@@ -33,8 +33,7 @@ class SeedRunner(ModelRunner):
 
     def print_result_line(self, result):
         schema_name = self.node.schema
-        print_seed_result_line(result, schema_name, self.node_index,
-                               self.num_nodes)
+        print_seed_result_line(result, schema_name, self.node_index, self.num_nodes)
 
 
 class SeedTask(RunTask):
@@ -48,7 +47,7 @@ class SeedTask(RunTask):
     def get_node_selector(self):
         if self.manifest is None or self.graph is None:
             raise InternalException(
-                'manifest and graph must be set to get perform node selection'
+                "manifest and graph must be set to get perform node selection"
             )
         return ResourceTypeSelector(
             graph=self.graph,

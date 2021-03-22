@@ -13,34 +13,31 @@ class TestBaseCaching(DBTIntegrationTest):
 
     @property
     def project_config(self):
-        return {
-            'config-version': 2,
-            'test-paths': ['tests']
-        }
+        return {"config-version": 2, "test-paths": ["tests"]}
 
-    @use_profile('postgres')
+    @use_profile("postgres")
     def test_postgres_adapter_methods(self):
-        self.run_dbt(['compile'])  # trigger any compile-time issues
+        self.run_dbt(["compile"])  # trigger any compile-time issues
         self.run_dbt()
-        self.assertTablesEqual('model', 'expected')
+        self.assertTablesEqual("model", "expected")
 
-    @use_profile('redshift')
+    @use_profile("redshift")
     def test_redshift_adapter_methods(self):
-        self.run_dbt(['compile'])  # trigger any compile-time issues
+        self.run_dbt(["compile"])  # trigger any compile-time issues
         self.run_dbt()
-        self.assertTablesEqual('model', 'expected')
+        self.assertTablesEqual("model", "expected")
 
-    @use_profile('snowflake')
+    @use_profile("snowflake")
     def test_snowflake_adapter_methods(self):
-        self.run_dbt(['compile'])  # trigger any compile-time issues
+        self.run_dbt(["compile"])  # trigger any compile-time issues
         self.run_dbt()
-        self.assertTablesEqual('MODEL', 'EXPECTED')
+        self.assertTablesEqual("MODEL", "EXPECTED")
 
-    @use_profile('bigquery')
+    @use_profile("bigquery")
     def test_bigquery_adapter_methods(self):
-        self.run_dbt(['compile'])  # trigger any compile-time issues
+        self.run_dbt(["compile"])  # trigger any compile-time issues
         self.run_dbt()
-        self.assertTablesEqual('model', 'expected')
+        self.assertTablesEqual("model", "expected")
 
 
 class TestRenameRelation(DBTIntegrationTest):
@@ -50,25 +47,26 @@ class TestRenameRelation(DBTIntegrationTest):
 
     @property
     def models(self):
-        return 'bigquery-models'
+        return "bigquery-models"
 
     @property
     def project_config(self):
-        return {
-            'config-version': 2,
-            'source-paths': ['models']
-        }
+        return {"config-version": 2, "source-paths": ["models"]}
 
-    @use_profile('bigquery')
+    @use_profile("bigquery")
     def test_bigquery_adapter_methods(self):
-        self.run_dbt(['compile'])  # trigger any compile-time issues
+        self.run_dbt(["compile"])  # trigger any compile-time issues
         self.run_sql_file("seed_bq.sql")
-        self.run_dbt(['seed'])
-        rename_relation_args = yaml.safe_dump({
-            'from_name': 'seed',
-            'to_name': 'renamed_seed',
-        })
-        self.run_dbt(['run-operation', 'rename_named_relation', '--args', rename_relation_args])
+        self.run_dbt(["seed"])
+        rename_relation_args = yaml.safe_dump(
+            {
+                "from_name": "seed",
+                "to_name": "renamed_seed",
+            }
+        )
+        self.run_dbt(
+            ["run-operation", "rename_named_relation", "--args", rename_relation_args]
+        )
         self.run_dbt()
 
 
@@ -79,32 +77,31 @@ class TestGrantAccess(DBTIntegrationTest):
 
     @property
     def models(self):
-        return 'bigquery-models'
+        return "bigquery-models"
 
     @property
     def project_config(self):
-        return {
-            'config-version': 2,
-            'source-paths': ['models']
-        }
+        return {"config-version": 2, "source-paths": ["models"]}
 
-    @use_profile('bigquery')
+    @use_profile("bigquery")
     def test_bigquery_adapter_methods(self):
         from dbt.adapters.bigquery import GrantTarget
         from google.cloud.bigquery import AccessEntry
 
-        self.run_dbt(['compile'])  # trigger any compile-time issues
+        self.run_dbt(["compile"])  # trigger any compile-time issues
         self.run_sql_file("seed_bq.sql")
-        self.run_dbt(['seed'])
+        self.run_dbt(["seed"])
 
         ae_role = "READER"
         ae_entity = "user@email.com"
         ae_entity_type = "userByEmail"
         ae_grant_target_dict = {
-            'project': self.default_database,
-            'dataset': self.unique_schema()
+            "project": self.default_database,
+            "dataset": self.unique_schema(),
         }
-        self.adapter.grant_access_to(ae_entity, ae_entity_type, ae_role, ae_grant_target_dict)
+        self.adapter.grant_access_to(
+            ae_entity, ae_entity_type, ae_role, ae_grant_target_dict
+        )
 
         conn = self.adapter.connections.get_thread_connection()
         client = conn.handle
@@ -117,5 +114,7 @@ class TestGrantAccess(DBTIntegrationTest):
         expected_access_entry = AccessEntry(ae_role, ae_entity_type, ae_entity)
         self.assertTrue(expected_access_entry in dataset.access_entries)
 
-        unexpected_access_entry = AccessEntry(ae_role, ae_entity_type, "unexpected@email.com")
+        unexpected_access_entry = AccessEntry(
+            ae_role, ae_entity_type, "unexpected@email.com"
+        )
         self.assertFalse(unexpected_access_entry in dataset.access_entries)

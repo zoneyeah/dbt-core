@@ -43,20 +43,18 @@ class TaskHandlerProtocol(Protocol):
     def _assert_started(self) -> datetime:
         if self.started is None:
             raise dbt.exceptions.InternalException(
-                'task handler started but start time is not set'
+                "task handler started but start time is not set"
             )
         return self.started
 
     def _assert_ended(self) -> datetime:
         if self.ended is None:
             raise dbt.exceptions.InternalException(
-                'task handler finished but end time is not set'
+                "task handler finished but end time is not set"
             )
         return self.ended
 
-    def make_task_timing(
-        self, now_time: datetime
-    ) -> TaskTiming:
+    def make_task_timing(self, now_time: datetime) -> TaskTiming:
         # get information about the task in a way that should not provide any
         # conflicting information. Calculate elapsed time based on `now_time`
         state = self.state

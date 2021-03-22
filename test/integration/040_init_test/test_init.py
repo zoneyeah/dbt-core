@@ -1,4 +1,3 @@
-
 from test.integration.base import DBTIntegrationTest, use_profile
 import os
 import shutil
@@ -25,19 +24,19 @@ class TestInit(DBTIntegrationTest):
     def models(self):
         return "models"
 
-    @use_profile('postgres')
+    @use_profile("postgres")
     def test_postgres_init_task(self):
         project_name = self.get_project_name()
-        self.run_dbt(['init', project_name, '--adapter', 'postgres'])
+        self.run_dbt(["init", project_name, "--adapter", "postgres"])
 
         assert os.path.exists(project_name)
-        project_file = os.path.join(project_name, 'dbt_project.yml')
+        project_file = os.path.join(project_name, "dbt_project.yml")
         assert os.path.exists(project_file)
         with open(project_file) as fp:
             project_data = yaml.safe_load(fp.read())
 
-        assert 'config-version' in project_data
-        assert project_data['config-version'] == 2
+        assert "config-version" in project_data
+        assert project_data["config-version"] == 2
 
-        git_dir = os.path.join(project_name, '.git')
+        git_dir = os.path.join(project_name, ".git")
         assert not os.path.exists(git_dir)

@@ -69,9 +69,7 @@ class GarbageCollector:
         candidates.sort(key=operator.itemgetter(0))
         return [task_id for _, task_id in candidates[:num]]
 
-    def collect_task_id(
-        self, result: GCResult, task_id: TaskID
-    ) -> None:
+    def collect_task_id(self, result: GCResult, task_id: TaskID) -> None:
         """To collect a task ID, we just delete it from the tasks dict.
 
         You must hold the lock, as this mutates `tasks`.
@@ -82,15 +80,12 @@ class GarbageCollector:
             # someone was mutating tasks while we had the lock, that's
             # not right!
             raise dbt.exceptions.InternalException(
-                'Got a KeyError for task uuid={} during gc'
-                .format(task_id)
+                "Got a KeyError for task uuid={} during gc".format(task_id)
             )
 
         return result.add_result(task_id=task_id, state=state)
 
-    def collect_multiple_task_ids(
-        self, task_ids: Iterable[TaskID]
-    ) -> GCResult:
+    def collect_multiple_task_ids(self, task_ids: Iterable[TaskID]) -> GCResult:
         result = GCResult()
         for task_id in task_ids:
             self.collect_task_id(result, task_id)

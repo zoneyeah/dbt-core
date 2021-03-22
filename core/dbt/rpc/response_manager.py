@@ -22,9 +22,7 @@ from dbt.rpc.task_manager import TaskManager
 
 
 def track_rpc_request(task):
-    dbt.tracking.track_rpc_request({
-        "task": task
-    })
+    dbt.tracking.track_rpc_request({"task": task})
 
 
 SYNCHRONOUS_REQUESTS = False
@@ -32,6 +30,7 @@ SYNCHRONOUS_REQUESTS = False
 
 class RequestDispatcher(Dict[str, Callable[..., Dict[str, Any]]]):
     """A special dispatcher that knows about requests."""
+
     def __init__(
         self,
         http_request: HTTPRequest,
@@ -61,8 +60,8 @@ class RequestDispatcher(Dict[str, Callable[..., Dict[str, Any]]]):
             )
         else:
             raise dbt.exceptions.InternalException(
-                f'Got an invalid handler from get_handler. Expected None, '
-                f'callable, or RemoteMethod, got {handler}'
+                f"Got an invalid handler from get_handler. Expected None, "
+                f"callable, or RemoteMethod, got {handler}"
             )
 
 
@@ -70,6 +69,7 @@ class ResponseManager(JSONRPCResponseManager):
     """Override the default response manager to handle request metadata and
     track in-flight tasks via the task manager.
     """
+
     @classmethod
     def handle_valid_request(
         cls,
@@ -78,12 +78,10 @@ class ResponseManager(JSONRPCResponseManager):
         task_manager: TaskManager,
     ) -> JSONRPC20Response:
         with RequestContext(request):
-            logger.info('handling {} request'.format(request.method))
+            logger.info("handling {} request".format(request.method))
             track_rpc_request(request.method)
 
-            dispatcher = RequestDispatcher(
-                http_request, request, task_manager
-            )
+            dispatcher = RequestDispatcher(http_request, request, task_manager)
 
             return cls.handle_request(request, dispatcher)
 
@@ -92,12 +90,11 @@ class ResponseManager(JSONRPCResponseManager):
         for output in super()._get_responses(requests, dispatcher):
             # if it's a result, check if it's a dbtClassMixin and if so call
             # to_dict
-            if hasattr(output, 'result'):
+            if hasattr(output, "result"):
                 if isinstance(output.result, dbtClassMixin):
                     # Note: errors in to_dict do not show up anywhere in
                     # the output and all you get is a generic 500 error
-                    output.result = \
-                        output.result.to_dict(omit_none=False)
+                    output.result = output.result.to_dict(omit_none=False)
             yield output
 
     @classmethod
@@ -115,33 +112,39 @@ class ResponseManager(JSONRPCResponseManager):
         try:
             data = json.loads(request_str)
         except (TypeError, ValueError):
-            return JSONRPC20Response(error=dict(
-                code=JSONRPCParseError.CODE,
-                message=JSONRPCParseError.MESSAGE,
-            ))
+            return JSONRPC20Response(
+                error=dict(
+                    code=JSONRPCParseError.CODE,
+                    message=JSONRPCParseError.MESSAGE,
+                )
+            )
 
-        if data.get('jsonrpc', None) != '2.0':
-            return JSONRPC20Response(error=dict(
-                code=JSONRPCInvalidRequest.CODE,
-                message=JSONRPCInvalidRequest.MESSAGE,
-            ))
+        if data.get("jsonrpc", None) != "2.0":
+            return JSONRPC20Response(
+                error=dict(
+                    code=JSONRPCInvalidRequest.CODE,
+                    message=JSONRPCInvalidRequest.MESSAGE,
+                )
+            )
 
         try:
             request = JSONRPCRequest.from_data(data)
         except (ValueError, JSONRPCInvalidRequestException):
-            return JSONRPC20Response(error=dict(
-                code=JSONRPCInvalidRequest.CODE,
-                message=JSONRPCInvalidRequest.MESSAGE,
-            ))
+            return JSONRPC20Response(
+                error=dict(
+                    code=JSONRPCInvalidRequest.CODE,
+                    message=JSONRPCInvalidRequest.MESSAGE,
+                )
+            )
 
         if not isinstance(request, JSONRPC20Request):
-            return JSONRPC20Response(error=dict(
-                code=JSONRPCInvalidRequest.CODE,
-                message=JSONRPCInvalidRequest.MESSAGE,
-            ))
+            return JSONRPC20Response(
+                error=dict(
+                    code=JSONRPCInvalidRequest.CODE,
+                    message=JSONRPCInvalidRequest.MESSAGE,
+                )
+            )
 
-        result = cls.handle_valid_request(
-            http_request, request, task_manager
-        )
+        result = cls.handle_valid_request(http_request, request, task_manager)
 
         return result

@@ -20,22 +20,17 @@ RESULT_TYPE_MAP = {
 
 
 class RPCTask(
-    GraphRunnableTask,
-    RemoteManifestMethod[Parameters, RemoteExecutionResult]
+    GraphRunnableTask, RemoteManifestMethod[Parameters, RemoteExecutionResult]
 ):
     def __init__(self, args, config, manifest):
         super().__init__(args, config)
-        RemoteManifestMethod.__init__(
-            self, args, config, manifest  # type: ignore
-        )
+        RemoteManifestMethod.__init__(self, args, config, manifest)  # type: ignore
 
     def load_manifest(self):
         # we started out with a manifest!
         pass
 
-    def get_result(
-        self, results, elapsed_time, generated_at
-    ) -> RemoteExecutionResult:
+    def get_result(self, results, elapsed_time, generated_at) -> RemoteExecutionResult:
         base = super().get_result(results, elapsed_time, generated_at)
         cls = RESULT_TYPE_MAP.get(type(base), RemoteExecutionResult)
         rpc_result = cls.from_local_result(base, logs=[])

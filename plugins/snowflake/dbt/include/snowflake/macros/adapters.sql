@@ -189,4 +189,4 @@
       {% do run_query("alter session unset query_tag") %}
     {% endif %}
   {% endif %}
-{% endmacro %} 
+{% endmacro %}

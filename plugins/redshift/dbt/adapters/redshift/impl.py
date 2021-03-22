@@ -25,7 +25,7 @@ class RedshiftAdapter(PostgresAdapter):
 
     @classmethod
     def date_function(cls):
-        return 'getdate()'
+        return "getdate()"
 
     def drop_relation(self, relation):
         """

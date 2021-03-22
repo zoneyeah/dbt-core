@@ -72,25 +72,21 @@ def signhup_replace() -> Iterator[bool]:
 
 
 class RPCServerTask(ConfiguredTask):
-    DEFAULT_LOG_FORMAT = 'json'
+    DEFAULT_LOG_FORMAT = "json"
 
     def __init__(
         self, args, config, tasks: Optional[List[Type[RemoteMethod]]] = None
     ) -> None:
-        if os.name == 'nt':
-            raise RuntimeException(
-                'The dbt RPC server is not supported on windows'
-            )
+        if os.name == "nt":
+            raise RuntimeException("The dbt RPC server is not supported on windows")
         super().__init__(args, config)
-        self.task_manager = TaskManager(
-            self.args, self.config, TaskTypes(tasks)
-        )
+        self.task_manager = TaskManager(self.args, self.config, TaskTypes(tasks))
         signal.signal(signal.SIGHUP, self._sighup_handler)
 
     @classmethod
     def pre_init_hook(cls, args):
         """A hook called before the task is initialized."""
-        if args.log_format == 'text':
+        if args.log_format == "text":
             log_manager.format_text()
         else:
             log_manager.format_json()
@@ -109,26 +105,21 @@ class RPCServerTask(ConfiguredTask):
         addr = (host, port)
 
         display_host = host
-        if host == '0.0.0.0':
-            display_host = 'localhost'
+        if host == "0.0.0.0":
+            display_host = "localhost"
 
-        logger.info(
-            'Serving RPC server at {}:{}, pid={}'.format(
-                *addr, os.getpid()
-            )
+        logger.info("Serving RPC server at {}:{}, pid={}".format(*addr, os.getpid()))
+
+        logger.info("Supported methods: {}".format(sorted(self.task_manager.methods())))
+
+        logger.info("Send requests to http://{}:{}/jsonrpc".format(display_host, port))
+
+        app = DispatcherMiddleware(
+            self.handle_request,
+            {
+                "/jsonrpc": self.handle_jsonrpc_request,
+            },
         )
-
-        logger.info(
-            'Supported methods: {}'.format(sorted(self.task_manager.methods()))
-        )
-
-        logger.info(
-            'Send requests to http://{}:{}/jsonrpc'.format(display_host, port)
-        )
-
-        app = DispatcherMiddleware(self.handle_request, {
-            '/jsonrpc': self.handle_jsonrpc_request,
-        })
 
         # we have to run in threaded mode if we want to share subprocess
         # handles, which is the easiest way to implement `kill` (it makes
@@ -150,21 +141,19 @@ class RPCServerTask(ConfiguredTask):
     @Request.application
     def handle_jsonrpc_request(self, request):
         with HTTPRequest(request):
-            jsonrpc_response = ResponseManager.handle(
-                request, self.task_manager
-            )
+            jsonrpc_response = ResponseManager.handle(request, self.task_manager)
             json_data = json.dumps(
                 jsonrpc_response.data,
                 cls=ForgivingJSONEncoder,
             )
-            response = Response(json_data, mimetype='application/json')
+            response = Response(json_data, mimetype="application/json")
             # this looks and feels dumb, but our json encoder converts decimals
             # and datetimes, and if we use the json_data itself the output
             # looks silly because of escapes, so re-serialize it into valid
             # JSON types for logging.
             with RPCResponse(jsonrpc_response):
-                logger.info('sending response ({}) to {}'.format(
-                    response, request.remote_addr)
+                logger.info(
+                    "sending response ({}) to {}".format(response, request.remote_addr)
                 )
             return response
 

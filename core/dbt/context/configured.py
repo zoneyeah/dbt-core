@@ -4,16 +4,14 @@ from dbt.contracts.connection import AdapterRequiredConfig
 from dbt.node_types import NodeType
 from dbt.utils import MultiDict
 
-from dbt.context.base import contextproperty, Var
+from dbt.context import contextproperty, Var
 from dbt.context.target import TargetContext
 
 
 class ConfiguredContext(TargetContext):
     config: AdapterRequiredConfig
 
-    def __init__(
-        self, config: AdapterRequiredConfig
-    ) -> None:
+    def __init__(self, config: AdapterRequiredConfig) -> None:
         super().__init__(config, config.cli_vars)
 
     @contextproperty
@@ -70,9 +68,7 @@ class SchemaYamlContext(ConfiguredContext):
 
     @contextproperty
     def var(self) -> ConfiguredVar:
-        return ConfiguredVar(
-            self._ctx, self.config, self._project_name
-        )
+        return ConfiguredVar(self._ctx, self.config, self._project_name)
 
 
 def generate_schema_yml(

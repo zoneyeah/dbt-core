@@ -8,9 +8,7 @@ from dbt.parser.search import FilesystemSearcher, FileBlock
 
 class AnalysisParser(SimpleSQLParser[ParsedAnalysisNode]):
     def get_paths(self):
-        return FilesystemSearcher(
-            self.project, self.project.analysis_paths, '.sql'
-        )
+        return FilesystemSearcher(self.project, self.project.analysis_paths, ".sql")
 
     def parse_from_dict(self, dct, validate=True) -> ParsedAnalysisNode:
         if validate:
@@ -23,4 +21,4 @@ class AnalysisParser(SimpleSQLParser[ParsedAnalysisNode]):
 
     @classmethod
     def get_compiled_path(cls, block: FileBlock):
-        return os.path.join('analysis', block.path.relative_path)
+        return os.path.join("analysis", block.path.relative_path)

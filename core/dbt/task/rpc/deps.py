@@ -2,7 +2,9 @@ import os
 import shutil
 
 from dbt.contracts.rpc import (
-    RPCDepsParameters, RemoteDepsResult, RemoteMethodFlags,
+    RPCDepsParameters,
+    RemoteDepsResult,
+    RemoteMethodFlags,
 )
 from dbt.rpc.method import RemoteMethod
 from dbt.task.deps import DepsTask
@@ -18,12 +20,12 @@ class RemoteDepsTask(
     RemoteMethod[RPCDepsParameters, RemoteDepsResult],
     DepsTask,
 ):
-    METHOD_NAME = 'deps'
+    METHOD_NAME = "deps"
 
     def get_flags(self) -> RemoteMethodFlags:
         return (
-            RemoteMethodFlags.RequiresConfigReloadBefore |
-            RemoteMethodFlags.RequiresManifestReloadAfter
+            RemoteMethodFlags.RequiresConfigReloadBefore
+            | RemoteMethodFlags.RequiresManifestReloadAfter
         )
 
     def set_args(self, params: RPCDepsParameters):

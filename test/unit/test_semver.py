@@ -2,9 +2,14 @@ import unittest
 import itertools
 
 from dbt.exceptions import VersionsNotCompatibleException
-from dbt.semver import VersionSpecifier, UnboundedVersionSpecifier, \
-    VersionRange, reduce_versions, versions_compatible, \
-    resolve_to_specific_version
+from dbt.semver import (
+    VersionSpecifier,
+    UnboundedVersionSpecifier,
+    VersionRange,
+    reduce_versions,
+    versions_compatible,
+    resolve_to_specific_version,
+)
 
 
 def create_range(start_version_string, end_version_string):
@@ -21,14 +26,11 @@ def create_range(start_version_string, end_version_string):
 
 
 class TestSemver(unittest.TestCase):
-
     def assertVersionSetResult(self, inputs, output_range):
         expected = create_range(*output_range)
 
         for permutation in itertools.permutations(inputs):
-            self.assertEqual(
-                reduce_versions(*permutation),
-                expected)
+            self.assertEqual(reduce_versions(*permutation), expected)
 
     def assertInvalidVersionSet(self, inputs):
         for permutation in itertools.permutations(inputs):
@@ -36,101 +38,83 @@ class TestSemver(unittest.TestCase):
                 reduce_versions(*permutation)
 
     def test__versions_compatible(self):
-        self.assertTrue(
-            versions_compatible('0.0.1', '0.0.1'))
-        self.assertFalse(
-            versions_compatible('0.0.1', '0.0.2'))
-        self.assertTrue(
-            versions_compatible('>0.0.1', '0.0.2'))
+        self.assertTrue(versions_compatible("0.0.1", "0.0.1"))
+        self.assertFalse(versions_compatible("0.0.1", "0.0.2"))
+        self.assertTrue(versions_compatible(">0.0.1", "0.0.2"))
 
     def test__reduce_versions(self):
-        self.assertVersionSetResult(
-            ['0.0.1', '0.0.1'],
-            ['=0.0.1', '=0.0.1'])
+        self.assertVersionSetResult(["0.0.1", "0.0.1"], ["=0.0.1", "=0.0.1"])
+
+        self.assertVersionSetResult(["0.0.1"], ["=0.0.1", "=0.0.1"])
+
+        self.assertVersionSetResult([">0.0.1"], [">0.0.1", None])
+
+        self.assertVersionSetResult(["<0.0.1"], [None, "<0.0.1"])
+
+        self.assertVersionSetResult([">0.0.1", "0.0.2"], ["=0.0.2", "=0.0.2"])
+
+        self.assertVersionSetResult(["0.0.2", ">=0.0.2"], ["=0.0.2", "=0.0.2"])
+
+        self.assertVersionSetResult([">0.0.1", ">0.0.2", ">0.0.3"], [">0.0.3", None])
+
+        self.assertVersionSetResult([">0.0.1", "<0.0.3"], [">0.0.1", "<0.0.3"])
+
+        self.assertVersionSetResult([">0.0.1", "0.0.2", "<0.0.3"], ["=0.0.2", "=0.0.2"])
 
         self.assertVersionSetResult(
-            ['0.0.1'],
-            ['=0.0.1', '=0.0.1'])
+            [">0.0.1", ">=0.0.1", "<0.0.3"], [">0.0.1", "<0.0.3"]
+        )
 
         self.assertVersionSetResult(
-            ['>0.0.1'],
-            ['>0.0.1', None])
+            [">0.0.1", "<0.0.3", "<=0.0.3"], [">0.0.1", "<0.0.3"]
+        )
 
         self.assertVersionSetResult(
-            ['<0.0.1'],
-            [None, '<0.0.1'])
+            [">0.0.1", ">0.0.2", "<0.0.3", "<0.0.4"], [">0.0.2", "<0.0.3"]
+        )
 
-        self.assertVersionSetResult(
-            ['>0.0.1', '0.0.2'],
-            ['=0.0.2', '=0.0.2'])
+        self.assertVersionSetResult(["<=0.0.3", ">=0.0.3"], [">=0.0.3", "<=0.0.3"])
 
-        self.assertVersionSetResult(
-            ['0.0.2', '>=0.0.2'],
-            ['=0.0.2', '=0.0.2'])
-
-        self.assertVersionSetResult(
-            ['>0.0.1', '>0.0.2', '>0.0.3'],
-            ['>0.0.3', None])
-
-        self.assertVersionSetResult(
-            ['>0.0.1', '<0.0.3'],
-            ['>0.0.1', '<0.0.3'])
-
-        self.assertVersionSetResult(
-            ['>0.0.1', '0.0.2', '<0.0.3'],
-            ['=0.0.2', '=0.0.2'])
-
-        self.assertVersionSetResult(
-            ['>0.0.1', '>=0.0.1', '<0.0.3'],
-            ['>0.0.1', '<0.0.3'])
-
-        self.assertVersionSetResult(
-            ['>0.0.1', '<0.0.3', '<=0.0.3'],
-            ['>0.0.1', '<0.0.3'])
-
-        self.assertVersionSetResult(
-            ['>0.0.1', '>0.0.2', '<0.0.3', '<0.0.4'],
-            ['>0.0.2', '<0.0.3'])
-
-        self.assertVersionSetResult(
-            ['<=0.0.3', '>=0.0.3'],
-            ['>=0.0.3', '<=0.0.3'])
-
-        self.assertInvalidVersionSet(['>0.0.2', '0.0.1'])
-        self.assertInvalidVersionSet(['>0.0.2', '0.0.2'])
-        self.assertInvalidVersionSet(['<0.0.2', '0.0.2'])
-        self.assertInvalidVersionSet(['<0.0.2', '>0.0.3'])
-        self.assertInvalidVersionSet(['<=0.0.3', '>0.0.3'])
-        self.assertInvalidVersionSet(['<0.0.3', '>=0.0.3'])
-        self.assertInvalidVersionSet(['<0.0.3', '>0.0.3'])
+        self.assertInvalidVersionSet([">0.0.2", "0.0.1"])
+        self.assertInvalidVersionSet([">0.0.2", "0.0.2"])
+        self.assertInvalidVersionSet(["<0.0.2", "0.0.2"])
+        self.assertInvalidVersionSet(["<0.0.2", ">0.0.3"])
+        self.assertInvalidVersionSet(["<=0.0.3", ">0.0.3"])
+        self.assertInvalidVersionSet(["<0.0.3", ">=0.0.3"])
+        self.assertInvalidVersionSet(["<0.0.3", ">0.0.3"])
 
     def test__resolve_to_specific_version(self):
         self.assertEqual(
             resolve_to_specific_version(
-                create_range('>0.0.1', None),
-                ['0.0.1', '0.0.2']),
-            '0.0.2')
+                create_range(">0.0.1", None), ["0.0.1", "0.0.2"]
+            ),
+            "0.0.2",
+        )
 
         self.assertEqual(
             resolve_to_specific_version(
-                create_range('>=0.0.2', None),
-                ['0.0.1', '0.0.2']),
-            '0.0.2')
+                create_range(">=0.0.2", None), ["0.0.1", "0.0.2"]
+            ),
+            "0.0.2",
+        )
 
         self.assertEqual(
             resolve_to_specific_version(
-                create_range('>=0.0.3', None),
-                ['0.0.1', '0.0.2']),
-            None)
+                create_range(">=0.0.3", None), ["0.0.1", "0.0.2"]
+            ),
+            None,
+        )
 
         self.assertEqual(
             resolve_to_specific_version(
-                create_range('>=0.0.3', '<0.0.5'),
-                ['0.0.3', '0.0.4', '0.0.5']),
-            '0.0.4')
+                create_range(">=0.0.3", "<0.0.5"), ["0.0.3", "0.0.4", "0.0.5"]
+            ),
+            "0.0.4",
+        )
 
         self.assertEqual(
             resolve_to_specific_version(
-                create_range(None, '<=0.0.5'),
-                ['0.0.3', '0.1.4', '0.0.5']),
-            '0.0.5')
+                create_range(None, "<=0.0.5"), ["0.0.3", "0.1.4", "0.0.5"]
+            ),
+            "0.0.5",
+        )

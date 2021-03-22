@@ -1,8 +1,6 @@
 import threading
 from queue import PriorityQueue
-from typing import (
-    Dict, Set, Optional
-)
+from typing import Dict, Set, Optional
 
 import networkx as nx  # type: ignore
 
@@ -21,9 +19,8 @@ class GraphQueue:
     that separate threads do not call `.empty()` or `__len__()` and `.get()` at
     the same time, as there is an unlocked race!
     """
-    def __init__(
-        self, graph: nx.DiGraph, manifest: Manifest, selected: Set[UniqueId]
-    ):
+
+    def __init__(self, graph: nx.DiGraph, manifest: Manifest, selected: Set[UniqueId]):
         self.graph = graph
         self.manifest = manifest
         self._selected = selected
@@ -75,10 +72,13 @@ class GraphQueue:
         """
         scores = {}
         for node in self.graph.nodes():
-            score = -1 * len([
-                d for d in nx.descendants(self.graph, node)
-                if self._include_in_cost(d)
-            ])
+            score = -1 * len(
+                [
+                    d
+                    for d in nx.descendants(self.graph, node)
+                    if self._include_in_cost(d)
+                ]
+            )
             scores[node] = score
         return scores
 

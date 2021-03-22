@@ -5,7 +5,7 @@ from .util import (
     ProjectDefinition,
 )
 
-source_freshness_schema_yml = '''
+source_freshness_schema_yml = """
 version: 2
 sources:
   - name: test_source
@@ -19,25 +19,25 @@ sources:
         identifier: source
       - name: failure_table
         identifier: other_source
-'''
+"""
 
 
-@pytest.mark.supported('postgres')
-def test_source_freshness(
-    project_root, profiles_root, dbt_profile, unique_schema
-):
+@pytest.mark.supported("postgres")
+def test_source_freshness(project_root, profiles_root, dbt_profile, unique_schema):
     start_time = datetime.utcnow()
     warn_me = start_time - timedelta(hours=18)
     error_me = start_time - timedelta(days=2)
     # this should trigger a 'warn'
     project = ProjectDefinition(
-        project_data={'seeds': {'config': {'quote_columns': False}}},
+        project_data={"seeds": {"config": {"quote_columns": False}}},
         seeds={
-            'source.csv': 'a,b\n1,{}\n'.format(error_me.strftime('%Y-%m-%d %H:%M:%S')),
-            'other_source.csv': 'a,b\n1,{}\n'.format(error_me.strftime('%Y-%m-%d %H:%M:%S'))
+            "source.csv": "a,b\n1,{}\n".format(error_me.strftime("%Y-%m-%d %H:%M:%S")),
+            "other_source.csv": "a,b\n1,{}\n".format(
+                error_me.strftime("%Y-%m-%d %H:%M:%S")
+            ),
         },
         models={
-            'sources.yml': source_freshness_schema_yml.format(schema=unique_schema),
+            "sources.yml": source_freshness_schema_yml.format(schema=unique_schema),
         },
     )
     querier_ctx = get_querier(
@@ -50,35 +50,53 @@ def test_source_freshness(
 
     with querier_ctx as querier:
         seeds = querier.async_wait_for_result(querier.seed())
-        assert len(seeds['results']) == 2
+        assert len(seeds["results"]) == 2
         # should error
-        error_results = querier.async_wait_for_result(querier.snapshot_freshness(), state='failed')
-        assert len(error_results['results']) == 2
-        for result in error_results['results']:
-            assert result['status'] == 'error'
-        error_results = querier.async_wait_for_result(querier.cli_args('source snapshot-freshness'), state='failed')
-        assert len(error_results['results']) == 2
-        for result in error_results['results']:
-            assert result['status'] == 'error'
+        error_results = querier.async_wait_for_result(
+            querier.snapshot_freshness(), state="failed"
+        )
+        assert len(error_results["results"]) == 2
+        for result in error_results["results"]:
+            assert result["status"] == "error"
+        error_results = querier.async_wait_for_result(
+            querier.cli_args("source snapshot-freshness"), state="failed"
+        )
+        assert len(error_results["results"]) == 2
+        for result in error_results["results"]:
+            assert result["status"] == "error"
 
-        project.seeds['source.csv'] += '2,{}\n'.format(warn_me.strftime('%Y-%m-%d %H:%M:%S'))
+        project.seeds["source.csv"] += "2,{}\n".format(
+            warn_me.strftime("%Y-%m-%d %H:%M:%S")
+        )
         project.write_seeds(project_root, remove=True)
         querier.async_wait_for_result(querier.seed())
         # should warn
-        warn_results = querier.async_wait_for_result(querier.snapshot_freshness(select='test_source.test_table'))
-        assert len(warn_results['results']) == 1
-        assert warn_results['results'][0]['status'] == 'warn'
-        warn_results = querier.async_wait_for_result(querier.cli_args('source snapshot-freshness -s test_source.test_table'))
-        assert len(warn_results['results']) == 1
-        assert warn_results['results'][0]['status'] == 'warn'
+        warn_results = querier.async_wait_for_result(
+            querier.snapshot_freshness(select="test_source.test_table")
+        )
+        assert len(warn_results["results"]) == 1
+        assert warn_results["results"][0]["status"] == "warn"
+        warn_results = querier.async_wait_for_result(
+            querier.cli_args("source snapshot-freshness -s test_source.test_table")
+        )
+        assert len(warn_results["results"]) == 1
+        assert warn_results["results"][0]["status"] == "warn"
 
-        project.seeds['source.csv'] += '3,{}\n'.format(start_time.strftime('%Y-%m-%d %H:%M:%S'))
+        project.seeds["source.csv"] += "3,{}\n".format(
+            start_time.strftime("%Y-%m-%d %H:%M:%S")
+        )
         project.write_seeds(project_root, remove=True)
         querier.async_wait_for_result(querier.seed())
         # should pass!
-        pass_results = querier.async_wait_for_result(querier.snapshot_freshness(select=['test_source.test_table']))
-        assert len(pass_results['results']) == 1
-        assert pass_results['results'][0]['status'] == 'pass'
-        pass_results = querier.async_wait_for_result(querier.cli_args('source snapshot-freshness --select test_source.test_table'))
-        assert len(pass_results['results']) == 1
-        assert pass_results['results'][0]['status'] == 'pass'
+        pass_results = querier.async_wait_for_result(
+            querier.snapshot_freshness(select=["test_source.test_table"])
+        )
+        assert len(pass_results["results"]) == 1
+        assert pass_results["results"][0]["status"] == "pass"
+        pass_results = querier.async_wait_for_result(
+            querier.cli_args(
+                "source snapshot-freshness --select test_source.test_table"
+            )
+        )
+        assert len(pass_results["results"]) == 1
+        assert pass_results["results"][0]["status"] == "pass"

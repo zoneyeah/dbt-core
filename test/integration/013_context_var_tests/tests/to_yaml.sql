@@ -14,4 +14,3 @@ union all
 (select 'sorted' as name {% if sorted %}limit 0{% endif %})
 union all
 (select 'default_results' as name {% if default_results %}limit 0{% endif %})
-

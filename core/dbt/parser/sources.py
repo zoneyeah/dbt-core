@@ -34,8 +34,7 @@ class SourcePatcher:
         self.results = results
         self.root_project = root_project
         self.macro_manifest = MacroManifest(
-            macros=self.results.macros,
-            files=self.results.files
+            macros=self.results.macros, files=self.results.files
         )
         self.schema_parsers: Dict[str, SchemaParser] = {}
         self.patches_used: Dict[SourceKey, Set[str]] = {}
@@ -65,9 +64,7 @@ class SourcePatcher:
 
         source = UnparsedSourceDefinition.from_dict(source_dct)
         table = UnparsedSourceTableDefinition.from_dict(table_dct)
-        return unpatched.replace(
-            source=source, table=table, patch_path=patch_path
-        )
+        return unpatched.replace(source=source, table=table, patch_path=patch_path)
 
     def parse_source_docs(self, block: UnpatchedSourceDefinition) -> ParserRef:
         refs = ParserRef()
@@ -78,7 +75,7 @@ class SourcePatcher:
             refs.add(column, description, data_type, meta)
         return refs
 
-    def get_schema_parser_for(self, package_name: str) -> 'SchemaParser':
+    def get_schema_parser_for(self, package_name: str) -> "SchemaParser":
         if package_name in self.schema_parsers:
             schema_parser = self.schema_parsers[package_name]
         else:
@@ -157,31 +154,28 @@ class SourcePatcher:
 
         if unused_tables:
             msg = self.get_unused_msg(unused_tables)
-            warn_or_error(msg, log_fmt=ui.warning_tag('{}'))
+            warn_or_error(msg, log_fmt=ui.warning_tag("{}"))
 
     def get_unused_msg(
         self,
         unused_tables: Dict[SourceKey, Optional[Set[str]]],
     ) -> str:
         msg = [
-            'During parsing, dbt encountered source overrides that had no '
-            'target:',
+            "During parsing, dbt encountered source overrides that had no " "target:",
         ]
         for key, table_names in unused_tables.items():
             patch = self.results.source_patches[key]
-            patch_name = f'{patch.overrides}.{patch.name}'
+            patch_name = f"{patch.overrides}.{patch.name}"
             if table_names is None:
-                msg.append(
-                    f'  - Source {patch_name} (in {patch.path})'
-                )
+                msg.append(f"  - Source {patch_name} (in {patch.path})")
             else:
                 for table_name in sorted(table_names):
                     msg.append(
-                        f'  - Source table {patch_name}.{table_name} '
-                        f'(in {patch.path})'
+                        f"  - Source table {patch_name}.{table_name} "
+                        f"(in {patch.path})"
                     )
-        msg.append('')
-        return '\n'.join(msg)
+        msg.append("")
+        return "\n".join(msg)
 
 
 def patch_sources(

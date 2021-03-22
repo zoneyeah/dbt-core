@@ -1,8 +1,6 @@
 import os
 from dataclasses import dataclass
-from typing import (
-    List, Callable, Iterable, Set, Union, Iterator, TypeVar, Generic
-)
+from typing import List, Callable, Iterable, Set, Union, Iterator, TypeVar, Generic
 
 from dbt.clients.jinja import extract_toplevel_blocks, BlockTag
 from dbt.clients.system import find_matching
@@ -72,13 +70,13 @@ class FilesystemSearcher(Iterable[FilePath]):
         root = self.project.project_root
 
         for result in find_matching(root, self.relative_dirs, ext):
-            if 'searched_path' not in result or 'relative_path' not in result:
+            if "searched_path" not in result or "relative_path" not in result:
                 raise InternalException(
-                    'Invalid result from find_matching: {}'.format(result)
+                    "Invalid result from find_matching: {}".format(result)
                 )
             file_match = FilePath(
-                searched_path=result['searched_path'],
-                relative_path=result['relative_path'],
+                searched_path=result["searched_path"],
+                relative_path=result["relative_path"],
                 project_root=root,
             )
             yield file_match
@@ -86,7 +84,7 @@ class FilesystemSearcher(Iterable[FilePath]):
 
 Block = Union[BlockContents, FullBlock]
 
-BlockSearchResult = TypeVar('BlockSearchResult', BlockContents, FullBlock)
+BlockSearchResult = TypeVar("BlockSearchResult", BlockContents, FullBlock)
 
 BlockSearchResultFactory = Callable[[SourceFile, BlockTag], BlockSearchResult]
 
@@ -96,7 +94,7 @@ class BlockSearcher(Generic[BlockSearchResult], Iterable[BlockSearchResult]):
         self,
         source: List[FileBlock],
         allowed_blocks: Set[str],
-        source_tag_factory: BlockSearchResultFactory
+        source_tag_factory: BlockSearchResultFactory,
     ) -> None:
         self.source = source
         self.allowed_blocks = allowed_blocks
@@ -107,7 +105,7 @@ class BlockSearcher(Generic[BlockSearchResult], Iterable[BlockSearchResult]):
             blocks = extract_toplevel_blocks(
                 source_file.contents,
                 allowed_blocks=self.allowed_blocks,
-                collect_raw_data=False
+                collect_raw_data=False,
             )
             # this makes mypy happy, and this is an invariant we really need
             for block in blocks:

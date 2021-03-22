@@ -18,27 +18,29 @@ from dbt.logger import log_manager, GLOBAL_LOGGER as logger
 
 
 class ListTask(GraphRunnableTask):
-    DEFAULT_RESOURCE_VALUES = frozenset((
-        NodeType.Model,
-        NodeType.Snapshot,
-        NodeType.Seed,
-        NodeType.Test,
-        NodeType.Source,
-        NodeType.Exposure,
-    ))
-    ALL_RESOURCE_VALUES = DEFAULT_RESOURCE_VALUES | frozenset((
-        NodeType.Analysis,
-    ))
-    ALLOWED_KEYS = frozenset((
-        'alias',
-        'name',
-        'package_name',
-        'depends_on',
-        'tags',
-        'config',
-        'resource_type',
-        'source_name',
-    ))
+    DEFAULT_RESOURCE_VALUES = frozenset(
+        (
+            NodeType.Model,
+            NodeType.Snapshot,
+            NodeType.Seed,
+            NodeType.Test,
+            NodeType.Source,
+            NodeType.Exposure,
+        )
+    )
+    ALL_RESOURCE_VALUES = DEFAULT_RESOURCE_VALUES | frozenset((NodeType.Analysis,))
+    ALLOWED_KEYS = frozenset(
+        (
+            "alias",
+            "name",
+            "package_name",
+            "depends_on",
+            "tags",
+            "config",
+            "resource_type",
+            "source_name",
+        )
+    )
 
     def __init__(self, args, config):
         super().__init__(args, config)
@@ -50,8 +52,7 @@ class ListTask(GraphRunnableTask):
                 )
             if self.args.resource_types:
                 raise RuntimeException(
-                    '"models" and "resource_type" are mutually exclusive '
-                    'arguments'
+                    '"models" and "resource_type" are mutually exclusive ' "arguments"
                 )
 
     @classmethod
@@ -65,12 +66,10 @@ class ListTask(GraphRunnableTask):
         spec = self.get_selection_spec()
         nodes = sorted(selector.get_selected(spec))
         if not nodes:
-            logger.warning('No nodes selected!')
+            logger.warning("No nodes selected!")
             return
         if self.manifest is None:
-            raise InternalException(
-                'manifest is None in _iterate_selected_nodes'
-            )
+            raise InternalException("manifest is None in _iterate_selected_nodes")
         for node in nodes:
             if node in self.manifest.nodes:
                 yield self.manifest.nodes[node]
@@ -81,7 +80,7 @@ class ListTask(GraphRunnableTask):
             else:
                 raise RuntimeException(
                     f'Got an unexpected result from node selection: "{node}"'
-                    f'Expected a source or a node!'
+                    f"Expected a source or a node!"
                 )
 
     def generate_selectors(self):
@@ -89,18 +88,18 @@ class ListTask(GraphRunnableTask):
             if node.resource_type == NodeType.Source:
                 assert isinstance(node, ParsedSourceDefinition)
                 # sources are searched for by pkg.source_name.table_name
-                source_selector = '.'.join([
-                    node.package_name, node.source_name, node.name
-                ])
-                yield f'source:{source_selector}'
+                source_selector = ".".join(
+                    [node.package_name, node.source_name, node.name]
+                )
+                yield f"source:{source_selector}"
             elif node.resource_type == NodeType.Exposure:
                 assert isinstance(node, ParsedExposure)
                 # exposures are searched for by pkg.exposure_name
-                exposure_selector = '.'.join([node.package_name, node.name])
-                yield f'exposure:{exposure_selector}'
+                exposure_selector = ".".join([node.package_name, node.name])
+                yield f"exposure:{exposure_selector}"
             else:
                 # everything else is from `fqn`
-                yield '.'.join(node.fqn)
+                yield ".".join(node.fqn)
 
     def generate_names(self):
         for node in self._iterate_selected_nodes():
@@ -108,11 +107,13 @@ class ListTask(GraphRunnableTask):
 
     def generate_json(self):
         for node in self._iterate_selected_nodes():
-            yield json.dumps({
-                k: v
-                for k, v in node.to_dict(omit_none=False).items()
-                if k in self.ALLOWED_KEYS
-            })
+            yield json.dumps(
+                {
+                    k: v
+                    for k, v in node.to_dict(omit_none=False).items()
+                    if k in self.ALLOWED_KEYS
+                }
+            )
 
     def generate_paths(self):
         for node in self._iterate_selected_nodes():
@@ -121,18 +122,16 @@ class ListTask(GraphRunnableTask):
     def run(self):
         ManifestTask._runtime_initialize(self)
         output = self.config.args.output
-        if output == 'selector':
+        if output == "selector":
             generator = self.generate_selectors
-        elif output == 'name':
+        elif output == "name":
             generator = self.generate_names
-        elif output == 'json':
+        elif output == "json":
             generator = self.generate_json
-        elif output == 'path':
+        elif output == "path":
             generator = self.generate_paths
         else:
-            raise InternalException(
-                'Invalid output {}'.format(output)
-            )
+            raise InternalException("Invalid output {}".format(output))
         for result in generator():
             self.node_results.append(result)
             print(result)
@@ -147,11 +146,11 @@ class ListTask(GraphRunnableTask):
         if not values:
             return list(self.DEFAULT_RESOURCE_VALUES)
 
-        if 'default' in values:
-            values.remove('default')
+        if "default" in values:
+            values.remove("default")
             values.update(self.DEFAULT_RESOURCE_VALUES)
-        if 'all' in values:
-            values.remove('all')
+        if "all" in values:
+            values.remove("all")
             values.update(self.ALL_RESOURCE_VALUES)
         return list(values)
 
@@ -172,7 +171,7 @@ class ListTask(GraphRunnableTask):
     def get_node_selector(self):
         if self.manifest is None or self.graph is None:
             raise InternalException(
-                'manifest and graph must be set to get perform node selection'
+                "manifest and graph must be set to get perform node selection"
             )
         cls: Type[ResourceTypeSelector]
         if self.resource_types == [NodeType.Test]:

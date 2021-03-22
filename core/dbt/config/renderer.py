@@ -2,9 +2,7 @@ from typing import Dict, Any, Tuple, Optional, Union, Callable
 
 from dbt.clients.jinja import get_rendered, catch_jinja
 
-from dbt.exceptions import (
-    DbtProjectError, CompilationException, RecursionException
-)
+from dbt.exceptions import DbtProjectError, CompilationException, RecursionException
 from dbt.node_types import NodeType
 from dbt.utils import deep_map
 
@@ -18,7 +16,7 @@ class BaseRenderer:
 
     @property
     def name(self):
-        return 'Rendering'
+        return "Rendering"
 
     def should_render_keypath(self, keypath: Keypath) -> bool:
         return True
@@ -29,9 +27,7 @@ class BaseRenderer:
 
         return self.render_value(value, keypath)
 
-    def render_value(
-        self, value: Any, keypath: Optional[Keypath] = None
-    ) -> Any:
+    def render_value(self, value: Any, keypath: Optional[Keypath] = None) -> Any:
         # keypath is ignored.
         # if it wasn't read as a string, ignore it
         if not isinstance(value, str):
@@ -40,18 +36,16 @@ class BaseRenderer:
             with catch_jinja():
                 return get_rendered(value, self.context, native=True)
         except CompilationException as exc:
-            msg = f'Could not render {value}: {exc.msg}'
+            msg = f"Could not render {value}: {exc.msg}"
             raise CompilationException(msg) from exc
 
-    def render_data(
-        self, data: Dict[str, Any]
-    ) -> Dict[str, Any]:
+    def render_data(self, data: Dict[str, Any]) -> Dict[str, Any]:
         try:
             return deep_map(self.render_entry, data)
         except RecursionException:
             raise DbtProjectError(
-                f'Cycle detected: {self.name} input has a reference to itself',
-                project=data
+                f"Cycle detected: {self.name} input has a reference to itself",
+                project=data,
             )
 
 
@@ -78,15 +72,15 @@ class ProjectPostprocessor(Dict[Keypath, Callable[[Any], Any]]):
     def __init__(self):
         super().__init__()
 
-        self[('on-run-start',)] = _list_if_none_or_string
-        self[('on-run-end',)] = _list_if_none_or_string
+        self[("on-run-start",)] = _list_if_none_or_string
+        self[("on-run-end",)] = _list_if_none_or_string
 
-        for k in ('models', 'seeds', 'snapshots'):
+        for k in ("models", "seeds", "snapshots"):
             self[(k,)] = _dict_if_none
-            self[(k, 'vars')] = _dict_if_none
-            self[(k, 'pre-hook')] = _list_if_none_or_string
-            self[(k, 'post-hook')] = _list_if_none_or_string
-        self[('seeds', 'column_types')] = _dict_if_none
+            self[(k, "vars")] = _dict_if_none
+            self[(k, "pre-hook")] = _list_if_none_or_string
+            self[(k, "post-hook")] = _list_if_none_or_string
+        self[("seeds", "column_types")] = _dict_if_none
 
     def postprocess(self, value: Any, key: Keypath) -> Any:
         if key in self:
@@ -101,7 +95,7 @@ class DbtProjectYamlRenderer(BaseRenderer):
 
     @property
     def name(self):
-        'Project config'
+        "Project config"
 
     def get_package_renderer(self) -> BaseRenderer:
         return PackageRenderer(self.context)
@@ -116,7 +110,7 @@ class DbtProjectYamlRenderer(BaseRenderer):
     ) -> Dict[str, Any]:
         """Render the project and insert the project root after rendering."""
         rendered_project = self.render_data(project)
-        rendered_project['project-root'] = project_root
+        rendered_project["project-root"] = project_root
         return rendered_project
 
     def render_packages(self, packages: Dict[str, Any]):
@@ -138,20 +132,19 @@ class DbtProjectYamlRenderer(BaseRenderer):
 
         first = keypath[0]
         # run hooks are not rendered
-        if first in {'on-run-start', 'on-run-end', 'query-comment'}:
+        if first in {"on-run-start", "on-run-end", "query-comment"}:
             return False
 
         # don't render vars blocks until runtime
-        if first == 'vars':
+        if first == "vars":
             return False
 
-        if first in {'seeds', 'models', 'snapshots', 'seeds'}:
+        if first in {"seeds", "models", "snapshots", "seeds"}:
             keypath_parts = {
-                (k.lstrip('+') if isinstance(k, str) else k)
-                for k in keypath
+                (k.lstrip("+") if isinstance(k, str) else k) for k in keypath
             }
             # model-level hooks
-            if 'pre-hook' in keypath_parts or 'post-hook' in keypath_parts:
+            if "pre-hook" in keypath_parts or "post-hook" in keypath_parts:
                 return False
 
         return True
@@ -160,17 +153,15 @@ class DbtProjectYamlRenderer(BaseRenderer):
 class ProfileRenderer(BaseRenderer):
     @property
     def name(self):
-        'Profile'
+        "Profile"
 
 
 class SchemaYamlRenderer(BaseRenderer):
-    DOCUMENTABLE_NODES = frozenset(
-        n.pluralize() for n in NodeType.documentable()
-    )
+    DOCUMENTABLE_NODES = frozenset(n.pluralize() for n in NodeType.documentable())
 
     @property
     def name(self):
-        return 'Rendering yaml'
+        return "Rendering yaml"
 
     def _is_norender_key(self, keypath: Keypath) -> bool:
         """
@@ -185,13 +176,13 @@ class SchemaYamlRenderer(BaseRenderer):
 
         Return True if it's tests or description - those aren't rendered
         """
-        if len(keypath) >= 2 and keypath[1] in ('tests', 'description'):
+        if len(keypath) >= 2 and keypath[1] in ("tests", "description"):
             return True
 
         if (
-            len(keypath) >= 4 and
-            keypath[1] == 'columns' and
-            keypath[3] in ('tests', 'description')
+            len(keypath) >= 4
+            and keypath[1] == "columns"
+            and keypath[3] in ("tests", "description")
         ):
             return True
 
@@ -209,13 +200,13 @@ class SchemaYamlRenderer(BaseRenderer):
             return True
 
         if keypath[0] == NodeType.Source.pluralize():
-            if keypath[2] == 'description':
+            if keypath[2] == "description":
                 return False
-            if keypath[2] == 'tables':
+            if keypath[2] == "tables":
                 if self._is_norender_key(keypath[3:]):
                     return False
         elif keypath[0] == NodeType.Macro.pluralize():
-            if keypath[2] == 'arguments':
+            if keypath[2] == "arguments":
                 if self._is_norender_key(keypath[3:]):
                     return False
             elif self._is_norender_key(keypath[1:]):
@@ -229,10 +220,10 @@ class SchemaYamlRenderer(BaseRenderer):
 class PackageRenderer(BaseRenderer):
     @property
     def name(self):
-        return 'Packages config'
+        return "Packages config"
 
 
 class SelectorRenderer(BaseRenderer):
     @property
     def name(self):
-        return 'Selector config'
+        return "Selector config"

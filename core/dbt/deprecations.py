@@ -14,39 +14,31 @@ class DBTDeprecation:
     def name(self) -> str:
         if self._name is not None:
             return self._name
-        raise NotImplementedError(
-            'name not implemented for {}'.format(self)
-        )
+        raise NotImplementedError("name not implemented for {}".format(self))
 
     def track_deprecation_warn(self) -> None:
         if dbt.tracking.active_user is not None:
-            dbt.tracking.track_deprecation_warn({
-                "deprecation_name": self.name
-            })
+            dbt.tracking.track_deprecation_warn({"deprecation_name": self.name})
 
     @property
     def description(self) -> str:
         if self._description is not None:
             return self._description
-        raise NotImplementedError(
-            'description not implemented for {}'.format(self)
-        )
+        raise NotImplementedError("description not implemented for {}".format(self))
 
     def show(self, *args, **kwargs) -> None:
         if self.name not in active_deprecations:
             desc = self.description.format(**kwargs)
-            msg = ui.line_wrap_message(
-                desc, prefix='* Deprecation Warning: '
-            )
+            msg = ui.line_wrap_message(desc, prefix="* Deprecation Warning: ")
             dbt.exceptions.warn_or_error(msg)
             self.track_deprecation_warn()
             active_deprecations.add(self.name)
 
 
 class MaterializationReturnDeprecation(DBTDeprecation):
-    _name = 'materialization-return'
+    _name = "materialization-return"
 
-    _description = '''\
+    _description = """\
     The materialization ("{materialization}") did not explicitly return a list
     of relations to add to the cache. By default the target relation will be
     added, but this behavior will be removed in a future version of dbt.
@@ -56,22 +48,22 @@ class MaterializationReturnDeprecation(DBTDeprecation):
     For more information, see:
 
     https://docs.getdbt.com/v0.15/docs/creating-new-materializations#section-6-returning-relations
-    '''
+    """
 
 
 class NotADictionaryDeprecation(DBTDeprecation):
-    _name = 'not-a-dictionary'
+    _name = "not-a-dictionary"
 
-    _description = '''\
+    _description = """\
     The object ("{obj}") was used as a dictionary. In a future version of dbt
     this capability will be removed from objects of this type.
-    '''
+    """
 
 
 class ColumnQuotingDeprecation(DBTDeprecation):
-    _name = 'column-quoting-unset'
+    _name = "column-quoting-unset"
 
-    _description = '''\
+    _description = """\
     The quote_columns parameter was not set for seeds, so the default value of
     False was chosen. The default will change to True in a future release.
 
@@ -80,13 +72,13 @@ class ColumnQuotingDeprecation(DBTDeprecation):
     For more information, see:
 
     https://docs.getdbt.com/v0.15/docs/seeds#section-specify-column-quoting
-    '''
+    """
 
 
 class ModelsKeyNonModelDeprecation(DBTDeprecation):
-    _name = 'models-key-mismatch'
+    _name = "models-key-mismatch"
 
-    _description = '''\
+    _description = """\
     "{node.name}" is a {node.resource_type} node, but it is specified in
     the {patch.yaml_key} section of {patch.original_file_path}.
 
@@ -96,25 +88,25 @@ class ModelsKeyNonModelDeprecation(DBTDeprecation):
     the {expected_key} key instead.
 
     This warning will become an error in a future release.
-    '''
+    """
 
 
 class ExecuteMacrosReleaseDeprecation(DBTDeprecation):
-    _name = 'execute-macro-release'
-    _description = '''\
+    _name = "execute-macro-release"
+    _description = """\
     The "release" argument to execute_macro is now ignored, and will be removed
     in a future relase of dbt. At that time, providing a `release` argument
     will result in an error.
-    '''
+    """
 
 
 class AdapterMacroDeprecation(DBTDeprecation):
-    _name = 'adapter-macro'
-    _description = '''\
+    _name = "adapter-macro"
+    _description = """\
     The "adapter_macro" macro has been deprecated. Instead, use the
     `adapter.dispatch` method to find a macro and call the result.
     adapter_macro was called for: {macro_name}
-    '''
+    """
 
 
 _adapter_renamed_description = """\
@@ -128,11 +120,11 @@ Documentation for {new_name} can be found here:
 
 
 def renamed_method(old_name: str, new_name: str):
-
     class AdapterDeprecationWarning(DBTDeprecation):
-        _name = 'adapter:{}'.format(old_name)
-        _description = _adapter_renamed_description.format(old_name=old_name,
-                                                           new_name=new_name)
+        _name = "adapter:{}".format(old_name)
+        _description = _adapter_renamed_description.format(
+            old_name=old_name, new_name=new_name
+        )
 
     dep = AdapterDeprecationWarning()
     deprecations_list.append(dep)
@@ -142,9 +134,7 @@ def renamed_method(old_name: str, new_name: str):
 def warn(name, *args, **kwargs):
     if name not in deprecations:
         # this should (hopefully) never happen
-        raise RuntimeError(
-            "Error showing deprecation warning: {}".format(name)
-        )
+        raise RuntimeError("Error showing deprecation warning: {}".format(name))
 
     deprecations[name].show(*args, **kwargs)
 
@@ -163,9 +153,7 @@ deprecations_list: List[DBTDeprecation] = [
     AdapterMacroDeprecation(),
 ]
 
-deprecations: Dict[str, DBTDeprecation] = {
-    d.name: d for d in deprecations_list
-}
+deprecations: Dict[str, DBTDeprecation] = {d.name: d for d in deprecations_list}
 
 
 def reset_deprecations():

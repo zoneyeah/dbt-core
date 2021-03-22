@@ -8,13 +8,13 @@ from dbt.dataclass_schema import dbtClassMixin, ValidationError
 from dbt.contracts.rpc import RPCParameters, RemoteResult, RemoteMethodFlags
 from dbt.exceptions import NotImplementedException, InternalException
 
-Parameters = TypeVar('Parameters', bound=RPCParameters)
-Result = TypeVar('Result', bound=RemoteResult)
+Parameters = TypeVar("Parameters", bound=RPCParameters)
+Result = TypeVar("Result", bound=RemoteResult)
 
 
 # If you call recursive_subclasses on a subclass of BaseRemoteMethod, it should
 # only return subtypes of the given subclass.
-T = TypeVar('T', bound='RemoteMethod')
+T = TypeVar("T", bound="RemoteMethod")
 
 
 class RemoteMethod(Generic[Parameters, Result]):
@@ -28,22 +28,22 @@ class RemoteMethod(Generic[Parameters, Result]):
     def get_parameters(cls) -> Type[Parameters]:
         argspec = inspect.getfullargspec(cls.set_args)
         annotations = argspec.annotations
-        if 'params' not in annotations:
+        if "params" not in annotations:
             raise InternalException(
-                'set_args must have parameter named params with a valid '
-                'RPCParameters type definition (no params annotation found)'
+                "set_args must have parameter named params with a valid "
+                "RPCParameters type definition (no params annotation found)"
             )
-        params_type = annotations['params']
+        params_type = annotations["params"]
         if not issubclass(params_type, RPCParameters):
             raise InternalException(
-                'set_args must have parameter named params with a valid '
-                'RPCParameters type definition (got {}, expected '
-                'RPCParameters subclass)'.format(params_type)
+                "set_args must have parameter named params with a valid "
+                "RPCParameters type definition (got {}, expected "
+                "RPCParameters subclass)".format(params_type)
             )
         if params_type is RPCParameters:
             raise InternalException(
-                'set_args must have parameter named params with a valid '
-                'RPCParameters type definition (got RPCParameters itself!)'
+                "set_args must have parameter named params with a valid "
+                "RPCParameters type definition (got RPCParameters itself!)"
             )
         return params_type
 
@@ -69,12 +69,12 @@ class RemoteMethod(Generic[Parameters, Result]):
     @abstractmethod
     def set_args(self, params: Parameters):
         """set_args executes in the parent process for an RPC call"""
-        raise NotImplementedException('set_args not implemented')
+        raise NotImplementedException("set_args not implemented")
 
     @abstractmethod
     def handle_request(self) -> Result:
         """handle_request executes inside the child process for an RPC call"""
-        raise NotImplementedException('handle_request not implemented')
+        raise NotImplementedException("handle_request not implemented")
 
     def cleanup(self, result: Optional[Result]):
         """cleanup is an optional method that executes inside the parent
@@ -105,9 +105,7 @@ class RemoteBuiltinMethod(RemoteMethod[Parameters, Result]):
         self.params = params
 
     def run(self):
-        raise InternalException(
-            'the run() method on builtins should never be called'
-        )
+        raise InternalException("the run() method on builtins should never be called")
 
     def __call__(self, **kwargs: Dict[str, Any]) -> dbtClassMixin:
         try:
@@ -119,36 +117,28 @@ class RemoteBuiltinMethod(RemoteMethod[Parameters, Result]):
 
 
 class TaskTypes(Dict[str, Type[RemoteMethod]]):
-    def __init__(
-        self, tasks: Optional[List[Type[RemoteMethod]]] = None
-    ) -> None:
+    def __init__(self, tasks: Optional[List[Type[RemoteMethod]]] = None) -> None:
         task_list: List[Type[RemoteMethod]]
         if tasks is None:
             task_list = RemoteMethod.recursive_subclasses(named_only=True)
         else:
             task_list = tasks
         super().__init__(
-            (t.METHOD_NAME, t) for t in task_list
-            if t.METHOD_NAME is not None
+            (t.METHOD_NAME, t) for t in task_list if t.METHOD_NAME is not None
         )
 
     def manifest(self) -> Dict[str, Type[RemoteManifestMethod]]:
-        return {
-            k: t for k, t in self.items()
-            if issubclass(t, RemoteManifestMethod)
-        }
+        return {k: t for k, t in self.items() if issubclass(t, RemoteManifestMethod)}
 
     def builtin(self) -> Dict[str, Type[RemoteBuiltinMethod]]:
-        return {
-            k: t for k, t in self.items()
-            if issubclass(t, RemoteBuiltinMethod)
-        }
+        return {k: t for k, t in self.items() if issubclass(t, RemoteBuiltinMethod)}
 
     def non_manifest(self) -> Dict[str, Type[RemoteMethod]]:
         return {
-            k: t for k, t in self.items()
+            k: t
+            for k, t in self.items()
             if (
-                not issubclass(t, RemoteManifestMethod) and
-                not issubclass(t, RemoteBuiltinMethod)
+                not issubclass(t, RemoteManifestMethod)
+                and not issubclass(t, RemoteBuiltinMethod)
             )
         }

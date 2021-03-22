@@ -3,7 +3,13 @@ import re
 from copy import deepcopy
 from dataclasses import dataclass
 from typing import (
-    Generic, TypeVar, Dict, Any, Tuple, Optional, List,
+    Generic,
+    TypeVar,
+    Dict,
+    Any,
+    Tuple,
+    Optional,
+    List,
 )
 
 from dbt.clients.jinja import get_rendered, SCHEMA_TEST_KWARGS_NAME
@@ -25,7 +31,7 @@ def get_nice_schema_test_name(
     flat_args = []
     for arg_name in sorted(args):
         # the model is already embedded in the name, so skip it
-        if arg_name == 'model':
+        if arg_name == "model":
             continue
         arg_val = args[arg_name]
 
@@ -38,17 +44,17 @@ def get_nice_schema_test_name(
 
         flat_args.extend([str(part) for part in parts])
 
-    clean_flat_args = [re.sub('[^0-9a-zA-Z_]+', '_', arg) for arg in flat_args]
+    clean_flat_args = [re.sub("[^0-9a-zA-Z_]+", "_", arg) for arg in flat_args]
     unique = "__".join(clean_flat_args)
 
     cutoff = 32
     if len(unique) <= cutoff:
         label = unique
     else:
-        label = hashlib.md5(unique.encode('utf-8')).hexdigest()
+        label = hashlib.md5(unique.encode("utf-8")).hexdigest()
 
-    filename = '{}_{}_{}'.format(test_type, test_name, label)
-    name = '{}_{}_{}'.format(test_type, test_name, unique)
+    filename = "{}_{}_{}".format(test_type, test_name, label)
+    name = "{}_{}_{}".format(test_type, test_name, unique)
 
     return filename, name
 
@@ -65,19 +71,17 @@ class YamlBlock(FileBlock):
         )
 
 
-Testable = TypeVar(
-    'Testable', UnparsedNodeUpdate, UnpatchedSourceDefinition
-)
+Testable = TypeVar("Testable", UnparsedNodeUpdate, UnpatchedSourceDefinition)
 
 ColumnTarget = TypeVar(
-    'ColumnTarget',
+    "ColumnTarget",
     UnparsedNodeUpdate,
     UnparsedAnalysisUpdate,
     UnpatchedSourceDefinition,
 )
 
 Target = TypeVar(
-    'Target',
+    "Target",
     UnparsedNodeUpdate,
     UnparsedMacroUpdate,
     UnparsedAnalysisUpdate,
@@ -103,9 +107,7 @@ class TargetBlock(YamlBlock, Generic[Target]):
         return []
 
     @classmethod
-    def from_yaml_block(
-        cls, src: YamlBlock, target: Target
-    ) -> 'TargetBlock[Target]':
+    def from_yaml_block(cls, src: YamlBlock, target: Target) -> "TargetBlock[Target]":
         return cls(
             file=src.file,
             data=src.data,
@@ -137,9 +139,7 @@ class TestBlock(TargetColumnsBlock[Testable], Generic[Testable]):
         return self.target.quote_columns
 
     @classmethod
-    def from_yaml_block(
-        cls, src: YamlBlock, target: Testable
-    ) -> 'TestBlock[Testable]':
+    def from_yaml_block(cls, src: YamlBlock, target: Testable) -> "TestBlock[Testable]":
         return cls(
             file=src.file,
             data=src.data,
@@ -160,7 +160,7 @@ class SchemaTestBlock(TestBlock[Testable], Generic[Testable]):
         test: Dict[str, Any],
         column_name: Optional[str],
         tags: List[str],
-    ) -> 'SchemaTestBlock':
+    ) -> "SchemaTestBlock":
         return cls(
             file=src.file,
             data=src.data,
@@ -179,13 +179,14 @@ class TestBuilder(Generic[Testable]):
         - or it may not be namespaced (test)
 
     """
+
     # The 'test_name' is used to find the 'macro' that implements the test
     TEST_NAME_PATTERN = re.compile(
-        r'((?P<test_namespace>([a-zA-Z_][0-9a-zA-Z_]*))\.)?'
-        r'(?P<test_name>([a-zA-Z_][0-9a-zA-Z_]*))'
+        r"((?P<test_namespace>([a-zA-Z_][0-9a-zA-Z_]*))\.)?"
+        r"(?P<test_name>([a-zA-Z_][0-9a-zA-Z_]*))"
     )
     # map magic keys to default values
-    MODIFIER_ARGS = {'severity': 'ERROR', 'tags': []}
+    MODIFIER_ARGS = {"severity": "ERROR", "tags": []}
 
     def __init__(
         self,
@@ -197,25 +198,24 @@ class TestBuilder(Generic[Testable]):
     ) -> None:
         test_name, test_args = self.extract_test_args(test, column_name)
         self.args: Dict[str, Any] = test_args
-        if 'model' in self.args:
+        if "model" in self.args:
             raise_compiler_error(
                 'Test arguments include "model", which is a reserved argument',
             )
         self.package_name: str = package_name
         self.target: Testable = target
 
-        self.args['model'] = self.build_model_str()
+        self.args["model"] = self.build_model_str()
 
         match = self.TEST_NAME_PATTERN.match(test_name)
         if match is None:
             raise_compiler_error(
-                'Test name string did not match expected pattern: {}'
-                .format(test_name)
+                "Test name string did not match expected pattern: {}".format(test_name)
             )
 
         groups = match.groupdict()
-        self.name: str = groups['test_name']
-        self.namespace: str = groups['test_namespace']
+        self.name: str = groups["test_name"]
+        self.namespace: str = groups["test_namespace"]
         self.modifiers: Dict[str, Any] = {}
         for key, default in self.MODIFIER_ARGS.items():
             value = self.args.pop(key, default)
@@ -237,57 +237,52 @@ class TestBuilder(Generic[Testable]):
     def extract_test_args(test, name=None) -> Tuple[str, Dict[str, Any]]:
         if not isinstance(test, dict):
             raise_compiler_error(
-                'test must be dict or str, got {} (value {})'.format(
-                    type(test), test
-                )
+                "test must be dict or str, got {} (value {})".format(type(test), test)
             )
 
         test = list(test.items())
         if len(test) != 1:
             raise_compiler_error(
-                'test definition dictionary must have exactly one key, got'
-                ' {} instead ({} keys)'.format(test, len(test))
+                "test definition dictionary must have exactly one key, got"
+                " {} instead ({} keys)".format(test, len(test))
             )
         test_name, test_args = test[0]
 
         if not isinstance(test_args, dict):
             raise_compiler_error(
-                'test arguments must be dict, got {} (value {})'.format(
+                "test arguments must be dict, got {} (value {})".format(
                     type(test_args), test_args
                 )
             )
         if not isinstance(test_name, str):
             raise_compiler_error(
-                'test name must be a str, got {} (value {})'.format(
+                "test name must be a str, got {} (value {})".format(
                     type(test_name), test_name
                 )
             )
         test_args = deepcopy(test_args)
         if name is not None:
-            test_args['column_name'] = name
+            test_args["column_name"] = name
         return test_name, test_args
 
     def severity(self) -> str:
-        return self.modifiers.get('severity', 'ERROR').upper()
+        return self.modifiers.get("severity", "ERROR").upper()
 
     def tags(self) -> List[str]:
-        tags = self.modifiers.get('tags', [])
+        tags = self.modifiers.get("tags", [])
         if isinstance(tags, str):
             tags = [tags]
         if not isinstance(tags, list):
             raise_compiler_error(
-                f'got {tags} ({type(tags)}) for tags, expected a list of '
-                f'strings'
+                f"got {tags} ({type(tags)}) for tags, expected a list of " f"strings"
             )
         for tag in tags:
             if not isinstance(tag, str):
-                raise_compiler_error(
-                    f'got {tag} ({type(tag)}) for tag, expected a str'
-                )
+                raise_compiler_error(f"got {tag} ({type(tag)}) for tag, expected a str")
         return tags[:]
 
     def macro_name(self) -> str:
-        macro_name = 'test_{}'.format(self.name)
+        macro_name = "test_{}".format(self.name)
         if self.namespace is not None:
             macro_name = "{}.{}".format(self.namespace, macro_name)
         return macro_name
@@ -296,11 +291,11 @@ class TestBuilder(Generic[Testable]):
         if isinstance(self.target, UnparsedNodeUpdate):
             name = self.name
         elif isinstance(self.target, UnpatchedSourceDefinition):
-            name = 'source_' + self.name
+            name = "source_" + self.name
         else:
             raise self._bad_type()
         if self.namespace is not None:
-            name = '{}_{}'.format(self.namespace, name)
+            name = "{}_{}".format(self.namespace, name)
         return get_nice_schema_test_name(name, self.target.name, self.args)
 
     # this is the 'raw_sql' that's used in 'render_update' and execution

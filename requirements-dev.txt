@@ -1,0 +1,16 @@
+freezegun
+pytest
+pytz
+bumpversion
+tox
+six
+ipdb
+pytest-xdist>=1.28.0,<2
+flaky>=3.5.3,<4
+mypy
+wheel
+twine
+pytest-logbook>=1.2.0,<1.3
+pre-commit
+black
+flake8

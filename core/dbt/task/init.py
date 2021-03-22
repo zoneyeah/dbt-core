@@ -11,9 +11,9 @@ from dbt.logger import GLOBAL_LOGGER as logger
 
 from dbt.task.base import BaseTask
 
-STARTER_REPO = 'https://github.com/fishtown-analytics/dbt-starter-project.git'
-STARTER_BRANCH = 'dbt-yml-config-version-2'
-DOCS_URL = 'https://docs.getdbt.com/docs/configure-your-profile'
+STARTER_REPO = "https://github.com/fishtown-analytics/dbt-starter-project.git"
+STARTER_BRANCH = "dbt-yml-config-version-2"
+DOCS_URL = "https://docs.getdbt.com/docs/configure-your-profile"
 
 ON_COMPLETE_MESSAGE = """
 Your new dbt project "{project_name}" was created! If this is your first time
@@ -39,7 +39,7 @@ class InitTask(BaseTask):
     def clone_starter_repo(self, project_name):
         dbt.clients.git.clone(
             STARTER_REPO,
-            cwd='.',
+            cwd=".",
             dirname=project_name,
             remove_git_dir=True,
             branch=STARTER_BRANCH,
@@ -55,10 +55,10 @@ class InitTask(BaseTask):
         # Line below raises an exception if the specified adapter is not found
         load_plugin(sample_adapter)
         adapter_path = get_include_paths(sample_adapter)[0]
-        sample_profiles_path = adapter_path / 'sample_profiles.yml'
+        sample_profiles_path = adapter_path / "sample_profiles.yml"
 
         if not sample_profiles_path.exists():
-            raise RuntimeException(f'No sample profile for {sample_adapter}')
+            raise RuntimeException(f"No sample profile for {sample_adapter}")
 
         if not os.path.exists(profiles_file):
             shutil.copyfile(sample_profiles_path, profiles_file)
@@ -74,7 +74,7 @@ class InitTask(BaseTask):
             project_name=project_name,
             sample_adapter=sample_adapter,
             profiles_path=profiles_path,
-            docs_url=DOCS_URL
+            docs_url=DOCS_URL,
         )
 
     def run(self):
@@ -82,7 +82,7 @@ class InitTask(BaseTask):
         sample_adapter = self.args.adapter
 
         profiles_dir = dbt.config.PROFILES_DIR
-        profiles_file = os.path.join(profiles_dir, 'profiles.yml')
+        profiles_file = os.path.join(profiles_dir, "profiles.yml")
 
         msg = "Creating dbt configuration folder at {}"
         logger.info(msg.format(profiles_dir))
@@ -94,9 +94,7 @@ class InitTask(BaseTask):
         self.create_profiles_file(profiles_file, sample_adapter)
 
         if os.path.exists(project_dir):
-            raise RuntimeError("directory {} already exists!".format(
-                project_dir
-            ))
+            raise RuntimeError("directory {} already exists!".format(project_dir))
 
         self.clone_starter_repo(project_dir)
 

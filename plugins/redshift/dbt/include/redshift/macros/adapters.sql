@@ -254,4 +254,3 @@
 {% macro redshift__alter_column_comment(relation, column_dict) %}
   {% do return(postgres__alter_column_comment(relation, column_dict)) %}
 {% endmacro %}
-

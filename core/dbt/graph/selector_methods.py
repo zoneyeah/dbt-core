@@ -31,28 +31,28 @@ from dbt.node_types import NodeType
 from dbt.ui import warning_tag
 
 
-SELECTOR_GLOB = '*'
-SELECTOR_DELIMITER = ':'
+SELECTOR_GLOB = "*"
+SELECTOR_DELIMITER = ":"
 
 
 class MethodName(StrEnum):
-    FQN = 'fqn'
-    Tag = 'tag'
-    Source = 'source'
-    Path = 'path'
-    Package = 'package'
-    Config = 'config'
-    TestName = 'test_name'
-    TestType = 'test_type'
-    ResourceType = 'resource_type'
-    State = 'state'
-    Exposure = 'exposure'
+    FQN = "fqn"
+    Tag = "tag"
+    Source = "source"
+    Path = "path"
+    Package = "package"
+    Config = "config"
+    TestName = "test_name"
+    TestType = "test_type"
+    ResourceType = "resource_type"
+    State = "state"
+    Exposure = "exposure"
 
 
 def is_selected_node(real_node, node_selector):
     for i, selector_part in enumerate(node_selector):
 
-        is_last = (i == len(node_selector) - 1)
+        is_last = i == len(node_selector) - 1
 
         # if we hit a GLOB, then this node is selected
         if selector_part == SELECTOR_GLOB:
@@ -83,15 +83,14 @@ class SelectorMethod(metaclass=abc.ABCMeta):
         self,
         manifest: Manifest,
         previous_state: Optional[PreviousState],
-        arguments: List[str]
+        arguments: List[str],
     ):
         self.manifest: Manifest = manifest
         self.previous_state = previous_state
         self.arguments: List[str] = arguments
 
     def parsed_nodes(
-        self,
-        included_nodes: Set[UniqueId]
+        self, included_nodes: Set[UniqueId]
     ) -> Iterator[Tuple[UniqueId, ManifestNode]]:
 
         for key, node in self.manifest.nodes.items():
@@ -101,8 +100,7 @@ class SelectorMethod(metaclass=abc.ABCMeta):
             yield unique_id, node
 
     def source_nodes(
-        self,
-        included_nodes: Set[UniqueId]
+        self, included_nodes: Set[UniqueId]
     ) -> Iterator[Tuple[UniqueId, ParsedSourceDefinition]]:
 
         for key, source in self.manifest.sources.items():
@@ -112,8 +110,7 @@ class SelectorMethod(metaclass=abc.ABCMeta):
             yield unique_id, source
 
     def exposure_nodes(
-        self,
-        included_nodes: Set[UniqueId]
+        self, included_nodes: Set[UniqueId]
     ) -> Iterator[Tuple[UniqueId, ParsedExposure]]:
 
         for key, exposure in self.manifest.exposures.items():
@@ -123,26 +120,28 @@ class SelectorMethod(metaclass=abc.ABCMeta):
             yield unique_id, exposure
 
     def all_nodes(
-        self,
-        included_nodes: Set[UniqueId]
+        self, included_nodes: Set[UniqueId]
     ) -> Iterator[Tuple[UniqueId, SelectorTarget]]:
-        yield from chain(self.parsed_nodes(included_nodes),
-                         self.source_nodes(included_nodes),
-                         self.exposure_nodes(included_nodes))
+        yield from chain(
+            self.parsed_nodes(included_nodes),
+            self.source_nodes(included_nodes),
+            self.exposure_nodes(included_nodes),
+        )
 
     def configurable_nodes(
-        self,
-        included_nodes: Set[UniqueId]
+        self, included_nodes: Set[UniqueId]
     ) -> Iterator[Tuple[UniqueId, CompileResultNode]]:
-        yield from chain(self.parsed_nodes(included_nodes),
-                         self.source_nodes(included_nodes))
+        yield from chain(
+            self.parsed_nodes(included_nodes), self.source_nodes(included_nodes)
+        )
 
     def non_source_nodes(
         self,
         included_nodes: Set[UniqueId],
     ) -> Iterator[Tuple[UniqueId, Union[ParsedExposure, ManifestNode]]]:
-        yield from chain(self.parsed_nodes(included_nodes),
-                         self.exposure_nodes(included_nodes))
+        yield from chain(
+            self.parsed_nodes(included_nodes), self.exposure_nodes(included_nodes)
+        )
 
     @abc.abstractmethod
     def search(
@@ -150,7 +149,7 @@ class SelectorMethod(metaclass=abc.ABCMeta):
         included_nodes: Set[UniqueId],
         selector: str,
     ) -> Iterator[UniqueId]:
-        raise NotImplementedError('subclasses should implement this')
+        raise NotImplementedError("subclasses should implement this")
 
 
 class QualifiedNameSelectorMethod(SelectorMethod):
@@ -216,7 +215,7 @@ class SourceSelectorMethod(SelectorMethod):
         self, included_nodes: Set[UniqueId], selector: str
     ) -> Iterator[UniqueId]:
         """yields nodes from included are the specified source."""
-        parts = selector.split('.')
+        parts = selector.split(".")
         target_package = SELECTOR_GLOB
         if len(parts) == 1:
             target_source, target_table = parts[0], None
@@ -227,9 +226,9 @@ class SourceSelectorMethod(SelectorMethod):
         else:  # len(parts) > 3 or len(parts) == 0
             msg = (
                 'Invalid source selector value "{}". Sources must be of the '
-                'form `${{source_name}}`, '
-                '`${{source_name}}.${{target_name}}`, or '
-                '`${{package_name}}.${{source_name}}.${{target_name}}'
+                "form `${{source_name}}`, "
+                "`${{source_name}}.${{target_name}}`, or "
+                "`${{package_name}}.${{source_name}}.${{target_name}}"
             ).format(selector)
             raise RuntimeException(msg)
 
@@ -248,7 +247,7 @@ class ExposureSelectorMethod(SelectorMethod):
     def search(
         self, included_nodes: Set[UniqueId], selector: str
     ) -> Iterator[UniqueId]:
-        parts = selector.split('.')
+        parts = selector.split(".")
         target_package = SELECTOR_GLOB
         if len(parts) == 1:
             target_name = parts[0]
@@ -257,8 +256,8 @@ class ExposureSelectorMethod(SelectorMethod):
         else:
             msg = (
                 'Invalid exposure selector value "{}". Exposures must be of '
-                'the form ${{exposure_name}} or '
-                '${{exposure_package.exposure_name}}'
+                "the form ${{exposure_name}} or "
+                "${{exposure_package.exposure_name}}"
             ).format(selector)
             raise RuntimeException(msg)
 
@@ -275,9 +274,7 @@ class PathSelectorMethod(SelectorMethod):
     def search(
         self, included_nodes: Set[UniqueId], selector: str
     ) -> Iterator[UniqueId]:
-        """Yields nodes from inclucded that match the given path.
-
-        """
+        """Yields nodes from inclucded that match the given path."""
         # use '.' and not 'root' for easy comparison
         root = Path.cwd()
         paths = set(p.relative_to(root) for p in root.glob(selector))
@@ -336,7 +333,7 @@ class ConfigSelectorMethod(SelectorMethod):
         parts = self.arguments
         # special case: if the user wanted to compare test severity,
         # make the comparison case-insensitive
-        if parts == ['severity']:
+        if parts == ["severity"]:
             selector = CaseInsensitive(selector)
 
         # search sources is kind of useless now source configs only have
@@ -382,14 +379,13 @@ class TestTypeSelectorMethod(SelectorMethod):
         self, included_nodes: Set[UniqueId], selector: str
     ) -> Iterator[UniqueId]:
         search_types: Tuple[Type, ...]
-        if selector == 'schema':
+        if selector == "schema":
             search_types = (ParsedSchemaTestNode, CompiledSchemaTestNode)
-        elif selector == 'data':
+        elif selector == "data":
             search_types = (ParsedDataTestNode, CompiledDataTestNode)
         else:
             raise RuntimeException(
-                f'Invalid test type selector {selector}: expected "data" or '
-                '"schema"'
+                f'Invalid test type selector {selector}: expected "data" or ' '"schema"'
             )
 
         for node, real_node in self.parsed_nodes(included_nodes):
@@ -405,25 +401,23 @@ class StateSelectorMethod(SelectorMethod):
     def _macros_modified(self) -> List[str]:
         # we checked in the caller!
         if self.previous_state is None or self.previous_state.manifest is None:
-            raise InternalException(
-                'No comparison manifest in _macros_modified'
-            )
+            raise InternalException("No comparison manifest in _macros_modified")
         old_macros = self.previous_state.manifest.macros
         new_macros = self.manifest.macros
 
         modified = []
         for uid, macro in new_macros.items():
-            name = f'{macro.package_name}.{macro.name}'
+            name = f"{macro.package_name}.{macro.name}"
             if uid in old_macros:
                 old_macro = old_macros[uid]
                 if macro.macro_sql != old_macro.macro_sql:
-                    modified.append(f'{name} changed')
+                    modified.append(f"{name} changed")
             else:
-                modified.append(f'{name} added')
+                modified.append(f"{name} added")
 
         for uid, macro in old_macros.items():
             if uid not in new_macros:
-                modified.append(f'{macro.package_name}.{macro.name} removed')
+                modified.append(f"{macro.package_name}.{macro.name} removed")
 
         return modified[:3]
 
@@ -437,12 +431,14 @@ class StateSelectorMethod(SelectorMethod):
         if self.macros_were_modified is None:
             self.macros_were_modified = self._macros_modified()
             if self.macros_were_modified:
-                log_str = ', '.join(self.macros_were_modified)
-                logger.warning(warning_tag(
-                    f'During a state comparison, dbt detected a change in '
-                    f'macros. This will not be marked as a modification. Some '
-                    f'macros: {log_str}'
-                ))
+                log_str = ", ".join(self.macros_were_modified)
+                logger.warning(
+                    warning_tag(
+                        f"During a state comparison, dbt detected a change in "
+                        f"macros. This will not be marked as a modification. Some "
+                        f"macros: {log_str}"
+                    )
+                )
 
         return not new.same_contents(old)  # type: ignore
 
@@ -458,12 +454,12 @@ class StateSelectorMethod(SelectorMethod):
     ) -> Iterator[UniqueId]:
         if self.previous_state is None or self.previous_state.manifest is None:
             raise RuntimeException(
-                'Got a state selector method, but no comparison manifest'
+                "Got a state selector method, but no comparison manifest"
             )
 
         state_checks = {
-            'modified': self.check_modified,
-            'new': self.check_new,
+            "modified": self.check_modified,
+            "new": self.check_new,
         }
         if selector in state_checks:
             checker = state_checks[selector]
@@ -517,7 +513,7 @@ class MethodManager:
         if method not in self.SELECTOR_METHODS:
             raise InternalException(
                 f'Method name "{method}" is a valid node selection '
-                f'method name, but it is not handled'
+                f"method name, but it is not handled"
             )
         cls: Type[SelectorMethod] = self.SELECTOR_METHODS[method]
         return cls(self.manifest, self.previous_state, method_arguments)

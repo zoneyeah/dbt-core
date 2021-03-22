@@ -7,7 +7,7 @@ from dbt.contracts.project import (
     RegistryPackageMetadata,
     RegistryPackage,
 )
-from dbt.deps.base import PinnedPackage, UnpinnedPackage, get_downloads_path
+from dbt.deps import PinnedPackage, UnpinnedPackage, get_downloads_path
 from dbt.exceptions import (
     package_version_not_found,
     VersionsNotCompatibleException,
@@ -26,7 +26,7 @@ class RegistryPackageMixin:
         return self.package
 
     def source_type(self) -> str:
-        return 'hub'
+        return "hub"
 
 
 class RegistryPinnedPackage(RegistryPackageMixin, PinnedPackage):
@@ -39,13 +39,13 @@ class RegistryPinnedPackage(RegistryPackageMixin, PinnedPackage):
         return self.package
 
     def source_type(self):
-        return 'hub'
+        return "hub"
 
     def get_version(self):
         return self.version
 
     def nice_version_name(self):
-        return 'version {}'.format(self.version)
+        return "version {}".format(self.version)
 
     def _fetch_metadata(self, project, renderer) -> RegistryPackageMetadata:
         dct = registry.package_version(self.package, self.version)
@@ -54,10 +54,8 @@ class RegistryPinnedPackage(RegistryPackageMixin, PinnedPackage):
     def install(self, project, renderer):
         metadata = self.fetch_metadata(project, renderer)
 
-        tar_name = '{}.{}.tar.gz'.format(self.package, self.version)
-        tar_path = os.path.realpath(
-            os.path.join(get_downloads_path(), tar_name)
-        )
+        tar_name = "{}.{}.tar.gz".format(self.package, self.version)
+        tar_path = os.path.realpath(os.path.join(get_downloads_path(), tar_name))
         system.make_directory(os.path.dirname(tar_path))
 
         download_url = metadata.downloads.tarball
@@ -70,9 +68,7 @@ class RegistryPinnedPackage(RegistryPackageMixin, PinnedPackage):
 class RegistryUnpinnedPackage(
     RegistryPackageMixin, UnpinnedPackage[RegistryPinnedPackage]
 ):
-    def __init__(
-        self, package: str, versions: List[semver.VersionSpecifier]
-    ) -> None:
+    def __init__(self, package: str, versions: List[semver.VersionSpecifier]) -> None:
         super().__init__(package)
         self.versions = versions
 
@@ -82,20 +78,15 @@ class RegistryUnpinnedPackage(
             package_not_found(self.package)
 
     @classmethod
-    def from_contract(
-        cls, contract: RegistryPackage
-    ) -> 'RegistryUnpinnedPackage':
+    def from_contract(cls, contract: RegistryPackage) -> "RegistryUnpinnedPackage":
         raw_version = contract.get_versions()
 
-        versions = [
-            semver.VersionSpecifier.from_version_string(v)
-            for v in raw_version
-        ]
+        versions = [semver.VersionSpecifier.from_version_string(v) for v in raw_version]
         return cls(package=contract.package, versions=versions)
 
     def incorporate(
-        self, other: 'RegistryUnpinnedPackage'
-    ) -> 'RegistryUnpinnedPackage':
+        self, other: "RegistryUnpinnedPackage"
+    ) -> "RegistryUnpinnedPackage":
         return RegistryUnpinnedPackage(
             package=self.package,
             versions=self.versions + other.versions,
@@ -106,8 +97,7 @@ class RegistryUnpinnedPackage(
         try:
             range_ = semver.reduce_versions(*self.versions)
         except VersionsNotCompatibleException as e:
-            new_msg = ('Version error for package {}: {}'
-                       .format(self.name, e))
+            new_msg = "Version error for package {}: {}".format(self.name, e)
             raise DependencyException(new_msg) from e
 
         available = registry.get_available_versions(self.package)

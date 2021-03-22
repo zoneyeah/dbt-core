@@ -25,5 +25,5 @@ default:
       schema: [dbt schema]
       threads: [1 or more]
       client_session_keep_alive: False
-  
+
   target: dev

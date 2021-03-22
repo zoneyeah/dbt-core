@@ -88,7 +88,7 @@ If you are not a member of the `fishtown-analytics` GitHub organization, you can
 
 ### Core contributors
 
-If you are a member of the `fishtown-analytics` GitHub organization, you will have push access to the dbt repo. Rather than 
+If you are a member of the `fishtown-analytics` GitHub organization, you will have push access to the dbt repo. Rather than
 forking dbt to make your changes, just clone the repository, check out a new branch, and push directly to that branch.
 
 ## Setting up an environment
@@ -139,7 +139,7 @@ brew install postgresql
 First make sure that you set up your `virtualenv` as described in section _Setting up an environment_. Next, install dbt (and its dependencies) with:
 
 ```
-pip install -r editable_requirements.txt
+pip install -r requirements-editable.txt
 ```
 
 When dbt is installed from source in this way, any changes you make to the dbt source code will be reflected immediately in your next `dbt` run.

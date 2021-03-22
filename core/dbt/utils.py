@@ -12,8 +12,21 @@ from contextlib import contextmanager
 from enum import Enum
 from typing_extensions import Protocol
 from typing import (
-    Tuple, Type, Any, Optional, TypeVar, Dict, Union, Callable, List, Iterator,
-    Mapping, Iterable, AbstractSet, Set, Sequence
+    Tuple,
+    Type,
+    Any,
+    Optional,
+    TypeVar,
+    Dict,
+    Union,
+    Callable,
+    List,
+    Iterator,
+    Mapping,
+    Iterable,
+    AbstractSet,
+    Set,
+    Sequence,
 )
 
 import dbt.exceptions
@@ -43,50 +56,51 @@ def coalesce(*args):
 
 
 def get_profile_from_project(project):
-    target_name = project.get('target', {})
-    profile = project.get('outputs', {}).get(target_name, {})
+    target_name = project.get("target", {})
+    profile = project.get("outputs", {}).get(target_name, {})
     return profile
 
 
 def get_model_name_or_none(model):
     if model is None:
-        name = '<None>'
+        name = "<None>"
 
     elif isinstance(model, str):
         name = model
     elif isinstance(model, dict):
-        name = model.get('alias', model.get('name'))
-    elif hasattr(model, 'alias'):
+        name = model.get("alias", model.get("name"))
+    elif hasattr(model, "alias"):
         name = model.alias
-    elif hasattr(model, 'name'):
+    elif hasattr(model, "name"):
         name = model.name
     else:
         name = str(model)
     return name
 
 
-MACRO_PREFIX = 'dbt_macro__'
-DOCS_PREFIX = 'dbt_docs__'
+MACRO_PREFIX = "dbt_macro__"
+DOCS_PREFIX = "dbt_docs__"
 
 
 def get_dbt_macro_name(name):
     if name is None:
-        raise dbt.exceptions.InternalException('Got None for a macro name!')
-    return '{}{}'.format(MACRO_PREFIX, name)
+        raise dbt.exceptions.InternalException("Got None for a macro name!")
+    return "{}{}".format(MACRO_PREFIX, name)
 
 
 def get_dbt_docs_name(name):
     if name is None:
-        raise dbt.exceptions.InternalException('Got None for a doc name!')
-    return '{}{}'.format(DOCS_PREFIX, name)
+        raise dbt.exceptions.InternalException("Got None for a doc name!")
+    return "{}{}".format(DOCS_PREFIX, name)
 
 
-def get_materialization_macro_name(materialization_name, adapter_type=None,
-                                   with_prefix=True):
+def get_materialization_macro_name(
+    materialization_name, adapter_type=None, with_prefix=True
+):
     if adapter_type is None:
-        adapter_type = 'default'
+        adapter_type = "default"
 
-    name = 'materialization_{}_{}'.format(materialization_name, adapter_type)
+    name = "materialization_{}_{}".format(materialization_name, adapter_type)
 
     if with_prefix:
         return get_dbt_macro_name(name)
@@ -172,31 +186,23 @@ def _deep_map(
     ret: Any
 
     if isinstance(value, list):
-        ret = [
-            _deep_map(func, v, (keypath + (idx,)))
-            for idx, v in enumerate(value)
-        ]
+        ret = [_deep_map(func, v, (keypath + (idx,))) for idx, v in enumerate(value)]
     elif isinstance(value, dict):
-        ret = {
-            k: _deep_map(func, v, (keypath + (str(k),)))
-            for k, v in value.items()
-        }
+        ret = {k: _deep_map(func, v, (keypath + (str(k),))) for k, v in value.items()}
     elif isinstance(value, atomic_types):
         ret = func(value, keypath)
     else:
         container_types: Tuple[Type[Any], ...] = (list, dict)
         ok_types = container_types + atomic_types
         raise dbt.exceptions.DbtConfigError(
-            'in _deep_map, expected one of {!r}, got {!r}'
-            .format(ok_types, type(value))
+            "in _deep_map, expected one of {!r}, got {!r}".format(ok_types, type(value))
         )
 
     return ret
 
 
 def deep_map(
-    func: Callable[[Any, Tuple[Union[str, int], ...]], Any],
-    value: Any
+    func: Callable[[Any, Tuple[Union[str, int], ...]], Any], value: Any
 ) -> Any:
     """map the function func() onto each non-container value in 'value'
     recursively, returning a new value. As long as func does not manipulate
@@ -216,10 +222,8 @@ def deep_map(
     try:
         return _deep_map(func, value, ())
     except RuntimeError as exc:
-        if 'maximum recursion depth exceeded' in str(exc):
-            raise dbt.exceptions.RecursionException(
-                'Cycle detected in deep_map'
-            )
+        if "maximum recursion depth exceeded" in str(exc):
+            raise dbt.exceptions.RecursionException("Cycle detected in deep_map")
         raise
 
 
@@ -239,20 +243,20 @@ def get_pseudo_test_path(node_name, source_path, test_type):
 
 
 def get_pseudo_hook_path(hook_name):
-    path_parts = ['hooks', "{}.sql".format(hook_name)]
+    path_parts = ["hooks", "{}.sql".format(hook_name)]
     return os.path.join(*path_parts)
 
 
 def md5(string):
-    return hashlib.md5(string.encode('utf-8')).hexdigest()
+    return hashlib.md5(string.encode("utf-8")).hexdigest()
 
 
 def get_hash(model):
-    return hashlib.md5(model.unique_id.encode('utf-8')).hexdigest()
+    return hashlib.md5(model.unique_id.encode("utf-8")).hexdigest()
 
 
 def get_hashed_contents(model):
-    return hashlib.md5(model.raw_sql.encode('utf-8')).hexdigest()
+    return hashlib.md5(model.raw_sql.encode("utf-8")).hexdigest()
 
 
 def flatten_nodes(dep_list):
@@ -260,11 +264,12 @@ def flatten_nodes(dep_list):
 
 
 class memoized:
-    '''Decorator. Caches a function's return value each time it is called. If
+    """Decorator. Caches a function's return value each time it is called. If
     called later with the same arguments, the cached value is returned (not
     reevaluated).
 
-    Taken from https://wiki.python.org/moin/PythonDecoratorLibrary#Memoize'''
+    Taken from https://wiki.python.org/moin/PythonDecoratorLibrary#Memoize"""
+
     def __init__(self, func):
         self.func = func
         self.cache = {}
@@ -281,16 +286,16 @@ class memoized:
         return value
 
     def __repr__(self):
-        '''Return the function's docstring.'''
+        """Return the function's docstring."""
         return self.func.__doc__
 
     def __get__(self, obj, objtype):
-        '''Support instance methods.'''
+        """Support instance methods."""
         return functools.partial(self.__call__, obj)
 
 
-K_T = TypeVar('K_T')
-V_T = TypeVar('V_T')
+K_T = TypeVar("K_T")
+V_T = TypeVar("V_T")
 
 
 def filter_null_values(input: Dict[K_T, Optional[V_T]]) -> Dict[K_T, V_T]:
@@ -298,13 +303,13 @@ def filter_null_values(input: Dict[K_T, Optional[V_T]]) -> Dict[K_T, V_T]:
 
 
 def add_ephemeral_model_prefix(s: str) -> str:
-    return '__dbt__cte__{}'.format(s)
+    return "__dbt__cte__{}".format(s)
 
 
 def timestring() -> str:
     """Get the current datetime as an RFC 3339-compliant string"""
     # isoformat doesn't include the mandatory trailing 'Z' for UTC.
-    return datetime.datetime.utcnow().isoformat() + 'Z'
+    return datetime.datetime.utcnow().isoformat() + "Z"
 
 
 class JSONEncoder(json.JSONEncoder):
@@ -312,12 +317,13 @@ class JSONEncoder(json.JSONEncoder):
     handles `Decimal`s. Naturally, this can lose precision because they get
     converted to floats.
     """
+
     def default(self, obj):
         if isinstance(obj, DECIMALS):
             return float(obj)
         if isinstance(obj, (datetime.datetime, datetime.date, datetime.time)):
             return obj.isoformat()
-        if hasattr(obj, 'to_dict'):
+        if hasattr(obj, "to_dict"):
             # if we have a to_dict we should try to serialize the result of
             # that!
             return obj.to_dict(omit_none=True)
@@ -339,9 +345,7 @@ class Translator:
         self.aliases = aliases
         self.recursive = recursive
 
-    def translate_mapping(
-        self, kwargs: Mapping[str, Any]
-    ) -> Dict[str, Any]:
+    def translate_mapping(self, kwargs: Mapping[str, Any]) -> Dict[str, Any]:
         result: Dict[str, Any] = {}
 
         for key, value in kwargs.items():
@@ -368,15 +372,17 @@ class Translator:
         try:
             return self.translate_mapping(value)
         except RuntimeError as exc:
-            if 'maximum recursion depth exceeded' in str(exc):
+            if "maximum recursion depth exceeded" in str(exc):
                 raise dbt.exceptions.RecursionException(
-                    'Cycle detected in a value passed to translate!'
+                    "Cycle detected in a value passed to translate!"
                 )
             raise
 
 
 def translate_aliases(
-    kwargs: Dict[str, Any], aliases: Dict[str, str], recurse: bool = False,
+    kwargs: Dict[str, Any],
+    aliases: Dict[str, str],
+    recurse: bool = False,
 ) -> Dict[str, Any]:
     """Given a dict of keyword arguments and a dict mapping aliases to their
     canonical values, canonicalize the keys in the kwargs dict.
@@ -395,7 +401,7 @@ def _pluralize(string: Union[str, NodeType]) -> str:
     try:
         convert = NodeType(string)
     except ValueError:
-        return f'{string}s'
+        return f"{string}s"
     else:
         return convert.pluralize()
 
@@ -404,12 +410,12 @@ def pluralize(count, string: Union[str, NodeType]):
     pluralized: str = str(string)
     if count != 1:
         pluralized = _pluralize(string)
-    return f'{count} {pluralized}'
+    return f"{count} {pluralized}"
 
 
 def restrict_to(*restrictions):
     """Create the metadata for a restricted dataclass field"""
-    return {'restrict': list(restrictions)}
+    return {"restrict": list(restrictions)}
 
 
 def coerce_dict_str(value: Any) -> Optional[Dict[str, Any]]:
@@ -417,7 +423,7 @@ def coerce_dict_str(value: Any) -> Optional[Dict[str, Any]]:
     easier. You get either `None` if it's not a Dict[str, Any], or the
     Dict[str, Any] you expected (to pass it to dbtClassMixin.from_dict(...)).
     """
-    if (isinstance(value, dict) and all(isinstance(k, str) for k in value)):
+    if isinstance(value, dict) and all(isinstance(k, str) for k in value):
         return value
     else:
         return None
@@ -434,6 +440,7 @@ def lowercase(value: Optional[str]) -> Optional[str]:
 # attributes, and regular properties only work with objects. maybe this should
 # be handled by the RelationProxy?
 
+
 class classproperty(object):
     def __init__(self, func):
         self.func = func
@@ -443,7 +450,7 @@ class classproperty(object):
 
 
 def format_bytes(num_bytes):
-    for unit in ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB']:
+    for unit in ["Bytes", "KB", "MB", "GB", "TB", "PB"]:
         if abs(num_bytes) < 1024.0:
             return f"{num_bytes:3.1f} {unit}"
         num_bytes /= 1024.0
@@ -453,7 +460,7 @@ def format_bytes(num_bytes):
 
 
 def format_rows_number(rows_number):
-    for unit in ['', 'k', 'm', 'b', 't']:
+    for unit in ["", "k", "m", "b", "t"]:
         if abs(rows_number) < 1000.0:
             return f"{rows_number:3.1f}{unit}".strip()
         rows_number /= 1000.0
@@ -467,6 +474,7 @@ class ConnectingExecutor(concurrent.futures.Executor):
         def connected(conn_name, func, *args, **kwargs):
             with self.connection_named(adapter, conn_name):
                 return func(*args, **kwargs)
+
         return self.submit(connected, conn_name, func, *args, **kwargs)
 
 
@@ -484,8 +492,8 @@ class SingleThreadedExecutor(ConnectingExecutor):
             )
         else:
             raise TypeError(
-                'submit expected at least 1 positional argument, '
-                'got %d' % (len(args) - 1)
+                "submit expected at least 1 positional argument, "
+                "got %d" % (len(args) - 1)
             )
         fut = concurrent.futures.Future()
         try:
@@ -527,9 +535,7 @@ def executor(config: HasThreadingConfig) -> ConnectingExecutor:
         return MultiThreadedExecutor(max_workers=config.threads)
 
 
-def fqn_search(
-    root: Dict[str, Any], fqn: List[str]
-) -> Iterator[Dict[str, Any]]:
+def fqn_search(root: Dict[str, Any], fqn: List[str]) -> Iterator[Dict[str, Any]]:
     """Iterate into a nested dictionary, looking for keys in the fqn as levels.
     Yield the level config.
     """
@@ -554,6 +560,7 @@ class MultiDict(Mapping[str, Any]):
     """Implement the mapping protocol using a list of mappings. The most
     recently added mapping "wins".
     """
+
     def __init__(self, sources: Optional[StringMapList] = None) -> None:
         super().__init__()
         self.sources: StringMapList

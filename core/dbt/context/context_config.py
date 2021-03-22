@@ -17,8 +17,8 @@ class ModelParts(IsFQNResource):
     package_name: str
 
 
-T = TypeVar('T')  # any old type
-C = TypeVar('C', bound=BaseConfig)
+T = TypeVar("T")  # any old type
+C = TypeVar("C", bound=BaseConfig)
 
 
 class ConfigSource:
@@ -36,13 +36,13 @@ class UnrenderedConfig(ConfigSource):
     def get_config_dict(self, resource_type: NodeType) -> Dict[str, Any]:
         unrendered = self.project.unrendered.project_dict
         if resource_type == NodeType.Seed:
-            model_configs = unrendered.get('seeds')
+            model_configs = unrendered.get("seeds")
         elif resource_type == NodeType.Snapshot:
-            model_configs = unrendered.get('snapshots')
+            model_configs = unrendered.get("snapshots")
         elif resource_type == NodeType.Source:
-            model_configs = unrendered.get('sources')
+            model_configs = unrendered.get("sources")
         else:
-            model_configs = unrendered.get('models')
+            model_configs = unrendered.get("models")
 
         if model_configs is None:
             return {}
@@ -79,8 +79,8 @@ class BaseContextConfigGenerator(Generic[T]):
         dependencies = self._active_project.load_dependencies()
         if project_name not in dependencies:
             raise InternalException(
-                f'Project name {project_name} not found in dependencies '
-                f'(found {list(dependencies)})'
+                f"Project name {project_name} not found in dependencies "
+                f"(found {list(dependencies)})"
             )
         return dependencies[project_name]
 
@@ -92,7 +92,7 @@ class BaseContextConfigGenerator(Generic[T]):
         for level_config in fqn_search(model_configs, fqn):
             result = {}
             for key, value in level_config.items():
-                if key.startswith('+'):
+                if key.startswith("+"):
                     result[key[1:]] = deepcopy(value)
                 elif not isinstance(value, dict):
                     result[key] = deepcopy(value)
@@ -171,13 +171,9 @@ class ContextConfigGenerator(BaseContextConfigGenerator[C]):
     def _update_from_config(
         self, result: C, partial: Dict[str, Any], validate: bool = False
     ) -> C:
-        translated = self._active_project.credentials.translate_aliases(
-            partial
-        )
+        translated = self._active_project.credentials.translate_aliases(partial)
         return result.update_from(
-            translated,
-            self._active_project.credentials.type,
-            validate=validate
+            translated, self._active_project.credentials.type, validate=validate
         )
 
     def calculate_node_config_dict(
@@ -219,11 +215,7 @@ class UnrenderedConfigGenerator(BaseContextConfigGenerator[Dict[str, Any]]):
             base=base,
         )
 
-    def initial_result(
-        self,
-        resource_type: NodeType,
-        base: bool
-    ) -> Dict[str, Any]:
+    def initial_result(self, resource_type: NodeType, base: bool) -> Dict[str, Any]:
         return {}
 
     def _update_from_config(
@@ -232,9 +224,7 @@ class UnrenderedConfigGenerator(BaseContextConfigGenerator[Dict[str, Any]]):
         partial: Dict[str, Any],
         validate: bool = False,
     ) -> Dict[str, Any]:
-        translated = self._active_project.credentials.translate_aliases(
-            partial
-        )
+        translated = self._active_project.credentials.translate_aliases(partial)
         result.update(translated)
         return result
 
