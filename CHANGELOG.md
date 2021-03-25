@@ -1,5 +1,8 @@
 ## dbt 0.19.1 (Release TBD)
 
+## dbt 0.19.1rc2 (March 25, 2021)
+
+
 ### Fixes
 - Pass service-account scopes to gcloud-based oauth ([#3040](https://github.com/fishtown-analytics/dbt/issues/3040), [#3041](https://github.com/fishtown-analytics/dbt/pull/3041))
 
