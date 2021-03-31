@@ -207,7 +207,6 @@ class BigQueryConnectionManager(BaseConnectionManager):
 
         if method == BigQueryConnectionMethod.OAUTH:
             credentials, _ = get_bigquery_defaults(scopes=cls.SCOPE)
-            import ipdb; ipdb.set_trace()
             return credentials
 
         elif method == BigQueryConnectionMethod.SERVICE_ACCOUNT:
