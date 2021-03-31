@@ -90,6 +90,9 @@ class BigQueryCredentials(Credentials):
     maximum_bytes_billed: Optional[int] = None
     impersonate_service_account: Optional[str] = None
 
+    # oauth
+    launch_browser: Optional[bool] = True
+
     # Keyfile json creds
     keyfile: Optional[str] = None
     keyfile_json: Optional[Dict[str, Any]] = None
@@ -204,6 +207,7 @@ class BigQueryConnectionManager(BaseConnectionManager):
 
         if method == BigQueryConnectionMethod.OAUTH:
             credentials, _ = get_bigquery_defaults(scopes=cls.SCOPE)
+            import ipdb; ipdb.set_trace()
             return credentials
 
         elif method == BigQueryConnectionMethod.SERVICE_ACCOUNT:
@@ -266,7 +270,7 @@ class BigQueryConnectionManager(BaseConnectionManager):
 
         except google.auth.exceptions.DefaultCredentialsError:
             logger.info("Please log into GCP to continue")
-            gcloud.setup_default_credentials()
+            gcloud.setup_default_credentials(connection.credentials)
 
             handle = cls.get_bigquery_client(connection.credentials)
 
