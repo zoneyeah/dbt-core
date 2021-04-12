@@ -497,10 +497,7 @@ class SchemaParser(SimpleParser[SchemaTestBlock, ParsedSchemaTestNode]):
         else:
             try:
                 # make a base context that doesn't have the magic kwargs field
-                context = generate_test_context(
-                    node, self.root_project, self.manifest, config,
-                    self.macro_resolver,
-                )
+                context = self._context_for(node, config)
                 # update with rendered test kwargs (which collects any refs)
                 add_rendered_test_kwargs(context, node, capture_macros=True)
                 # the parsed node is not rendered in the native context.
