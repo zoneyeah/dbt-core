@@ -94,9 +94,3 @@ jobs:
           no_output_timeout: 30m
       - store_artifacts:
           path: ./logs
-
-
-workflows:
-  version: 2
-  test-everything:
-    jobs:
