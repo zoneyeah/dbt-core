@@ -840,7 +840,8 @@ class TestProject(BaseConfigTest):
         project = project_from_config_rendered(self.default_project_data)
         self.assertEqual(project.models, {'vars': {}, 'pre-hook': [], 'post-hook': []})
         self.assertEqual(project.seeds, {'vars': {}, 'pre-hook': [], 'post-hook': [], 'column_types': {}})
-
+    
+    @pytest.mark.skipif(os.name == 'nt', reason='crashes CI for Windows')
     def test_cycle(self):
         models = {}
         models['models'] = models
