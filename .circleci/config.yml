@@ -94,3 +94,37 @@ jobs:
           no_output_timeout: 30m
       - store_artifacts:
           path: ./logs
+  # temp
+  noop:
+    docker: *test_only
+    steps:
+      - run: ":"
+
+
+ workflows:
+   version: 2
+   test-everything:
+     jobs:
+        - noop 
+#       - lint
+#       - unit
+#       - integration-postgres:
+#           requires:
+#             - unit
+#       - integration-redshift:
+#           requires:
+#             - unit
+#       - integration-bigquery:
+#           requires:
+#             - unit
+#       - integration-snowflake:
+#           requires:
+#             - unit
+#       - build-wheels:
+#           requires:
+#             - lint
+#             - unit
+#             - integration-postgres
+#             - integration-redshift
+#             - integration-bigquery
+#             - integration-snowflake
