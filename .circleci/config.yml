@@ -95,29 +95,10 @@ jobs:
       - store_artifacts:
           path: ./logs
 
+
 workflows:
   version: 2
   test-everything:
     jobs:
       - lint
       - unit
-      - integration-postgres:
-          requires:
-            - unit
-      - integration-redshift:
-          requires:
-            - unit
-      - integration-bigquery:
-          requires:
-            - unit
-      - integration-snowflake:
-          requires:
-            - unit
-      - build-wheels:
-          requires:
-            - lint
-            - unit
-            - integration-postgres
-            - integration-redshift
-            - integration-bigquery
-            - integration-snowflake
