@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from dataclasses import field
 import os
-import pickle
 from typing import (
     Dict, Optional, Mapping, Callable, Any, List, Type, Union
 )
@@ -59,7 +58,7 @@ from dbt.version import __version__
 
 from dbt.dataclass_schema import dbtClassMixin
 
-PARTIAL_PARSE_FILE_NAME = 'partial_parse.pickle'
+PARTIAL_PARSE_FILE_NAME = 'partial_parse.msgpack'
 PARSING_STATE = DbtProcessState('parsing')
 DEFAULT_PARTIAL_PARSE = False
 
@@ -334,11 +333,16 @@ class ManifestLoader:
         return False
 
     def write_manifest_for_partial_parse(self):
+
         path = os.path.join(self.root_project.target_path,
                             PARTIAL_PARSE_FILE_NAME)
-        make_directory(self.root_project.target_path)
-        with open(path, 'wb') as fp:
-            pickle.dump(self.manifest, fp)
+        try:
+            manifest_msgpack = self.manifest.to_msgpack()
+            make_directory(os.path.dirname(path))
+            with open(path, 'wb') as fp:
+                fp.write(manifest_msgpack)
+        except Exception:
+            raise
 
     def matching_parse_results(self, manifest: Manifest) -> bool:
         """Compare the global hashes of the read-in parse results' values to
@@ -410,7 +414,8 @@ class ManifestLoader:
         if os.path.exists(path):
             try:
                 with open(path, 'rb') as fp:
-                    manifest: Manifest = pickle.load(fp)
+                    manifest_mp = fp.read()
+                manifest: Manifest = Manifest.from_msgpack(manifest_mp)  # type: ignore
                 # keep this check inside the try/except in case something about
                 # the file has changed in weird ways, perhaps due to being a
                 # different version of dbt
