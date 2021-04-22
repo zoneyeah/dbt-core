@@ -47,6 +47,7 @@
       {% do adapter.expand_target_column_types(
              from_relation=tmp_relation,
              to_relation=target_relation) %}
+             
       {% set build_sql = incremental_upsert(tmp_relation, target_relation, unique_key=unique_key) %}
   
   {% endif %}
