@@ -7,6 +7,8 @@
   {% set existing_relation = load_relation(this) %}
   {% set tmp_relation = make_temp_relation(this) %}
 
+  {% set on_schema_change = incremental_validate_on_schema_change(config.get('on_schema_change')) %}
+
   {{ run_hooks(pre_hooks, inside_transaction=False) }}
 
   -- `BEGIN` happens here:
@@ -27,10 +29,26 @@
   {% else %}
       {% set tmp_relation = make_temp_relation(target_relation) %}
       {% do run_query(create_table_as(True, tmp_relation, sql)) %}
+      
+      -- sync the schemas on the temp and target relations according to the config.
+      {% set schema_changes = sync_columns(on_schema_change, tmp_relation, target_relation) %}
+      {% set schema_changed = schema_changes['schema_changed'] %}
+      {% set new_columns = schema_changes['new_columns'] %}
+
+       -- if the schema changed and we want to fail, do that
+      {% if schema_changed and on_schema_change == 'fail' %}
+        {{ 
+          exceptions.raise_compiler_error('The source and target schemas on this incremental model are out of sync!
+               Please re-run the incremental model with full_refresh set to True to update the target schema.
+               Alternatively, you can update the schema manually and re-run the process.') 
+        }}
+      {% endif %}
+
       {% do adapter.expand_target_column_types(
              from_relation=tmp_relation,
              to_relation=target_relation) %}
       {% set build_sql = incremental_upsert(tmp_relation, target_relation, unique_key=unique_key) %}
+  
   {% endif %}
 
   {% call statement("main") %}
