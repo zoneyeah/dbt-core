@@ -88,8 +88,8 @@
 
 {% macro diff_columns(array_one, array_two) %}
   {% set result = [] %}
-   {%- for col in source_columns -%} 
-     {%- if col not in target_columns -%}
+   {%- for col in array_one -%} 
+     {%- if col not in array_two -%}
       {{ result.append(col) }}
     {%- endif -%}
    {%- endfor -%}
