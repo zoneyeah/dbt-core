@@ -91,47 +91,56 @@
    {%- for col in array_one -%} 
      {%- if col not in array_two -%}
       {{ result.append(col) }}
-    {%- endif -%}
+      {%- endif -%}
    {%- endfor -%}
    {{ return(result) }}
 {% endmacro %}
 
-{% macro sync_columns(on_schema_change, source_relation, target_relation) %}
+{% macro check_for_schema_changes(source_relation, target_relation) %}
+  
+  {% set schema_changed = False %}
+  {%- set source_columns = adapter.get_columns_in_relation(source_relation) -%}
+  {%- set target_columns = adapter.get_columns_in_relation(target_relation) -%}
 
-  {# if on_schema_change is append or sync, we perform the according action. Otherwise this is a noop #}
+  {% if source_columns != target_columns %}
+    {% set schema_changed = True %}
+  {% endif %}
+
+  {{return(schema_changed)}}
+
+{% endmacro %}
+
+{% macro sync_columns(source_relation, target_relation, on_schema_change='append') %}
   
   {%- set source_columns = adapter.get_columns_in_relation(source_relation) -%}
   {%- set target_columns = adapter.get_columns_in_relation(target_relation) -%}
-  {%- set add_to_target_arr = diff_columns(source_columns, target_relation) %}
-  {%- set remove_from_target_arr = diff_columns(target_relation, source_columns) %}
-  
-  {%- if on_schema_change in ['append', 'sync'] %}
+  {%- set add_to_target_arr = diff_columns(source_columns, target_columns) -%}
+  {%- set remove_from_target_arr = diff_columns(target_columns, source_columns) -%}
+
+  {%- if on_schema_change == 'append' -%}
     {%- for col in add_to_target_arr -%}
        {%- set build_sql = 'ALTER TABLE ' + target_relation.schema+'.'+target_relation.name + ' ADD COLUMN ' + col.name + ' ' + col.dtype -%}
        {%- do run_query(build_sql) -%}
     {%- endfor -%}
-  {% endif %}
-  
-  {% if on_schema_change == 'sync' %}
+    
+  {% elif on_schema_change == 'sync' %}
+    {%- for col in add_to_target_arr -%}
+       {%- set build_sql = 'ALTER TABLE ' + target_relation.schema+'.'+target_relation.name + ' ADD COLUMN ' + col.name + ' ' + col.dtype -%}
+       {%- do run_query(build_sql) -%}
+    {%- endfor -%}
+
     {%- for col in remove_from_target_arr -%}
       {%- set build_sql = 'ALTER TABLE ' + target_relation.schema+'.'+target_relation.name + ' DROP COLUMN ' + col.name -%}
       {%- do run_query(build_sql) -%}
     {%- endfor -%}
-  {% endif %}
   
-  -- check whether the schema changed
-  {% if add_to_target_arr != [] or remove_from_target_arr != [] %}
-    {%- set schema_changed = True -%}
-  {% else %}
-    {%- set schema_changed = False -%}
   {% endif %}
 
-  -- return the list of columns added so we can set defaults if we have them
   {{ 
       return(
              {
-              'schema_changed': schema_changed,
-              'new_columns': add_to_target_arr
+              'columns_added': add_to_target_arr,
+              'columns_removed': remove_from_target_arr
              }
           )
   }}
