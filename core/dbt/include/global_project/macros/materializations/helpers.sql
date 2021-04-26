@@ -86,14 +86,29 @@
 
 {% endmacro %}
 
-{% macro diff_columns(array_one, array_two) %}
+{% macro get_column_names(columns) %}
   {% set result = [] %}
-   {%- for col in array_one -%} 
-     {%- if col not in array_two -%}
+  
+  {% for col in columns %}
+    {{ result.append(col.column) }}
+  {% endfor %}
+  
+  {{ return(result) }}
+{% endmacro %}
+
+{% macro diff_columns(source_columns, target_columns) %}
+  {% set result = [] %}
+  {% set source_names = get_column_names(source_columns) %}
+  {% set target_names = get_column_names(target_columns) %}
+   
+   {# check whether the name attribute exists in the target, but dont worry about data type differences #}
+   {%- for col in source_columns -%} 
+     {%- if col.name not in target_names -%}
       {{ result.append(col) }}
       {%- endif -%}
    {%- endfor -%}
-   {{ return(result) }}
+  
+  {{ return(result) }}
 {% endmacro %}
 
 {% macro check_for_schema_changes(source_relation, target_relation) %}
@@ -101,12 +116,16 @@
   {% set schema_changed = False %}
   {%- set source_columns = adapter.get_columns_in_relation(source_relation) -%}
   {%- set target_columns = adapter.get_columns_in_relation(target_relation) -%}
+  {%- set source_not_in_target = diff_columns(source_columns, target_columns) -%}
+  {%- set target_not_in_source = diff_columns(target_columns, source_columns) -%}
 
-  {% if source_columns != target_columns %}
+  {% if source_not_in_target != [] %}
+    {% set schema_changed = True %}
+  {% elif target_not_in_source != [] %}
     {% set schema_changed = True %}
   {% endif %}
 
-  {{return(schema_changed)}}
+  {{ return(schema_changed) }}
 
 {% endmacro %}
 
@@ -119,18 +138,18 @@
 
   {%- if on_schema_change == 'append' -%}
     {%- for col in add_to_target_arr -%}
-       {%- set build_sql = 'ALTER TABLE ' + target_relation.schema+'.'+target_relation.name + ' ADD COLUMN ' + col.name + ' ' + col.dtype -%}
+       {%- set build_sql = 'ALTER TABLE ' + target_relation.database + '.' + target_relation.schema+'.'+target_relation.name + ' ADD COLUMN ' + col.name + ' ' + col.dtype -%}
        {%- do run_query(build_sql) -%}
     {%- endfor -%}
     
   {% elif on_schema_change == 'sync' %}
     {%- for col in add_to_target_arr -%}
-       {%- set build_sql = 'ALTER TABLE ' + target_relation.schema+'.'+target_relation.name + ' ADD COLUMN ' + col.name + ' ' + col.dtype -%}
+       {%- set build_sql = 'ALTER TABLE ' + target_relation.database + '.' + target_relation.schema+'.'+target_relation.name + ' ADD COLUMN ' + col.name + ' ' + col.dtype -%}
        {%- do run_query(build_sql) -%}
     {%- endfor -%}
 
     {%- for col in remove_from_target_arr -%}
-      {%- set build_sql = 'ALTER TABLE ' + target_relation.schema+'.'+target_relation.name + ' DROP COLUMN ' + col.name -%}
+      {%- set build_sql = 'ALTER TABLE ' + target_relation.database + '.' + target_relation.schema+'.'+target_relation.name + ' DROP COLUMN ' + col.name -%}
       {%- do run_query(build_sql) -%}
     {%- endfor -%}
   
