@@ -288,3 +288,21 @@
   {{ config.set('sql_header', caller()) }}
 {%- endmacro %}
 
+{% macro alter_relation_add_remove_columns(relation, add_columns = none, remove_columns = none) -%}
+  {{ return(adapter.dispatch('default__alter_relation_add_remove_columns')(relation, add_columns, remove_columns)) }}
+{% endmacro %}
+
+{% macro default__alter_relation_add_remove_columns(relation, add_columns = none, remove_columns = none) -%}
+  {% set sql -%}
+      alter {{ relation.type }} {{ relation }}
+          {% for column in add_columns %}
+            add column {{ column.name }} {{ column.data_type }} {{ ',' if not loop.last }}
+          {% endfor %}
+          {{ ',' if remove_columns }}
+          {% for column in remove_columns %}
+            drop column {{ column.name }}
+          {% endfor %}
+  {%- endset %}
+  {{ return(run_query(sql)) }}
+{% endmacro %}
+

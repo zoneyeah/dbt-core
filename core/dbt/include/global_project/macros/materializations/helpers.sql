@@ -76,7 +76,7 @@
 
 {% macro incremental_validate_on_schema_change(on_schema_change, default_value='ignore') %}
    
-   {% if on_schema_change not in ['sync', 'append', 'fail', 'ignore'] %}
+   {% if on_schema_change not in ['full_refresh', 'sync_all_columns', 'append_new_columns', 'fail', 'ignore'] %}
      {{ return(default_value) }}
 
    {% else %}
@@ -87,6 +87,7 @@
 {% endmacro %}
 
 {% macro get_column_names(columns) %}
+
   {% set result = [] %}
   
   {% for col in columns %}
@@ -94,9 +95,11 @@
   {% endfor %}
   
   {{ return(result) }}
+
 {% endmacro %}
 
 {% macro diff_columns(source_columns, target_columns) %}
+
   {% set result = [] %}
   {% set source_names = get_column_names(source_columns) %}
   {% set target_names = get_column_names(target_columns) %}
@@ -109,6 +112,7 @@
    {%- endfor -%}
   
   {{ return(result) }}
+
 {% endmacro %}
 
 {% macro check_for_schema_changes(source_relation, target_relation) %}
@@ -129,30 +133,52 @@
 
 {% endmacro %}
 
-{% macro sync_columns(source_relation, target_relation, on_schema_change='append') %}
+{% macro process_schema_changes(schema_changed, on_schema_change, tmp_relation, target_relation) %}
+
+    {% if schema_changed %}
+      
+      {% if on_schema_change=='fail' %}
+        
+        {{ 
+          exceptions.raise_compiler_error('The source and target schemas on this incremental model are out of sync!
+               Please re-run the incremental model with full_refresh set to True to update the target schema.
+               Alternatively, you can update the schema manually and re-run the process.') 
+        }}
+      
+      {# unless we ignore, run the sync operation per the config #}
+      {% elif on_schema_change != 'ignore' %}
+        
+        {% set schema_changes = sync_columns(tmp_relation, target_relation, on_schema_change) %}
+        {% set columns_added = schema_changes['columns_added'] %}
+        {% set columns_removed = schema_changes['columns_removed'] %}
+
+        {# logging conditionally based on specified behavior #}
+        
+        {% if on_schema_change == 'append_new_columns' %}
+          {% set log_message = 'Schema change detected. dbt performed {{ on_schema_change }} by adding {{ columns_added }}. ' %}
+        {% else %}
+          {% set log_message = 'Schema change detected. dbt performed {{ on_schema_change }} by adding {{ columns_added }} and removing {{ columns_removed }}. ' %}
+        {% endif %}
+        
+        {% do log(log_message, debug=true) %}
+
+      {% endif %}
+
+    {% endif %}
+
+{% endmacro %}
+
+{% macro sync_columns(source_relation, target_relation, on_schema_change='append_new_columns') %}
   
   {%- set source_columns = adapter.get_columns_in_relation(source_relation) -%}
   {%- set target_columns = adapter.get_columns_in_relation(target_relation) -%}
   {%- set add_to_target_arr = diff_columns(source_columns, target_columns) -%}
   {%- set remove_from_target_arr = diff_columns(target_columns, source_columns) -%}
 
-  {%- if on_schema_change == 'append' -%}
-    {%- for col in add_to_target_arr -%}
-       {%- set build_sql = 'ALTER TABLE ' + target_relation.database + '.' + target_relation.schema+'.'+target_relation.name + ' ADD COLUMN ' + col.name + ' ' + col.dtype -%}
-       {%- do run_query(build_sql) -%}
-    {%- endfor -%}
-    
-  {% elif on_schema_change == 'sync' %}
-    {%- for col in add_to_target_arr -%}
-       {%- set build_sql = 'ALTER TABLE ' + target_relation.database + '.' + target_relation.schema+'.'+target_relation.name + ' ADD COLUMN ' + col.name + ' ' + col.dtype -%}
-       {%- do run_query(build_sql) -%}
-    {%- endfor -%}
-
-    {%- for col in remove_from_target_arr -%}
-      {%- set build_sql = 'ALTER TABLE ' + target_relation.database + '.' + target_relation.schema+'.'+target_relation.name + ' DROP COLUMN ' + col.name -%}
-      {%- do run_query(build_sql) -%}
-    {%- endfor -%}
-  
+  {%- if on_schema_change == 'append_new_columns' -%}
+   {%- do alter_relation_add_remove_columns(target_relation, add_to_target_arr) -%}
+  {% elif on_schema_change == 'sync_all_columns' %}
+   {%- do alter_relation_add_remove_columns(target_relation, add_to_target_arr, remove_from_target_arr) -%}
   {% endif %}
 
   {{ 
