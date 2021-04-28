@@ -1,7 +1,8 @@
-## dbt 0.19.2 (tbd)
+## dbt 0.19.2 (Release TBD)
 
-#### Fixes
+### Fixes
 - Ensure that schema test macros are properly processed ([#3229](https://github.com/fishtown-analytics/dbt/issues/3229), [#3272](https://github.com/fishtown-analytics/dbt/pull/3272))
+- Fix regression for default project/database for BigQuery connections ([#3218](https://github.com/fishtown-analytics/dbt/issues/3218), [#3305](https://github.com/fishtown-analytics/dbt/pull/3305))
 
 ## dbt 0.19.1 (March 31, 2021)
 

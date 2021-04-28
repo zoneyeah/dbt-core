@@ -111,6 +111,7 @@ class BigQueryCredentials(Credentials):
     def _connection_keys(self):
         return ('method', 'database', 'schema', 'location', 'priority',
                 'timeout_seconds', 'maximum_bytes_billed')
+
     @classmethod
     def __pre_deserialize__(cls, d: Dict[Any, Any]) -> Dict[Any, Any]:
         # We need to inject the correct value of the database (aka project) at
