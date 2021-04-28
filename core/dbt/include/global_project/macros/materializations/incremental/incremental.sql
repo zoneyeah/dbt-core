@@ -14,11 +14,24 @@
   -- `BEGIN` happens here:
   {{ run_hooks(pre_hooks, inside_transaction=True) }}
 
+  {% do run_query(create_table_as(True, tmp_relation, sql)) %}
+  {% set schema_changed = check_for_schema_changes(tmp_relation, target_relation) %}
+
+  {% set trigger_full_refresh = false %}
+  {% if should_full_refresh() %}
+    {% set trigger_full_refresh = true %}
+  {% elif existing_relation.is_view %}
+    {% set trigger_full_refresh = true %}
+  {% elif schema_changed and on_schema_change == 'full_refresh' %}
+    {% set trigger_full_refresh = false %}
+  {% endif %}
+
   {% set to_drop = [] %}
+  
   {% if existing_relation is none %}
       {% set build_sql = create_table_as(False, target_relation, sql) %}
   
-  {% elif existing_relation.is_view or should_full_refresh() %}
+  {% elif trigger_full_refresh %}
       {#-- Make sure the backup doesn't exist so we don't encounter issues with the rename below #}
       {% set backup_identifier = existing_relation.identifier ~ "__dbt_backup" %}
       {% set backup_relation = existing_relation.incorporate(path={"identifier": backup_identifier}) %}
@@ -29,10 +42,7 @@
       {% do to_drop.append(backup_relation) %}
   
   {% else %}
-      {% do run_query(create_table_as(True, tmp_relation, sql)) %}
 
-      {% set schema_changed = check_for_schema_changes(tmp_relation, target_relation) %}
-      
       {% do process_schema_changes(schema_changed, on_schema_change, tmp_relation, target_relation) %}
       
       {% do adapter.expand_target_column_types(

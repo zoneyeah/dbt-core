@@ -77,6 +77,10 @@
 {% macro incremental_validate_on_schema_change(on_schema_change, default_value='ignore') %}
    
    {% if on_schema_change not in ['full_refresh', 'sync_all_columns', 'append_new_columns', 'fail', 'ignore'] %}
+     
+     {% set log_message = 'invalid value for on_schema_change {{ on_schema_change }} specified. Setting default value of {{ default_value }}.' %}
+     {% do log(log_message, debug=true) %}
+     
      {{ return(default_value) }}
 
    {% else %}
@@ -133,6 +137,32 @@
 
 {% endmacro %}
 
+{% macro sync_schemas(source_relation, target_relation, on_schema_change='append_new_columns') %}
+  
+  {%- set source_columns = adapter.get_columns_in_relation(source_relation) -%}
+  {%- set target_columns = adapter.get_columns_in_relation(target_relation) -%}
+  {%- set add_to_target_arr = diff_columns(source_columns, target_columns) -%}
+  {%- set remove_from_target_arr = diff_columns(target_columns, source_columns) -%}
+
+  {%- if on_schema_change == 'append_new_columns' -%}
+   {%- do alter_relation_add_remove_columns(target_relation, add_to_target_arr) -%}
+  {% elif on_schema_change == 'sync_all_columns' %}
+   {%- do alter_relation_add_remove_columns(target_relation, add_to_target_arr, remove_from_target_arr) -%}
+  {% elif on_schema_change == 'full_refresh' %}
+    
+  {% endif %}
+
+  {{ 
+      return(
+             {
+              'columns_added': add_to_target_arr,
+              'columns_removed': remove_from_target_arr
+             }
+          )
+  }}
+  
+{% endmacro %}
+
 {% macro process_schema_changes(schema_changed, on_schema_change, tmp_relation, target_relation) %}
 
     {% if schema_changed %}
@@ -141,6 +171,7 @@
         
         {{ 
           exceptions.raise_compiler_error('The source and target schemas on this incremental model are out of sync!
+               You can specify one of ["fail", "ignore", "add_new_columns", "sync_all_columns", "full_refresh"] in the on_schema_change config to control this behavior.
                Please re-run the incremental model with full_refresh set to True to update the target schema.
                Alternatively, you can update the schema manually and re-run the process.') 
         }}
@@ -148,7 +179,7 @@
       {# unless we ignore, run the sync operation per the config #}
       {% elif on_schema_change != 'ignore' %}
         
-        {% set schema_changes = sync_columns(tmp_relation, target_relation, on_schema_change) %}
+        {% set schema_changes = sync_schemas(tmp_relation, target_relation, on_schema_change) %}
         {% set columns_added = schema_changes['columns_added'] %}
         {% set columns_removed = schema_changes['columns_removed'] %}
 
@@ -168,26 +199,14 @@
 
 {% endmacro %}
 
-{% macro sync_columns(source_relation, target_relation, on_schema_change='append_new_columns') %}
-  
-  {%- set source_columns = adapter.get_columns_in_relation(source_relation) -%}
-  {%- set target_columns = adapter.get_columns_in_relation(target_relation) -%}
-  {%- set add_to_target_arr = diff_columns(source_columns, target_columns) -%}
-  {%- set remove_from_target_arr = diff_columns(target_columns, source_columns) -%}
+{% macro run_refresh_procedure(existing_relation, target_relation, sql) %}
+  {% set backup_identifier = existing_relation.identifier ~ "__dbt_backup" %}
+  {% set backup_relation = existing_relation.incorporate(path={"identifier": backup_identifier}) %}
+  {% do adapter.drop_relation(backup_relation) %}
 
-  {%- if on_schema_change == 'append_new_columns' -%}
-   {%- do alter_relation_add_remove_columns(target_relation, add_to_target_arr) -%}
-  {% elif on_schema_change == 'sync_all_columns' %}
-   {%- do alter_relation_add_remove_columns(target_relation, add_to_target_arr, remove_from_target_arr) -%}
-  {% endif %}
-
-  {{ 
-      return(
-             {
-              'columns_added': add_to_target_arr,
-              'columns_removed': remove_from_target_arr
-             }
-          )
-  }}
+  {% do adapter.rename_relation(target_relation, backup_relation) %}
+  {% set build_sql = create_table_as(False, target_relation, sql) %}
+  {% do to_drop.append(backup_relation) %}
   
+  {{ return(build_sql) }}
 {% endmacro %}
