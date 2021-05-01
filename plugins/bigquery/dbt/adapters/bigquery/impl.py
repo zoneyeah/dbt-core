@@ -304,19 +304,6 @@ class BigQueryAdapter(BaseAdapter):
             table = None
         return self._bq_table_to_relation(table)
 
-    def create_schema(self, relation: BigQueryRelation) -> None:
-        database = relation.database
-        schema = relation.schema
-        logger.debug('Creating schema "{}.{}".', database, schema)
-        self.connections.create_dataset(database, schema)
-
-    def drop_schema(self, relation: BigQueryRelation) -> None:
-        database = relation.database
-        schema = relation.schema
-        logger.debug('Dropping schema "{}.{}".', database, schema)
-        self.connections.drop_dataset(database, schema)
-        self.cache.drop_schema(database, schema)
-
     @classmethod
     def quote(cls, identifier: str) -> str:
         return '`{}`'.format(identifier)
