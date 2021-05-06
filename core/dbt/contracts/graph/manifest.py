@@ -729,8 +729,12 @@ class Manifest(MacroMethods):
         # were ok with doing an O(n*m) search (one nodes scan per patch)
         # Q: could we save patches by node unique_ids instead, or convert
         # between names and node ids?
+        patch_keys = set(self.patches.keys())
+        used_patch_keys = set()
+
         for node in self.nodes.values():
-            patch = self.patches.pop(node.patch_lookup_key, None)
+            patch_lookup_key = node.patch_lookup_key
+            patch = self.patches.get(patch_lookup_key, None)
             if not patch:
                 continue
 
@@ -746,11 +750,15 @@ class Manifest(MacroMethods):
                         node, patch.yaml_key, patch.original_file_path
                     )
             node.patch(patch)
+            used_patch_keys.add(patch_lookup_key)
 
-        # If anything is left in self.patches, it means that the node for
+        unused_patch_keys = patch_keys - used_patch_keys
+
+        # if there are any unused patch names, it means that the node for
         # that patch wasn't found.
-        if self.patches:
-            for patch in self.patches.values():
+        if unused_patch_keys:
+            for patch_key in unused_patch_keys:
+                patch = self.patches[patch_key]
                 # since patches aren't nodes, we can't use the existing
                 # target_not_found warning
                 logger.debug((

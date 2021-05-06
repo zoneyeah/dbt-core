@@ -13,6 +13,8 @@ models:
           description: "The user's first name"
         - name: ip_address
           description: "The user's IP address"
+          tests:
+            - unique
         - name: updated_at
           description: "The update time of the user"
         - name: email

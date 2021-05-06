@@ -394,11 +394,12 @@ class TestSchemaTestProperties(DBTIntegrationTest):
         results = self.run_dbt()
         self.assertEqual(len(results), 1)
         results = self.run_dbt(['test'])
-        self.assertEqual(len(results), 2)
+        self.assertEqual(len(results), 3)
 
         test_descriptions = [
             'test not null description for column id on model table_copy',
-            'test unique description for column id on model table_copy'
+            'test unique description for column id on model table_copy',
+            'test unique description for column ip_address on model table_copy'
         ]
 
         test_result_descriptions = []
