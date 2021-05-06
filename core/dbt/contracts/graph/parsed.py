@@ -368,6 +368,10 @@ class ParsedSchemaTestNode(ParsedNode, HasTestMetadata):
     column_name: Optional[str] = None
     config: TestConfig = field(default_factory=TestConfig)
 
+    @property
+    def patch_lookup_key(self) -> str:
+        return self.test_metadata.name
+
     def same_config(self, other) -> bool:
         return (
             self.unrendered_config.get('severity') ==
@@ -428,6 +432,11 @@ class ParsedMacroPatch(ParsedPatch):
 
 
 @dataclass
+class ParsedTestPatch(ParsedMacroPatch):
+    pass
+
+
+@dataclass
 class ParsedMacro(UnparsedBaseNode, HasUniqueID):
     name: str
     macro_sql: str
@@ -445,7 +454,7 @@ class ParsedMacro(UnparsedBaseNode, HasUniqueID):
     def local_vars(self):
         return {}
 
-    def patch(self, patch: ParsedMacroPatch):
+    def patch(self, patch: Union[ParsedMacroPatch, ParsedTestPatch]):
         self.patch_path: Optional[str] = patch.original_file_path
         self.description = patch.description
         self.meta = patch.meta

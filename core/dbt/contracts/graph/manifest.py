@@ -417,7 +417,7 @@ T = TypeVar('T', bound=GraphMemberNode)
 
 def _update_into(dest: MutableMapping[str, T], new_item: T):
     """Update dest to overwrite whatever is at dest[new_item.unique_id] with
-    new_itme. There must be an existing value to overwrite, and they two nodes
+    new_item. There must be an existing value to overwrite, and they two nodes
     must have the same original file path.
     """
     unique_id = new_item.unique_id
@@ -730,7 +730,7 @@ class Manifest(MacroMethods):
         # Q: could we save patches by node unique_ids instead, or convert
         # between names and node ids?
         for node in self.nodes.values():
-            patch = self.patches.pop(node.name, None)
+            patch = self.patches.pop(node.patch_lookup_key, None)
             if not patch:
                 continue
 
@@ -745,7 +745,6 @@ class Manifest(MacroMethods):
                     raise_invalid_patch(
                         node, patch.yaml_key, patch.original_file_path
                     )
-
             node.patch(patch)
 
         # If anything is left in self.patches, it means that the node for
