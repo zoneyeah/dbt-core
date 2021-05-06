@@ -449,7 +449,7 @@ class ParsedMacro(UnparsedBaseNode, HasUniqueID):
     def local_vars(self):
         return {}
 
-    def patch(self, patch: Union[ParsedMacroPatch]):
+    def patch(self, patch: ParsedMacroPatch):
         self.patch_path: Optional[str] = patch.original_file_path
         self.description = patch.description
         self.meta = patch.meta
