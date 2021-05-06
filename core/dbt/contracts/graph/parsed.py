@@ -432,11 +432,6 @@ class ParsedMacroPatch(ParsedPatch):
 
 
 @dataclass
-class ParsedTestPatch(ParsedMacroPatch):
-    pass
-
-
-@dataclass
 class ParsedMacro(UnparsedBaseNode, HasUniqueID):
     name: str
     macro_sql: str
@@ -454,7 +449,7 @@ class ParsedMacro(UnparsedBaseNode, HasUniqueID):
     def local_vars(self):
         return {}
 
-    def patch(self, patch: Union[ParsedMacroPatch, ParsedTestPatch]):
+    def patch(self, patch: Union[ParsedMacroPatch]):
         self.patch_path: Optional[str] = patch.original_file_path
         self.description = patch.description
         self.meta = patch.meta

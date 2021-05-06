@@ -806,10 +806,6 @@ def process_docs(manifest: Manifest, config: RuntimeConfig):
         _process_docs_for_exposure(ctx, exposure)
 
 
-def process_tests(manifest: Manifest):
-    pass
-
-
 def _process_refs_for_exposure(
     manifest: Manifest, current_project: str, exposure: ParsedExposure
 ):

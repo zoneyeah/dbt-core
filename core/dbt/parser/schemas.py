@@ -33,7 +33,6 @@ from dbt.contracts.graph.parsed import (
     ColumnInfo,
     ParsedSchemaTestNode,
     ParsedMacroPatch,
-    ParsedTestPatch,
     UnpatchedSourceDefinition,
     ParsedExposure,
 )
@@ -682,7 +681,7 @@ class SchemaParser(SimpleParser[SchemaTestBlock, ParsedSchemaTestNode]):
 
 Parsed = TypeVar(
     'Parsed',
-    UnpatchedSourceDefinition, ParsedNodePatch, ParsedMacroPatch, ParsedTestPatch
+    UnpatchedSourceDefinition, ParsedNodePatch, ParsedMacroPatch
 )
 NodeTarget = TypeVar(
     'NodeTarget',
