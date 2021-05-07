@@ -5,7 +5,6 @@
 
   {% set target_relation = this.incorporate(type='table') %}
   {% set existing_relation = load_relation(this) %}
-  {% set tmp_relation = make_temp_relation(this) %}
 
   {% set on_schema_change = incremental_validate_on_schema_change(config.get('on_schema_change')) %}
 
@@ -21,12 +20,17 @@
   
   {% elif should_full_refresh() or existing_relation.is_view %}
       {#-- Make sure the backup doesn't exist so we don't encounter issues with the rename below #}
-      {% set backup_identifier = existing_relation.identifier ~ "__dbt_backup" %}
+      {% set tmp_identifier = model['name'] + '__dbt_tmp' %}
+      {% set backup_identifier = model['name'] + "__dbt_backup" %}
+
+      {% set intermediate_relation = existing_relation.incorporate(path={"identifier": tmp_identifier}) %}
       {% set backup_relation = existing_relation.incorporate(path={"identifier": backup_identifier}) %}
+
+      {% do adapter.drop_relation(intermediate_relation) %}
       {% do adapter.drop_relation(backup_relation) %}
 
-      {% do adapter.rename_relation(target_relation, backup_relation) %}
-      {% set build_sql = create_table_as(False, target_relation, sql) %}
+      {% set build_sql = create_table_as(False, intermediate_relation, sql) %}
+      {% set need_swap = true %}
       {% do to_drop.append(backup_relation) %}
   
   {% else %}
@@ -50,6 +54,11 @@
   {% call statement("main") %}
       {{ build_sql }}
   {% endcall %}
+
+  {% if need_swap %} 
+      {% do adapter.rename_relation(target_relation, backup_relation) %} 
+      {% do adapter.rename_relation(intermediate_relation, target_relation) %} 
+  {% endif %}
 
   {% do persist_docs(target_relation, model) %}
 
