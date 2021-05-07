@@ -1,5 +1,10 @@
 ## dbt 0.19.2 (Release TBD)
 
+## dbt 0.19.2rc2
+
+### Fixes
+- Fix references to macros with package names when rendering schema tests ([#3324](https://github.com/fishtown-analytics/dbt/issues/3324), [#3345](https://github.com/fishtown-analytics/dbt/pull/3345))
+
 ## dbt 0.19.2rc1 (April 28, 2021)
 
 
