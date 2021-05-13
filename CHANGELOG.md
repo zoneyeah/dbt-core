@@ -1,12 +1,9 @@
 ## dbt 0.19.2 (Release TBD)
 
-## dbt 0.19.2rc2
-
 ### Fixes
 - Fix references to macros with package names when rendering schema tests ([#3324](https://github.com/fishtown-analytics/dbt/issues/3324), [#3345](https://github.com/fishtown-analytics/dbt/pull/3345))
 
 ## dbt 0.19.2rc1 (April 28, 2021)
-
 
 ### Fixes
 - Ensure that schema test macros are properly processed ([#3229](https://github.com/fishtown-analytics/dbt/issues/3229), [#3272](https://github.com/fishtown-analytics/dbt/pull/3272))
@@ -15,7 +12,6 @@
 ## dbt 0.19.1 (March 31, 2021)
 
 ## dbt 0.19.1rc2 (March 25, 2021)
-
 
 ### Fixes
 - Pass service-account scopes to gcloud-based oauth ([#3040](https://github.com/fishtown-analytics/dbt/issues/3040), [#3041](https://github.com/fishtown-analytics/dbt/pull/3041))
