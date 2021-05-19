@@ -1,4 +1,3 @@
-
 {% materialization incremental, default -%}
 
   {% set unique_key = config.get('unique_key') %}
@@ -6,11 +5,11 @@
   {% set target_relation = this.incorporate(type='table') %}
   {% set existing_relation = load_relation(this) %}
 
-  {% set on_schema_change = incremental_validate_on_schema_change(config.get('on_schema_change')) %}
+  {% set on_schema_change = incremental_validate_on_schema_change(config.get('on_schema_change', 'ignore')) %}
 
   {{ run_hooks(pre_hooks, inside_transaction=False) }}
 
-  -- `BEGIN` happens here:
+  -- `BEGIN` happens here
   {{ run_hooks(pre_hooks, inside_transaction=True) }}
 
   {% set to_drop = [] %}
