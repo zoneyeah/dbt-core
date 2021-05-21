@@ -1,15 +1,17 @@
+
 {% materialization incremental, default -%}
 
   {% set unique_key = config.get('unique_key') %}
 
   {% set target_relation = this.incorporate(type='table') %}
   {% set existing_relation = load_relation(this) %}
+  {%- set full_refresh_mode = (should_full_refresh()) -%}
 
-  {% set on_schema_change = incremental_validate_on_schema_change(config.get('on_schema_change', 'ignore')) %}
+  {% set on_schema_change = incremental_validate_on_schema_change(config.get('on_schema_change'), default='ignore') %}
 
   {{ run_hooks(pre_hooks, inside_transaction=False) }}
 
-  -- `BEGIN` happens here
+  -- `BEGIN` happens here:
   {{ run_hooks(pre_hooks, inside_transaction=True) }}
 
   {% set to_drop = [] %}
@@ -17,10 +19,10 @@
   {% if existing_relation is none %}
       {% set build_sql = create_table_as(False, target_relation, sql) %}
   
-  {% elif should_full_refresh() or existing_relation.is_view %}
+  {% elif existing_relation.is_view or full_refresh_mode %}
       {#-- Make sure the backup doesn't exist so we don't encounter issues with the rename below #}
       {% set tmp_identifier = model['name'] + '__dbt_tmp' %}
-      {% set backup_identifier = model['name'] + "__dbt_backup" %}
+      {% set backup_identifier = model['name'] + '__dbt_backup' %}
 
       {% set intermediate_relation = existing_relation.incorporate(path={"identifier": tmp_identifier}) %}
       {% set backup_relation = existing_relation.incorporate(path={"identifier": backup_identifier}) %}
@@ -33,20 +35,50 @@
       {% do to_drop.append(backup_relation) %}
   
   {% else %}
+      {% set tmp_relation = make_temp_relation(target_relation) %}
       {% do run_query(create_table_as(True, tmp_relation, sql)) %}
-      {% set schema_changed = check_for_schema_changes(tmp_relation, target_relation) %}
-  
-      {% if schema_changed and on_schema_change == 'full_refresh' %}
-        {# placeholder for full refresh from permanent table #}
-      {% endif %}
 
-      {% do process_schema_changes(schema_changed, on_schema_change, tmp_relation, target_relation) %}
+      {% if on_schema_change not in ('ignore', 'full_refresh') %}
+        {% set schema_changed = check_for_schema_changes(tmp_relation, target_relation) %}
+        {% do log('schema changed: %s' % schema_changed, info=true) %}
+        
+        {% if schema_changed %}
+          {% do process_schema_changes(on_schema_change, tmp_relation, existing_relation) %}
+          {% set build_sql = incremental_upsert(tmp_relation, target_relation, unique_key=unique_key) %}
+        {% endif %}
       
-      {% do adapter.expand_target_column_types(
+      {% elif on_schema_change == 'full_refresh' %}
+        {% set schema_changed = check_for_schema_changes(tmp_relation, target_relation) %}
+        {% if schema_changed %}
+          {% do log('schema changed and running full_refresh', info=true) %}
+          {% set tmp_identifier = model['name'] + '__dbt_tmp' %}
+          {% set backup_identifier = model['name'] + "__dbt_backup" %}
+
+          {% set intermediate_relation = existing_relation.incorporate(path={"identifier": tmp_identifier}) %}
+          {% set backup_relation = existing_relation.incorporate(path={"identifier": backup_identifier}) %}
+
+          {% do adapter.drop_relation(intermediate_relation) %}
+          {% do adapter.drop_relation(backup_relation) %}
+          
+          {% set build_sql = create_table_as(False, intermediate_relation, sql) %}
+          {% set need_swap = true %}
+          {% do to_drop.append(backup_relation) %}
+        
+        {% else %}
+          {# -- ignore the on_schema_change == full_refresh behavior in this case as it's not necessary #}
+           {% do adapter.expand_target_column_types(
              from_relation=tmp_relation,
              to_relation=target_relation) %}
+           {% set build_sql = incremental_upsert(tmp_relation, target_relation, unique_key=unique_key) %}
+        {% endif %}
+      
+      {% elif on_schema_change == 'ignore' %}
+        {% do adapter.expand_target_column_types(
+             from_relation=tmp_relation,
+             to_relation=target_relation) %}
+        {% set build_sql = incremental_upsert(tmp_relation, target_relation, unique_key=unique_key) %}
 
-      {% set build_sql = incremental_upsert(tmp_relation, target_relation, unique_key=unique_key) %}
+      {% endif %}
   
   {% endif %}
 

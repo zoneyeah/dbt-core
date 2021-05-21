@@ -1,11 +1,11 @@
-{% macro incremental_validate_on_schema_change(on_schema_change, default_value='ignore') %}
+{% macro incremental_validate_on_schema_change(on_schema_change, default='ignore') %}
    
    {% if on_schema_change not in ['full_refresh', 'sync_all_columns', 'append_new_columns', 'fail', 'ignore'] %}
      
-     {% set log_message = 'invalid value for on_schema_change {{ on_schema_change }} specified. Setting default value of {{ default_value }}.' %}
+     {% set log_message = 'invalid value for on_schema_change (%s) specified. Setting default value of %s.' % (on_schema_change, default_value) %}
      {% do log(log_message, info=true) %}
      
-     {{ return(default_value) }}
+     {{ return(default) }}
 
    {% else %}
      {{ return(on_schema_change) }}
@@ -26,7 +26,7 @@
 
 {% endmacro %}
 
-{% macro snowflake_diff_columns(source_columns, target_columns) %}
+{% macro diff_columns(source_columns, target_columns) %}
 
   {% set result = [] %}
   {% set source_names = get_column_names(source_columns) %}
@@ -49,8 +49,8 @@
   
   {%- set source_columns = adapter.get_columns_in_relation(source_relation) -%}
   {%- set target_columns = adapter.get_columns_in_relation(target_relation) -%}
-  {%- set source_not_in_target = snowflake_diff_columns(source_columns, target_columns) -%}
-  {%- set target_not_in_source = snowflake_diff_columns(target_columns, source_columns) -%}
+  {%- set source_not_in_target = diff_columns(source_columns, target_columns) -%}
+  {%- set target_not_in_source = diff_columns(target_columns, source_columns) -%}
 
   {% if source_not_in_target != [] %}
     {% set schema_changed = True %}
@@ -108,7 +108,7 @@
       }}
     
     {# unless we ignore, run the sync operation per the config #}
-    {% elif on_schema_change != 'ignore' %}
+    {% else %}
       
       {% set schema_changes = sync_schemas(source_relation, target_relation, on_schema_change) %}
       {% set columns_added = schema_changes['columns_added'] %}
