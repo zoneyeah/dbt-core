@@ -26,13 +26,29 @@
 
 {% endmacro %}
 
+{% macro diff_arrays(source_array, target_array) %}
+  
+  {% set result = [] %}
+  {%- for elem in source_array -%}
+     {% if elem not in target_array %}
+       
+       {{ result.append(elem) }}
+
+     {% endif %}
+
+  {%- endfor -%}
+
+  {{ return(result) }}
+
+{% endmacro %}
+
 {% macro diff_columns(source_columns, target_columns) %}
 
   {% set result = [] %}
   {% set source_names = get_column_names(source_columns) %}
   {% set target_names = get_column_names(target_columns) %}
    
-   {# check whether the name attribute exists in the target, but dont worry about data type differences #}
+   {# --check whether the name attribute exists in the target, but dont worry about data type differences #}
    {%- for col in source_columns -%} 
      {%- if col.column not in target_names -%}
       {{ result.append(col) }}
