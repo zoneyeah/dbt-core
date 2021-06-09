@@ -57,15 +57,15 @@ jobs:
       run: python -m tox -e py -- -v
       
   PostgresIntegrationTest-Windows:   
-     strategy:
+    strategy:
       matrix:
-        include: 
-          - python-version: '3.6'
-            environment-version: 'py36-postgres'
-          - python-version: '3.7'
-            environment-version: 'py37-postgres'
-          - python-version: '3.8'
-            environment-version: 'py38-postgres'
+         include: 
+           - python-version: '3.6'
+             environment-version: 'py36-postgres'
+           - python-version: '3.7'
+             environment-version: 'py37-postgres'
+           - python-version: '3.8'
+             environment-version: 'py38-postgres'
     runs-on: 'windows-latest'
     environment: 'Postgres'
     needs: UnitTest
@@ -101,15 +101,15 @@ jobs:
       run: python -m tox -e ${{ matrix.environment-version }} -- -v -n4
   
   PostgresIntegrationTest-Mac:
-    strategy:
-      matrix:
-        include: 
-          - python-version: '3.6'
-            environment-version: 'py36-postgres'
-          - python-version: '3.7'
-            environment-version: 'py37-postgres'
-          - python-version: '3.8'
-            environment-version: 'py38-postgres'
+     strategy:
+       matrix:
+         include: 
+           - python-version: '3.6'
+             environment-version: 'py36-postgres'
+           - python-version: '3.7'
+             environment-version: 'py37-postgres'
+           - python-version: '3.8'
+             environment-version: 'py38-postgres'
     runs-on: macos-latest
     environment: 'Postgres'
     steps:
