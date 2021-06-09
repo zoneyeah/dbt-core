@@ -112,6 +112,7 @@ jobs:
              environment-version: 'py38-postgres'
     runs-on: 'macos-latest'
     environment: 'Postgres'
+    needs: UnitTest
     steps:
     - uses: actions/checkout@v2
     - name: Start PostgreSQL on MacOS
@@ -133,10 +134,10 @@ jobs:
         done
     - name: Create users and DBs
       run: |  
-        psql --command="CREATE USER root PASSWORD 'password'" --command="\du" postgres
+        psql --command="CREATE USER root PASSWORD '$env:ROOT_PASSWORD'" --command="\du" postgres
         createdb --owner=root dbt 
-        PGPASSWORD=password psql --username=root --host=localhost --list dbt 
-        psql --command="CREATE USER noaccess PASSWORD 'password'" --command="\du" postgres
+        PGPASSWORD=$env:ROOT_PASSWORD psql --username=root --host=localhost --list dbt 
+        psql --command="CREATE USER noaccess PASSWORD '$env:NOACCESS_PASSWORD'" --command="\du" postgres
         psql --command="grant all privileges on database dbt to noaccess" --command="\du" postgres
         createdb --owner=root dbtMixedCase 
         
