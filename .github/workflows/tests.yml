@@ -101,7 +101,7 @@ jobs:
       run: python -m tox -e ${{ matrix.environment-version }} -- -v -n4
   
   PostgresIntegrationTest-Mac:
-     strategy:
+    strategy:
        matrix:
          include: 
            - python-version: '3.6'
@@ -110,7 +110,7 @@ jobs:
              environment-version: 'py37-postgres'
            - python-version: '3.8'
              environment-version: 'py38-postgres'
-    runs-on: macos-latest
+    runs-on: 'macos-latest'
     environment: 'Postgres'
     steps:
     - uses: actions/checkout@v2
