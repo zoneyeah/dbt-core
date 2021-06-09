@@ -40,13 +40,14 @@ jobs:
     strategy:
       matrix:
         os: [windows-latest, ubuntu-latest, macos-latest]
+        python-version: ['3.6', '3.7', '3.8']
     runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@v2
     - name: Setup Python
       uses: actions/setup-python@v2.2.2
       with:
-        python-version: '3.8'
+        python-version:  ${{ matrix.python-version }}
         architecture: 'x64'
 
     - name: 'Install dependencies'
@@ -55,7 +56,16 @@ jobs:
     - name: 'Run unit tests'
       run: python -m tox -e py -- -v
       
-  PostgresIntegrationTest-Windows:
+  PostgresIntegrationTest-Windows:   
+     strategy:
+      matrix:
+        include: 
+          - python-version: '3.6'
+            environment-version: 'py36-postgres'
+          - python-version: '3.7'
+            environment-version: 'py37-postgres'
+          - python-version: '3.8'
+            environment-version: 'py38-postgres'
     runs-on: 'windows-latest'
     environment: 'Postgres'
     needs: UnitTest
@@ -81,14 +91,14 @@ jobs:
     - name: Setup Python
       uses: actions/setup-python@v2.2.2
       with:
-        python-version: '3.7'
+        python-version: ${{ matrix.python-version }}
         architecture: 'x64'
         
     - name: 'Install dependencies'
       run: python -m pip install --upgrade pip && pip install tox
       
     - name: 'Run integration tests'
-      run: python -m tox -e py-postgres -- -v -n4
+      run: python -m tox -e ${{ matrix.environment-version }} -- -v -n4
   
   PostgresIntegrationTest-Mac:
     strategy:
@@ -141,12 +151,14 @@ jobs:
       
     - name: 'Run integration tests'
       run: tox -p -e ${{ matrix.environment-version }} -- -v -n4
+  
   # These three are all similar except secure environment variables, which MUST be passed along to their tasks,
   # but there's probably a better way to do this!
   SnowflakeIntegrationTest:
     strategy:
       matrix:
         os: [windows-latest, macos-latest]
+        python-version: ['3.6', '3.7', '3.8']
     runs-on: ${{ matrix.os }}
     environment: 'Snowflake'
     needs: UnitTest
@@ -155,7 +167,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v2.2.2
         with:
-          python-version: '3.7'
+          python-version: ${{ matrix.python-version }}
           architecture: 'x64'
 
       - name: 'Install dependencies'
@@ -181,6 +193,7 @@ jobs:
     strategy:
       matrix:
         os: [windows-latest, macos-latest]
+        python-version: ['3.6', '3.7', '3.8']
     runs-on: ${{ matrix.os }}
     environment: 'Bigquery'
     needs: UnitTest
@@ -189,7 +202,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v2.2.2
         with:
-          python-version: '3.7'
+          python-version: ${{ matrix.python-version }}
           architecture: 'x64'
         
       - name: 'Install dependencies'
@@ -205,6 +218,7 @@ jobs:
     strategy:
       matrix:
         os: [windows-latest, macos-latest]
+        python-version: ['3.6', '3.7', '3.8']
     runs-on: ${{ matrix.os }}
     environment: 'Redshift'
     needs: UnitTest
@@ -213,7 +227,7 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v2.2.2
         with:
-          python-version: '3.7'
+          python-version: ${{ matrix.python-version }}
           architecture: 'x64'
 
       - name: 'Install dependencies'
