@@ -1,7 +1,9 @@
 ## dbt 0.19.2 (Release TBD)
 
-## dbt 0.19.2rc2 (June 03, 2021)
+### Fixes
+- Fix infinite recursion when parsing schema tests due to loops in macro calls ([#3444](https://github.com/fishtown-analytics/dbt/issues/3344), [#3454](https://github.com/fishtown-analytics/dbt/pull/3454))
 
+## dbt 0.19.2rc2 (June 03, 2021)
 
 ### Breaking changes
 - Fix adapter.dispatch macro resolution when statically extracting macros. Introduce new project-level `dispatch` config. The `packages` argument to `dispatch` no longer supports macro calls; there is backwards compatibility for existing packages. The argument will no longer be supported in a future release, instead provide the `macro_namespace` argument. ([#3362](https://github.com/fishtown-analytics/dbt/issues/3362), [#3363](https://github.com/fishtown-analytics/dbt/pull/3363), [#3383](https://github.com/fishtown-analytics/dbt/pull/3383), [#3403](https://github.com/fishtown-analytics/dbt/pull/3403))
