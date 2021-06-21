@@ -12,6 +12,7 @@ from dbt import ui
 from dbt.adapters.base import (
     BaseAdapter, available, RelationType, SchemaSearchMap, AdapterConfig
 )
+from dbt.adapters.sql import SQLAdapter
 from dbt.adapters.bigquery.relation import BigQueryRelation
 from dbt.adapters.bigquery import BigQueryColumn
 from dbt.adapters.bigquery import BigQueryConnectionManager
@@ -119,7 +120,7 @@ class BigqueryConfig(AdapterConfig):
     merge_update_columns: Optional[str] = None
 
 
-class BigQueryAdapter(BaseAdapter):
+class BigQueryAdapter(SQLAdapter):
 
     RELATION_TYPES = {
         'TABLE': RelationType.Table,
