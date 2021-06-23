@@ -1,19 +1,51 @@
 from dbt.clients.system import load_file_contents
-from dbt.contracts.files import FilePath, ParseFileType, SourceFile, FileHash
+from dbt.contracts.files import (
+    FilePath, ParseFileType, SourceFile, FileHash, AnySourceFile, SchemaSourceFile
+)
 
+from dbt.parser.schemas import yaml_from_file, schema_file_keys, check_format_version
+from dbt.exceptions import CompilationException
 from dbt.parser.search import FilesystemSearcher
 
 
 # This loads the files contents and creates the SourceFile object
 def load_source_file(
         path: FilePath, parse_file_type: ParseFileType,
-        project_name: str) -> SourceFile:
+        project_name: str) -> AnySourceFile:
     file_contents = load_file_contents(path.absolute_path, strip=False)
     checksum = FileHash.from_contents(file_contents)
-    source_file = SourceFile(path=path, checksum=checksum,
-                             parse_file_type=parse_file_type, project_name=project_name)
+    sf_cls = SchemaSourceFile if parse_file_type == ParseFileType.Schema else SourceFile
+    source_file = sf_cls(path=path, checksum=checksum,
+                         parse_file_type=parse_file_type, project_name=project_name)
     source_file.contents = file_contents.strip()
+    if parse_file_type == ParseFileType.Schema and source_file.contents:
+        dfy = yaml_from_file(source_file)
+        validate_yaml(source_file.path.original_file_path, dfy)
+        source_file.dfy = dfy
     return source_file
+
+
+# Do some minimal validation of the yaml in a schema file.
+# Check version, that key values are lists and that each element in
+# the lists has a 'name' key
+def validate_yaml(file_path, dct):
+    check_format_version(file_path, dct)
+    for key in schema_file_keys:
+        if key in dct:
+            if not isinstance(dct[key], list):
+                msg = (f"The schema file at {file_path} is "
+                       f"invalid because the value of '{key}' is not a list")
+                raise CompilationException(msg)
+            for element in dct[key]:
+                if not isinstance(element, dict):
+                    msg = (f"The schema file at {file_path} is "
+                           f"invalid because a list element for '{key}' is not a dictionary")
+                    raise CompilationException(msg)
+                if 'name' not in element:
+                    msg = (f"The schema file at {file_path} is "
+                           f"invalid because a list element for '{key}' does not have a "
+                           "name attribute.")
+                    raise CompilationException(msg)
 
 
 # Special processing for big seed files
@@ -55,8 +87,8 @@ def read_files_for_parser(project, files, dirs, extension, parse_ft):
         project, dirs, extension, parse_ft
     )
     for sf in source_files:
-        files[sf.search_key] = sf
-        parser_files.append(sf.search_key)
+        files[sf.file_id] = sf
+        parser_files.append(sf.file_id)
     return parser_files
 
 

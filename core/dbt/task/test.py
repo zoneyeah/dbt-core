@@ -1,5 +1,8 @@
+from dataclasses import dataclass
+from dbt import utils
+from dbt.dataclass_schema import dbtClassMixin
 import threading
-from typing import Dict, Any, Set
+from typing import Dict, Any, Union
 
 from .compile import CompileRunner
 from .run import RunTask
@@ -11,26 +14,27 @@ from dbt.contracts.graph.compiled import (
     CompiledTestNode,
 )
 from dbt.contracts.graph.manifest import Manifest
-from dbt.contracts.graph.parsed import (
-    ParsedDataTestNode,
-    ParsedSchemaTestNode,
-)
-from dbt.contracts.results import RunResult, TestStatus
+from dbt.contracts.results import TestStatus, PrimitiveDict, RunResult
 from dbt.context.providers import generate_runtime_model
 from dbt.clients.jinja import MacroGenerator
 from dbt.exceptions import (
-    raise_compiler_error,
     InternalException,
     missing_materialization
 )
 from dbt.graph import (
     ResourceTypeSelector,
     SelectionSpec,
-    UniqueId,
     parse_test_selectors,
 )
 from dbt.node_types import NodeType, RunHookType
 from dbt import flags
+
+
+@dataclass
+class TestResultData(dbtClassMixin):
+    failures: int
+    should_warn: bool
+    should_error: bool
 
 
 class TestRunner(CompileRunner):
@@ -39,39 +43,20 @@ class TestRunner(CompileRunner):
         return "test {}".format(node_name)
 
     def print_result_line(self, result):
-        schema_name = self.node.schema
-        print_test_result_line(result, schema_name, self.node_index,
-                               self.num_nodes)
+        print_test_result_line(result, self.node_index, self.num_nodes)
 
     def print_start_line(self):
         description = self.describe_node()
         print_start_line(description, self.node_index, self.num_nodes)
 
-    def execute_schema_test(self, test: CompiledSchemaTestNode):
-        _, table = self.adapter.execute(
-            test.compiled_sql,
-            auto_begin=True,
-            fetch=True,
-        )
-
-        num_rows = len(table.rows)
-        if num_rows != 1:
-            num_cols = len(table.columns)
-            raise_compiler_error(
-                f"Bad test {test.test_metadata.name}: "
-                f"Returned {num_rows} rows and {num_cols} cols, but expected "
-                f"1 row and 1 column"
-            )
-        return table[0][0]
-
     def before_execute(self):
         self.print_start_line()
 
-    def execute_data_test(
+    def execute_test(
         self,
-        test: CompiledDataTestNode,
+        test: Union[CompiledDataTestNode, CompiledSchemaTestNode],
         manifest: Manifest
-    ) -> int:
+    ) -> TestResultData:
         context = generate_runtime_model(
             test, self.config, manifest
         )
@@ -79,7 +64,8 @@ class TestRunner(CompileRunner):
         materialization_macro = manifest.find_materialization_macro_by_name(
             self.config.project_name,
             test.get_materialization(),
-            self.adapter.type())
+            self.adapter.type()
+        )
 
         if materialization_macro is None:
             missing_materialization(test, self.adapter.type())
@@ -91,7 +77,6 @@ class TestRunner(CompileRunner):
             )
 
         # generate materialization macro
-        # simple `select(*)` of the compiled test node
         macro_func = MacroGenerator(materialization_macro, context)
         # execute materialization macro
         macro_func()
@@ -101,36 +86,51 @@ class TestRunner(CompileRunner):
         table = result['table']
         num_rows = len(table.rows)
         if num_rows != 1:
-            num_cols = len(table.columns)
-            # since we just wrapped our query in `select count(*)`, we are in
-            # big trouble!
             raise InternalException(
                 f"dbt internally failed to execute {test.unique_id}: "
-                f"Returned {num_rows} rows and {num_cols} cols, but expected "
-                f"1 row and 1 column"
+                f"Returned {num_rows} rows, but expected "
+                f"1 row"
             )
-        return int(table[0][0])
+        num_cols = len(table.columns)
+        if num_cols != 3:
+            raise InternalException(
+                f"dbt internally failed to execute {test.unique_id}: "
+                f"Returned {num_cols} columns, but expected "
+                f"3 columns"
+            )
+
+        test_result_dct: PrimitiveDict = dict(
+            zip(
+                [column_name.lower() for column_name in table.column_names],
+                map(utils._coerce_decimal, table.rows[0])
+            )
+        )
+        TestResultData.validate(test_result_dct)
+        return TestResultData.from_dict(test_result_dct)
 
     def execute(self, test: CompiledTestNode, manifest: Manifest):
-        if isinstance(test, CompiledDataTestNode):
-            failed_rows = self.execute_data_test(test, manifest)
-        elif isinstance(test, CompiledSchemaTestNode):
-            failed_rows = self.execute_schema_test(test)
-        else:
-            raise InternalException(
-                f'Expected compiled schema test or compiled data test, got '
-                f'{type(test)}'
-            )
+        result = self.execute_test(test, manifest)
 
         severity = test.config.severity.upper()
         thread_id = threading.current_thread().name
+        num_errors = utils.pluralize(result.failures, 'result')
         status = None
-        if failed_rows == 0:
-            status = TestStatus.Pass
-        elif severity == 'ERROR' or flags.WARN_ERROR:
+        message = None
+        failures = 0
+        if severity == "ERROR" and result.should_error:
             status = TestStatus.Fail
+            message = f'Got {num_errors}, configured to fail if {test.config.error_if}'
+            failures = result.failures
+        elif result.should_warn:
+            if flags.WARN_ERROR:
+                status = TestStatus.Fail
+                message = f'Got {num_errors}, configured to fail if {test.config.warn_if}'
+            else:
+                status = TestStatus.Warn
+                message = f'Got {num_errors}, configured to warn if {test.config.warn_if}'
+            failures = result.failures
         else:
-            status = TestStatus.Warn
+            status = TestStatus.Pass
 
         return RunResult(
             node=test,
@@ -138,16 +138,13 @@ class TestRunner(CompileRunner):
             timing=[],
             thread_id=thread_id,
             execution_time=0,
-            message=int(failed_rows),
-            adapter_response={}
+            message=message,
+            adapter_response={},
+            failures=failures,
         )
 
     def after_execute(self, result):
         self.print_result_line(result)
-
-
-DATA_TEST_TYPES = (CompiledDataTestNode, ParsedDataTestNode)
-SCHEMA_TEST_TYPES = (CompiledSchemaTestNode, ParsedSchemaTestNode)
 
 
 class TestSelector(ResourceTypeSelector):
@@ -158,17 +155,6 @@ class TestSelector(ResourceTypeSelector):
             previous_state=previous_state,
             resource_types=[NodeType.Test],
         )
-
-    def expand_selection(self, selected: Set[UniqueId]) -> Set[UniqueId]:
-        # exposures can't have tests, so this is relatively easy
-        selected_tests = set()
-        for unique_id in self.graph.select_successors(selected):
-            if unique_id in self.manifest.nodes:
-                node = self.manifest.nodes[unique_id]
-                if node.resource_type == NodeType.Test:
-                    selected_tests.add(unique_id)
-
-        return selected | selected_tests
 
 
 class TestTask(RunTask):

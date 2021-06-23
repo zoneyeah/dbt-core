@@ -1,8 +1,9 @@
-from typing import Iterable
+from typing import Iterable, Optional
 
 import re
 
 from dbt.clients.jinja import get_rendered
+from dbt.contracts.files import SourceFile
 from dbt.contracts.graph.parsed import ParsedDocumentation
 from dbt.node_types import NodeType
 from dbt.parser.base import Parser
@@ -23,7 +24,7 @@ class DocumentationParser(Parser[ParsedDocumentation]):
     def get_compiled_path(cls, block: FileBlock):
         return block.path.relative_path
 
-    def generate_unique_id(self, resource_name: str) -> str:
+    def generate_unique_id(self, resource_name: str, _: Optional[str] = None) -> str:
         # because docs are in their own graph namespace, node type doesn't
         # need to be part of the unique ID.
         return '{}.{}'.format(self.project.project_name, resource_name)
@@ -46,6 +47,7 @@ class DocumentationParser(Parser[ParsedDocumentation]):
         return [doc]
 
     def parse_file(self, file_block: FileBlock):
+        assert isinstance(file_block.file, SourceFile)
         searcher: Iterable[BlockContents] = BlockSearcher(
             source=[file_block],
             allowed_blocks={'docs'},

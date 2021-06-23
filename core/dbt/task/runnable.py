@@ -413,7 +413,7 @@ class GraphRunnableTask(ManifestTask):
         if len(self._flattened_nodes) == 0:
             logger.warning("WARNING: Nothing to do. Try checking your model "
                            "configs and model specification args")
-            return self.get_result(
+            result = self.get_result(
                 results=[],
                 generated_at=datetime.utcnow(),
                 elapsed_time=0.0,
@@ -421,9 +421,8 @@ class GraphRunnableTask(ManifestTask):
         else:
             with TextOnly():
                 logger.info("")
-
-        selected_uids = frozenset(n.unique_id for n in self._flattened_nodes)
-        result = self.execute_with_hooks(selected_uids)
+            selected_uids = frozenset(n.unique_id for n in self._flattened_nodes)
+            result = self.execute_with_hooks(selected_uids)
 
         if flags.WRITE_JSON:
             self.write_manifest()
@@ -456,7 +455,7 @@ class GraphRunnableTask(ManifestTask):
         for node in self.manifest.nodes.values():
             if node.unique_id not in selected_uids:
                 continue
-            if node.is_refable and not node.is_ephemeral:
+            if node.is_relational and not node.is_ephemeral:
                 relation = adapter.Relation.create_from(self.config, node)
                 result.add(relation.without_identifier())
 
@@ -526,7 +525,6 @@ class GraphRunnableTask(ManifestTask):
                 db_schema = (db_lower, schema.lower())
                 if db_schema not in existing_schemas_lowered:
                     existing_schemas_lowered.add(db_schema)
-
                     fut = tpe.submit_connected(
                         adapter, f'create_{info.database or ""}_{info.schema}',
                         create_schema, info

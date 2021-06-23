@@ -3,6 +3,7 @@ import os
 
 from dbt.task.test import TestTask
 from dbt.exceptions import CompilationException
+from dbt.contracts.results import TestStatus
 
 
 class TestSchemaTests(DBTIntegrationTest):
@@ -22,7 +23,6 @@ class TestSchemaTests(DBTIntegrationTest):
 
     def run_schema_validations(self):
         args = FakeArgs()
-
         test_task = TestTask(args, self.config)
         return test_task.run()
 
@@ -30,7 +30,7 @@ class TestSchemaTests(DBTIntegrationTest):
         self.assertEqual(result.status, "fail")
         self.assertFalse(result.skipped)
         self.assertTrue(
-            int(result.message) > 0,
+            result.failures > 0,
             'test {} did not fail'.format(result.node.name)
         )
 
@@ -38,7 +38,7 @@ class TestSchemaTests(DBTIntegrationTest):
         self.assertEqual(result.status, "pass")
         self.assertFalse(result.skipped)
         self.assertEqual(
-            int(result.message), 0,
+            result.failures, 0,
             'test {} failed'.format(result.node.name)
         )
 
@@ -57,8 +57,7 @@ class TestSchemaTests(DBTIntegrationTest):
             # assert that actual tests pass
             else:
                 self.assertTestPassed(result)
-
-        self.assertEqual(sum(x.message for x in test_results), 6)
+        self.assertEqual(sum(x.failures for x in test_results), 6)
 
     @use_profile('postgres')
     def test_postgres_schema_test_selection(self):
@@ -126,50 +125,40 @@ class TestMalformedSchemaTests(DBTIntegrationTest):
             self.run_dbt(strict=False)
 
 
-class TestMalformedMacroTests(DBTIntegrationTest):
-
+class TestCustomConfigSchemaTests(DBTIntegrationTest):
     def setUp(self):
         DBTIntegrationTest.setUp(self)
         self.run_sql_file("seed.sql")
 
     @property
     def schema(self):
-        return "schema_tests_008"
+        return 'schema_tests_008'
 
     @property
     def models(self):
-        return "models-v2/custom-bad-test-macro"
-
+        return "models-v2/custom-configs"
+    
     @property
     def project_config(self):
         return {
             'config-version': 2,
-            "macro-paths": ["macros-v2/malformed"],
+            "macro-paths": ["macros-v2/custom-configs"],
         }
 
-    def run_schema_validations(self):
-        args = FakeArgs()
-        test_task = TestTask(args, self.config)
-        return test_task.run()
-
     @use_profile('postgres')
-    def test_postgres_malformed_macro_reports_error(self):
-        self.run_dbt(['deps'])
-        self.run_dbt(strict=True)
-        expected_failure = 'not_null'
+    def test_postgres_config(self):
+        """ Test that tests use configs properly. All tests for
+        this project will fail, configs are set to make test pass. """
+        results = self.run_dbt()
+        results = self.run_dbt(['test'], strict=False)
 
-        test_results = self.run_schema_validations()
-
-        self.assertEqual(len(test_results), 2)
-
-        for result in test_results:
-            self.assertIn(result.status, ('error', 'fail'))
-            # Assert that error is thrown for empty schema test
-            if result.status == "error":
-                self.assertIn("Returned 0 rows", result.message)
-            # Assert that failure occurs for normal schema test
-            elif result.status == "fail":
-                self.assertIn(expected_failure, result.node.name)
+        self.assertEqual(len(results), 5)
+        for result in results:
+            self.assertFalse(result.skipped)
+            self.assertEqual(
+                result.failures, 0,
+                'test {} failed'.format(result.node.name)
+            )
 
 
 class TestHooksInTests(DBTIntegrationTest):
@@ -200,7 +189,7 @@ class TestHooksInTests(DBTIntegrationTest):
             self.assertEqual(result.status, "pass")
             self.assertFalse(result.skipped)
             self.assertEqual(
-                int(result.message), 0,
+                result.failures, 0,
                 'test {} failed'.format(result.node.name)
             )
 
@@ -258,12 +247,14 @@ class TestCustomSchemaTests(DBTIntegrationTest):
         test_results = self.run_schema_validations()
         self.assertEqual(len(test_results), 6)
 
-        expected_failures = ['unique', 'every_value_is_blue']
+        expected_failures = [
+            'not_null_table_copy_email',
+            'every_value_is_blue_table_copy_favorite_color'
+        ]
 
         for result in test_results:
-            if result.status == 'error':
-                self.assertTrue(result.node['name'] in expected_failures)
-        self.assertEqual(sum(x.message for x in test_results), 52)
+            if result.status == 'fail':
+                self.assertIn(result.node.name, expected_failures)
 
 
 class TestBQSchemaTests(DBTIntegrationTest):
@@ -301,7 +292,7 @@ class TestBQSchemaTests(DBTIntegrationTest):
                 self.assertEqual(result.status, 'fail')
                 self.assertFalse(result.skipped)
                 self.assertTrue(
-                    int(result.message) > 0,
+                    result.failures > 0,
                     'test {} did not fail'.format(result.node.name)
                 )
             # assert that actual tests pass
@@ -309,12 +300,11 @@ class TestBQSchemaTests(DBTIntegrationTest):
                 self.assertEqual(result.status, 'pass')
                 self.assertFalse(result.skipped)
                 self.assertEqual(
-                    int(result.message), 0,
+                    result.failures, 0,
                     'test {} failed'.format(result.node.name)
                 )
 
-        self.assertEqual(sum(x.message for x in test_results), 0)
-
+        self.assertEqual(sum(x.failures for x in test_results), 0)
 
 class TestQuotedSchemaTestColumns(DBTIntegrationTest):
     @property
@@ -404,25 +394,149 @@ class TestSchemaTestContext(DBTIntegrationTest):
         return {
             'config-version': 2,
             "macro-paths": ["test-context-macros"],
+            "vars": {
+                'local_utils_dispatch_list': ['local_utils']
+            }
+        }
+
+    @property
+    def packages_config(self):
+        return {
+            "packages": [
+                {
+                    'local': 'local_utils'
+                }
+            ]
         }
 
     @use_profile('postgres')
     def test_postgres_test_context_tests(self):
         # This test tests the the TestContext and TestMacroNamespace
         # are working correctly
+        self.run_dbt(['deps'])
         results = self.run_dbt(strict=False)
-        self.assertEqual(len(results), 2)
+        self.assertEqual(len(results), 3)
 
-        results = self.run_dbt(['test'], expect_pass=False)
+        run_result = self.run_dbt(['test'], expect_pass=False)
+        results = run_result.results
+        results = sorted(results, key=lambda r: r.node.name)
+        self.assertEqual(len(results), 5)
+        # call_pkg_macro_model_c_
+        self.assertEqual(results[0].status, TestStatus.Fail)
+        # pkg_and_dispatch_model_c_
+        self.assertEqual(results[1].status, TestStatus.Fail)
+        # my_datediff
+        self.assertRegex(results[2].node.compiled_sql, r'1000')
+        # type_one_model_a_
+        self.assertEqual(results[3].status, TestStatus.Fail)
+        self.assertRegex(results[3].node.compiled_sql, r'union all')
+        # type_two_model_a_
+        self.assertEqual(results[4].status, TestStatus.Fail)
+        self.assertEqual(results[4].node.config.severity, 'WARN')
+
+class TestSchemaTestContextWithMacroNamespace(DBTIntegrationTest):
+    @property
+    def schema(self):
+        return "schema_tests_008"
+
+    @property
+    def models(self):
+        return "test-context-models2"
+
+    @property
+    def project_config(self):
+        return {
+            'config-version': 2,
+            "macro-paths": ["test-context-macros2"],
+            "dispatch": [
+                {
+                    "macro_namespace": "test_utils",
+                    "search_order": ['local_utils', 'test_utils'],
+                }
+            ],
+        }
+
+    @property
+    def packages_config(self):
+        return {
+            "packages": [
+                {
+                    'local': 'test_utils'
+                },
+                {
+                    'local': 'local_utils'
+                },
+            ]
+        }
+
+    @use_profile('postgres')
+    def test_postgres_test_context_with_macro_namespace(self):
+        # This test tests the the TestContext and TestMacroNamespace
+        # are working correctly
+        self.run_dbt(['deps'])
+        results = self.run_dbt(strict=False)
+        self.assertEqual(len(results), 3)
+
+        run_result = self.run_dbt(['test'], expect_pass=False)
+        results = run_result.results
+        results = sorted(results, key=lambda r: r.node.name)
+        self.assertEqual(len(results), 4)
+        # call_pkg_macro_model_c_
+        self.assertEqual(results[0].status, TestStatus.Fail)
+        # pkg_and_dispatch_model_c_
+        self.assertEqual(results[1].status, TestStatus.Fail)
+        # type_one_model_a_
+        self.assertEqual(results[2].status, TestStatus.Fail)
+        self.assertRegex(results[2].node.compiled_sql, r'union all')
+        # type_two_model_a_
+        self.assertEqual(results[3].status, TestStatus.Fail)
+        self.assertEqual(results[3].node.config.severity, 'WARN')
+
+class TestSchemaTestNameCollision(DBTIntegrationTest):
+    @property
+    def schema(self):
+        return "schema_tests_008"
+
+    @property
+    def models(self):
+        return "name_collision"
+
+    def run_schema_tests(self):
+        args = FakeArgs()
+        test_task = TestTask(args, self.config)
+        return test_task.run()
+
+    @use_profile('postgres')
+    def test_postgres_collision_test_names_get_hash(self):
+        """The models should produce unique IDs with a has appended"""
+        results = self.run_dbt()
+        test_results = self.run_schema_tests()
+
+        # both models and both tests run
         self.assertEqual(len(results), 2)
-        result0 = results[0]
-        result1 = results[1]
-        for result in results:
-            if result.node.name == 'type_two_model_a_':
-                # This will be WARN if the test macro was rendered correctly
-                self.assertEqual(result.node.config.severity, 'WARN')
-            elif result.node.name == 'type_one_model_a':
-                # This will have correct compiled_sql if the test macro
-                # was rendered correctly
-                self.assertRegex(result.node.compiled_sql, r'union all')
+        self.assertEqual(len(test_results), 2)
+
+        # both tests have the same unique id except for the hash
+        expected_unique_ids = [
+            'test.test.not_null_base_extension_id.4a9d96018d',
+            'test.test.not_null_base_extension_id.60bbea9027'
+        ]
+        self.assertIn(test_results[0].node.unique_id, expected_unique_ids)
+        self.assertIn(test_results[1].node.unique_id, expected_unique_ids)
+
+
+class TestInvalidSchema(DBTIntegrationTest):
+    @property
+    def schema(self):
+        return "schema_tests_008"
+
+    @property
+    def models(self):
+        return "invalid-schema-models"
+
+    @use_profile('postgres')
+    def test_postgres_invalid_schema_file(self):
+        with self.assertRaises(CompilationException) as exc:
+            results = self.run_dbt()
+        self.assertRegex(str(exc.exception), r"'models' is not a list")
 

@@ -42,7 +42,7 @@ from dbt.contracts.graph.unparsed import (
 from dbt import flags
 
 from dbt.dataclass_schema import ValidationError
-from .utils import ContractTestCase, assert_symmetric, assert_from_dict, assert_to_dict, compare_dicts, assert_fails_validation, dict_replace, replace_config
+from .utils import ContractTestCase, assert_symmetric, assert_from_dict, compare_dicts, assert_fails_validation, dict_replace, replace_config
 
 
 @pytest.fixture(autouse=True)
@@ -128,6 +128,7 @@ def base_parsed_model_dict():
     return {
         'name': 'foo',
         'root_path': '/root/',
+        'created_at': 1,
         'resource_type': str(NodeType.Model),
         'path': '/root/x/path.sql',
         'original_file_path': '/root/path.sql',
@@ -194,6 +195,7 @@ def minimal_parsed_model_dict():
     return {
         'name': 'foo',
         'root_path': '/root/',
+        'created_at': 1,
         'resource_type': str(NodeType.Model),
         'path': '/root/x/path.sql',
         'original_file_path': '/root/path.sql',
@@ -214,6 +216,7 @@ def complex_parsed_model_dict():
     return {
         'name': 'foo',
         'root_path': '/root/',
+        'created_at': 1,
         'resource_type': str(NodeType.Model),
         'path': '/root/x/path.sql',
         'original_file_path': '/root/path.sql',
@@ -410,6 +413,7 @@ def basic_parsed_seed_dict():
     return {
         'name': 'foo',
         'root_path': '/root/',
+        'created_at': 1,
         'resource_type': str(NodeType.Seed),
         'path': '/root/seeds/seed.csv',
         'original_file_path': 'seeds/seed.csv',
@@ -481,6 +485,7 @@ def minimal_parsed_seed_dict():
     return {
         'name': 'foo',
         'root_path': '/root/',
+        'created_at': 1,
         'resource_type': str(NodeType.Seed),
         'path': '/root/seeds/seed.csv',
         'original_file_path': 'seeds/seed.csv',
@@ -500,6 +505,7 @@ def complex_parsed_seed_dict():
     return {
         'name': 'foo',
         'root_path': '/root/',
+        'created_at': 1,
         'resource_type': str(NodeType.Seed),
         'path': '/root/seeds/seed.csv',
         'original_file_path': 'seeds/seed.csv',
@@ -654,7 +660,7 @@ def basic_parsed_model_patch_dict():
     return {
         'name': 'foo',
         'description': 'The foo model',
-        'original_file_path': '/path/to/schema.yml',
+        'original_file_path': 'path/to/schema.yml',
         'docs': {'show': True},
         'meta': {},
         'yaml_key': 'models',
@@ -677,7 +683,7 @@ def basic_parsed_model_patch_object():
         yaml_key='models',
         package_name='test',
         description='The foo model',
-        original_file_path='/path/to/schema.yml',
+        original_file_path='path/to/schema.yml',
         columns={'a': ColumnInfo(name='a', description='a text field', meta={})},
         docs=Docs(),
         meta={},
@@ -706,7 +712,7 @@ def patched_model_object():
         tags=[],
         meta={},
         config=NodeConfig(),
-        patch_path='/path/to/schema.yml',
+        patch_path='test://path/to/schema.yml',
         columns={'a': ColumnInfo(name='a', description='a text field', meta={})},
         docs=Docs(),
         checksum=FileHash.from_contents(''),
@@ -751,6 +757,7 @@ def base_parsed_hook_dict():
     return {
         'name': 'foo',
         'root_path': '/root/',
+        'created_at': 1,
         'resource_type': str(NodeType.Operation),
         'path': '/root/x/path.sql',
         'original_file_path': '/root/path.sql',
@@ -819,6 +826,7 @@ def complex_parsed_hook_dict():
     return {
         'name': 'foo',
         'root_path': '/root/',
+        'created_at': 1,
         'resource_type': str(NodeType.Operation),
         'path': '/root/x/path.sql',
         'original_file_path': '/root/path.sql',
@@ -935,6 +943,7 @@ def minimal_parsed_schema_test_dict():
     return {
         'name': 'foo',
         'root_path': '/root/',
+        'created_at': 1,
         'resource_type': str(NodeType.Test),
         'path': '/root/x/path.sql',
         'original_file_path': '/root/path.sql',
@@ -959,6 +968,7 @@ def basic_parsed_schema_test_dict():
     return {
         'name': 'foo',
         'root_path': '/root/',
+        'created_at': 1,
         'resource_type': str(NodeType.Test),
         'path': '/root/x/path.sql',
         'original_file_path': '/root/path.sql',
@@ -987,6 +997,10 @@ def basic_parsed_schema_test_dict():
             'tags': [],
             'vars': {},
             'severity': 'ERROR',
+            'schema': 'dbt_test__audit',
+            'warn_if': '!= 0',
+            'error_if': '!= 0',
+            'fail_calc': 'count(*)'
         },
         'docs': {'show': True},
         'columns': {},
@@ -1031,6 +1045,7 @@ def complex_parsed_schema_test_dict():
     return {
         'name': 'foo',
         'root_path': '/root/',
+        'created_at': 1,
         'resource_type': str(NodeType.Test),
         'path': '/root/x/path.sql',
         'original_file_path': '/root/path.sql',
@@ -1059,6 +1074,10 @@ def complex_parsed_schema_test_dict():
             'tags': [],
             'vars': {},
             'severity': 'WARN',
+            'schema': 'dbt_test__audit',
+            'warn_if': '!= 0',
+            'error_if': '!= 0',
+            'fail_calc': 'count(*)',
             'extra_key': 'extra value'
         },
         'docs': {'show': False},
@@ -1343,6 +1362,22 @@ def test_invalid_missing_check_cols(basic_check_snapshot_config_dict):
     del wrong_fields['check_cols']
     with pytest.raises(ValidationError, match=r"A snapshot configured with the check strategy"):
         SnapshotConfig.validate(wrong_fields)
+        
+def test_missing_snapshot_configs(basic_check_snapshot_config_dict):
+    wrong_fields = basic_check_snapshot_config_dict
+    del wrong_fields['strategy']
+    with pytest.raises(ValidationError, match=r"Snapshots must be configured with a 'strategy'"):
+        SnapshotConfig.validate(wrong_fields)
+    
+    wrong_fields['strategy'] = 'timestamp'
+    del wrong_fields['unique_key']
+    with pytest.raises(ValidationError, match=r"Snapshots must be configured with a 'strategy'"):
+        SnapshotConfig.validate(wrong_fields)
+        
+    wrong_fields['unique_key'] = 'id'
+    del wrong_fields['target_schema']
+    with pytest.raises(ValidationError, match=r"Snapshots must be configured with a 'strategy'"):
+        SnapshotConfig.validate(wrong_fields)
 
 
 def test_invalid_check_value(basic_check_snapshot_config_dict):
@@ -1356,6 +1391,7 @@ def basic_timestamp_snapshot_dict():
     return {
         'name': 'foo',
         'root_path': '/root/',
+        'created_at': 1,
         'resource_type': str(NodeType.Snapshot),
         'path': '/root/x/path.sql',
         'original_file_path': '/root/path.sql',
@@ -1486,6 +1522,7 @@ def basic_check_snapshot_dict():
     return {
         'name': 'foo',
         'root_path': '/root/',
+        'created_at': 1,
         'resource_type': str(NodeType.Snapshot),
         'path': '/root/x/path.sql',
         'original_file_path': '/root/path.sql',
@@ -1652,7 +1689,7 @@ def populated_parsed_node_patch_dict():
     return {
         'name': 'foo',
         'description': 'The foo model',
-        'original_file_path': '/path/to/schema.yml',
+        'original_file_path': 'path/to/schema.yml',
         'columns': {
             'a': {
                 'name': 'a',
@@ -1673,7 +1710,7 @@ def populated_parsed_node_patch_object():
     return ParsedNodePatch(
         name='foo',
         description='The foo model',
-        original_file_path='/path/to/schema.yml',
+        original_file_path='path/to/schema.yml',
         columns={'a': ColumnInfo(name='a', description='a text field', meta={})},
         meta={'key': ['value']},
         yaml_key='models',
@@ -1694,6 +1731,7 @@ class TestParsedMacro(ContractTestCase):
             'name': 'foo',
             'path': '/root/path.sql',
             'original_file_path': '/root/path.sql',
+            'created_at': 1,
             'package_name': 'test',
             'macro_sql': '{% macro foo() %}select 1 as id{% endmacro %}',
             'root_path': '/root/',
@@ -1724,7 +1762,7 @@ class TestParsedMacro(ContractTestCase):
             description='my macro description',
             arguments=[],
         )
-        self.assert_symmetric(macro, macro_dict)
+        assert_symmetric(macro, macro_dict)
         self.assertEqual(macro.local_vars(), {})
         pickle.loads(pickle.dumps(macro))
 
@@ -1785,6 +1823,7 @@ def minimum_parsed_source_definition_dict():
         'root_path': '/root',
         'path': '/root/models/sources.yml',
         'original_file_path': '/root/models/sources.yml',
+        'created_at': 1,
         'database': 'some_db',
         'schema': 'some_schema',
         'fqn': ['test', 'source', 'my_source', 'my_source_table'],
@@ -1805,6 +1844,7 @@ def basic_parsed_source_definition_dict():
         'root_path': '/root',
         'path': '/root/models/sources.yml',
         'original_file_path': '/root/models/sources.yml',
+        'created_at': 1,
         'database': 'some_db',
         'schema': 'some_schema',
         'fqn': ['test', 'source', 'my_source', 'my_source_table'],
@@ -1860,6 +1900,7 @@ def complex_parsed_source_definition_dict():
         'root_path': '/root',
         'path': '/root/models/sources.yml',
         'original_file_path': '/root/models/sources.yml',
+        'created_at': 1,
         'database': 'some_db',
         'schema': 'some_schema',
         'fqn': ['test', 'source', 'my_source', 'my_source_table'],
@@ -2007,10 +2048,13 @@ def minimal_parsed_exposure_dict():
         'fqn': ['test', 'exposures', 'my_exposure'],
         'unique_id': 'exposure.test.my_exposure',
         'package_name': 'test',
+        'meta': {},
+        'tags': [],
         'path': 'models/something.yml',
         'root_path': '/usr/src/app',
         'original_file_path': 'models/something.yml',
-        'description': ''
+        'description': '',
+        'created_at': 1,
     }
 
 
@@ -2035,7 +2079,10 @@ def basic_parsed_exposure_dict():
         'path': 'models/something.yml',
         'root_path': '/usr/src/app',
         'original_file_path': 'models/something.yml',
-        'description': ''
+        'description': '',
+        'meta': {},
+        'tags': [],
+        'created_at': 1,
     }
 
 
@@ -2051,7 +2098,9 @@ def basic_parsed_exposure_object():
         root_path='/usr/src/app',
         original_file_path='models/something.yml',
         owner=ExposureOwner(email='test@example.com'),
-        description=''
+        description='',
+        meta={},
+        tags=[]
     )
 
 
@@ -2060,6 +2109,7 @@ def complex_parsed_exposure_dict():
     return {
         'name': 'my_exposure',
         'type': 'analysis',
+        'created_at': 1,
         'owner': {
             'email': 'test@example.com',
             'name': 'A Name',
@@ -2068,6 +2118,11 @@ def complex_parsed_exposure_dict():
         'maturity': 'low',
         'url': 'https://example.com/analyses/1',
         'description': 'my description',
+        'meta': {
+            'tool': 'my_tool',
+            'is_something': False
+        },
+        'tags': ['my_department'],
         'depends_on': {
             'nodes': ['models.test.my_model'],
             'macros': [],
@@ -2092,6 +2147,8 @@ def complex_parsed_exposure_object():
         maturity=MaturityType.Low,
         url='https://example.com/analyses/1',
         description='my description',
+        meta={'tool': 'my_tool', 'is_something': False},
+        tags=['my_department'],
         depends_on=DependsOn(nodes=['models.test.my_model']),
         fqn=['test', 'exposures', 'my_exposure'],
         unique_id='exposure.test.my_exposure',

@@ -64,13 +64,6 @@ class TestInvalidMacros(DBTIntegrationTest):
     def models(self):
         return "models"
 
-    @property
-    def project_config(self):
-        return {
-            'config-version': 2,
-            "macro-paths": ["bad-macros"]
-        }
-
     @use_profile('postgres')
     def test_postgres_invalid_macro(self):
         with pytest.raises(RuntimeError):
@@ -87,12 +80,33 @@ class TestAdapterMacroNoDestination(DBTIntegrationTest):
     def models(self):
         return "fail-missing-macro-models"
 
+    @property
+    def project_config(self):
+        return {
+            'config-version': 2,
+            "macro-paths": ["no-default-macros"]
+        }
+
     @use_profile('postgres')
     def test_postgres_invalid_macro(self):
         with pytest.raises(dbt.exceptions.CompilationException) as exc:
             self.run_dbt(['run'])
 
         assert "In dispatch: No macro named 'dispatch_to_nowhere' found" in str(exc.value)
+
+
+class TestDispatchMacroUseParent(DBTIntegrationTest):
+    @property
+    def schema(self):
+        return "test_macros_016"
+
+    @property
+    def models(self):
+        return "dispatch-inheritance-models"
+
+    @use_profile('redshift')
+    def test_redshift_inherited_macro(self):
+        self.run_dbt(['run'])
 
 
 class TestMacroOverrideBuiltin(DBTIntegrationTest):

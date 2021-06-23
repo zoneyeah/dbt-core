@@ -2,6 +2,7 @@ import itertools
 import os
 
 from abc import ABCMeta, abstractmethod
+from hashlib import md5
 from typing import (
     Iterable, Dict, Any, Union, List, Optional, Generic, TypeVar, Type
 )
@@ -13,10 +14,7 @@ from dbt.clients.jinja import get_rendered, add_rendered_test_kwargs
 from dbt.clients.yaml_helper import load_yaml_text
 from dbt.config.renderer import SchemaYamlRenderer
 from dbt.context.context_config import (
-    BaseContextConfigGenerator,
     ContextConfig,
-    ContextConfigGenerator,
-    UnrenderedConfigGenerator,
 )
 from dbt.context.configured import generate_schema_yml
 from dbt.context.target import generate_target_context
@@ -25,11 +23,9 @@ from dbt.context.providers import (
 )
 from dbt.context.macro_resolver import MacroResolver
 from dbt.contracts.files import FileHash
-from dbt.contracts.graph.manifest import SourceFile
-from dbt.contracts.graph.model_config import SourceConfig
+from dbt.contracts.graph.manifest import SchemaSourceFile
 from dbt.contracts.graph.parsed import (
     ParsedNodePatch,
-    ParsedSourceDefinition,
     ColumnInfo,
     ParsedSchemaTestNode,
     ParsedMacroPatch,
@@ -37,7 +33,6 @@ from dbt.contracts.graph.parsed import (
     ParsedExposure,
 )
 from dbt.contracts.graph.unparsed import (
-    FreshnessThreshold,
     HasColumnDocs,
     HasColumnTests,
     HasDocs,
@@ -52,7 +47,7 @@ from dbt.contracts.graph.unparsed import (
 from dbt.exceptions import (
     validator_error_message, JSONValidationException,
     raise_invalid_schema_yml_version, ValidationException,
-    CompilationException, InternalException
+    CompilationException,
 )
 from dbt.node_types import NodeType
 from dbt.parser.base import SimpleParser
@@ -75,6 +70,11 @@ UnparsedSchemaYaml = Union[
 
 TestDef = Union[str, Dict[str, Any]]
 
+schema_file_keys = (
+    'models', 'seeds', 'snapshots', 'sources',
+    'macros', 'analyses', 'exposures',
+)
+
 
 def error_context(
     path: str,
@@ -94,6 +94,23 @@ def error_context(
         'Invalid {key} config given in {path} @ {key}: {data} - {reason}'
         .format(key=key, path=path, data=data, reason=reason)
     )
+
+
+def yaml_from_file(
+    source_file: SchemaSourceFile
+) -> Optional[Dict[str, Any]]:
+    """If loading the yaml fails, raise an exception.
+    """
+    path: str = source_file.path.relative_path
+    try:
+        return load_yaml_text(source_file.contents)
+    except ValidationException as e:
+        reason = validator_error_message(e)
+        raise CompilationException(
+            'Error reading {}: {} - {}'
+            .format(source_file.project_name, path, reason)
+        )
+    return None
 
 
 class ParserRef:
@@ -145,17 +162,6 @@ def _trimmed(inp: str) -> str:
     return inp[:44] + '...' + inp[-3:]
 
 
-def merge_freshness(
-    base: Optional[FreshnessThreshold], update: Optional[FreshnessThreshold]
-) -> Optional[FreshnessThreshold]:
-    if base is not None and update is not None:
-        return base.merged(update)
-    elif base is None and update is not None:
-        return update
-    else:
-        return None
-
-
 class SchemaParser(SimpleParser[SchemaTestBlock, ParsedSchemaTestNode]):
     def __init__(
         self, project, manifest, root_project,
@@ -199,41 +205,6 @@ class SchemaParser(SimpleParser[SchemaTestBlock, ParsedSchemaTestNode]):
             ParsedSchemaTestNode.validate(dct)
         return ParsedSchemaTestNode.from_dict(dct)
 
-    def _check_format_version(
-        self, yaml: YamlBlock
-    ) -> None:
-        path = yaml.path.relative_path
-        if 'version' not in yaml.data:
-            raise_invalid_schema_yml_version(path, 'no version is specified')
-
-        version = yaml.data['version']
-        # if it's not an integer, the version is malformed, or not
-        # set. Either way, only 'version: 2' is supported.
-        if not isinstance(version, int):
-            raise_invalid_schema_yml_version(
-                path, 'the version is not an integer'
-            )
-        if version != 2:
-            raise_invalid_schema_yml_version(
-                path, 'version {} is not supported'.format(version)
-            )
-
-    def _yaml_from_file(
-        self, source_file: SourceFile
-    ) -> Optional[Dict[str, Any]]:
-        """If loading the yaml fails, raise an exception.
-        """
-        path: str = source_file.path.relative_path
-        try:
-            return load_yaml_text(source_file.contents)
-        except ValidationException as e:
-            reason = validator_error_message(e)
-            raise CompilationException(
-                'Error reading {}: {} - {}'
-                .format(self.project.project_name, path, reason)
-            )
-        return None
-
     def parse_column_tests(
         self, block: TestBlock, column: UnparsedColumn
     ) -> None:
@@ -242,101 +213,6 @@ class SchemaParser(SimpleParser[SchemaTestBlock, ParsedSchemaTestNode]):
 
         for test in column.tests:
             self.parse_test(block, test, column)
-
-    def _generate_source_config(self, fqn: List[str], rendered: bool):
-        generator: BaseContextConfigGenerator
-        if rendered:
-            generator = ContextConfigGenerator(self.root_project)
-        else:
-            generator = UnrenderedConfigGenerator(
-                self.root_project
-            )
-
-        return generator.calculate_node_config(
-            config_calls=[],
-            fqn=fqn,
-            resource_type=NodeType.Source,
-            project_name=self.project.project_name,
-            base=False,
-        )
-
-    def _get_relation_name(self, node: ParsedSourceDefinition):
-        adapter = get_adapter(self.root_project)
-        relation_cls = adapter.Relation
-        return str(relation_cls.create_from(self.root_project, node))
-
-    # This converts an UnpatchedSourceDefinition to a ParsedSourceDefinition
-    # it is used by the SourcePatcher.
-    def parse_source(
-        self, target: UnpatchedSourceDefinition
-    ) -> ParsedSourceDefinition:
-        source = target.source
-        table = target.table
-        refs = ParserRef.from_target(table)
-        unique_id = target.unique_id
-        description = table.description or ''
-        meta = table.meta or {}
-        source_description = source.description or ''
-        loaded_at_field = table.loaded_at_field or source.loaded_at_field
-
-        freshness = merge_freshness(source.freshness, table.freshness)
-        quoting = source.quoting.merged(table.quoting)
-        # path = block.path.original_file_path
-        source_meta = source.meta or {}
-
-        # make sure we don't do duplicate tags from source + table
-        tags = sorted(set(itertools.chain(source.tags, table.tags)))
-
-        config = self._generate_source_config(
-            fqn=target.fqn,
-            rendered=True,
-        )
-
-        unrendered_config = self._generate_source_config(
-            fqn=target.fqn,
-            rendered=False,
-        )
-
-        if not isinstance(config, SourceConfig):
-            raise InternalException(
-                f'Calculated a {type(config)} for a source, but expected '
-                f'a SourceConfig'
-            )
-
-        default_database = self.root_project.credentials.database
-
-        parsed_source = ParsedSourceDefinition(
-            package_name=target.package_name,
-            database=(source.database or default_database),
-            schema=(source.schema or source.name),
-            identifier=(table.identifier or table.name),
-            root_path=target.root_path,
-            path=target.path,
-            original_file_path=target.original_file_path,
-            columns=refs.column_info,
-            unique_id=unique_id,
-            name=table.name,
-            description=description,
-            external=table.external,
-            source_name=source.name,
-            source_description=source_description,
-            source_meta=source_meta,
-            meta=meta,
-            loader=source.loader,
-            loaded_at_field=loaded_at_field,
-            freshness=freshness,
-            quoting=quoting,
-            resource_type=NodeType.Source,
-            fqn=target.fqn,
-            tags=tags,
-            config=config,
-            unrendered_config=unrendered_config,
-        )
-
-        # relation name is added after instantiation because the adapter does
-        # not provide the relation name for a UnpatchedSourceDefinition object
-        parsed_source.relation_name = self._get_relation_name(parsed_source)
-        return parsed_source
 
     def create_test_node(
         self,
@@ -351,6 +227,25 @@ class SchemaParser(SimpleParser[SchemaTestBlock, ParsedSchemaTestNode]):
         column_name: Optional[str],
     ) -> ParsedSchemaTestNode:
 
+        HASH_LENGTH = 10
+
+        # N.B: This function builds a hashable string from any given test_metadata dict.
+        #   it's a bit fragile for general use (only supports str, int, float, List, Dict)
+        #   but it gets the job done here without the overhead of complete ser(de).
+        def get_hashable_md(
+            data: Union[str, int, float, List, Dict]
+        ) -> Union[str, List, Dict]:
+            if type(data) == dict:
+                return {k: get_hashable_md(data[k]) for k in sorted(data.keys())}  # type: ignore
+            elif type(data) == list:
+                return [get_hashable_md(val) for val in data]  # type: ignore
+            else:
+                return str(data)
+
+        hashable_metadata = repr(get_hashable_md(test_metadata))
+        hash_string = ''.join([name, hashable_metadata]).encode('utf-8')
+        test_hash = md5(hash_string).hexdigest()[-HASH_LENGTH:]
+
         dct = {
             'alias': name,
             'schema': self.default_schema,
@@ -364,7 +259,7 @@ class SchemaParser(SimpleParser[SchemaTestBlock, ParsedSchemaTestNode]):
             'original_file_path': target.original_file_path,
             'package_name': self.project.project_name,
             'raw_sql': raw_sql,
-            'unique_id': self.generate_unique_id(name),
+            'unique_id': self.generate_unique_id(name, test_hash),
             'config': self.config_dict(config),
             'test_metadata': test_metadata,
             'column_name': column_name,
@@ -467,11 +362,33 @@ class SchemaParser(SimpleParser[SchemaTestBlock, ParsedSchemaTestNode]):
         if (macro_unique_id in
                 ['macro.dbt.test_not_null', 'macro.dbt.test_unique']):
             self.update_parsed_node(node, config)
-            if builder.severity() is not None:
-                node.unrendered_config['severity'] = builder.severity()
-                node.config['severity'] = builder.severity()
-            if builder.enabled() is not None:
-                node.config['enabled'] = builder.enabled()
+            # manually set configs
+            # note: this does not respect generate_alias_name() macro
+            if builder.alias is not None:
+                node.unrendered_config['alias'] = builder.alias
+                node.config['alias'] = builder.alias
+                node.alias = builder.alias
+            if builder.severity is not None:
+                node.unrendered_config['severity'] = builder.severity
+                node.config['severity'] = builder.severity
+            if builder.enabled is not None:
+                node.unrendered_config['enabled'] = builder.enabled
+                node.config['enabled'] = builder.enabled
+            if builder.where is not None:
+                node.unrendered_config['where'] = builder.where
+                node.config['where'] = builder.where
+            if builder.limit is not None:
+                node.unrendered_config['limit'] = builder.limit
+                node.config['limit'] = builder.limit
+            if builder.warn_if is not None:
+                node.unrendered_config['warn_if'] = builder.warn_if
+                node.config['warn_if'] = builder.warn_if
+            if builder.error_if is not None:
+                node.unrendered_config['error_if'] = builder.error_if
+                node.config['error_if'] = builder.error_if
+            if builder.fail_calc is not None:
+                node.unrendered_config['fail_calc'] = builder.fail_calc
+                node.config['fail_calc'] = builder.fail_calc
             # source node tests are processed at patch_source time
             if isinstance(builder.target, UnpatchedSourceDefinition):
                 sources = [builder.target.fqn[-2], builder.target.fqn[-1]]
@@ -496,42 +413,6 @@ class SchemaParser(SimpleParser[SchemaTestBlock, ParsedSchemaTestNode]):
                 # we got a ValidationError - probably bad types in config()
                 msg = validator_error_message(exc)
                 raise CompilationException(msg, node=node) from exc
-
-    def parse_source_test(
-        self,
-        target: UnpatchedSourceDefinition,
-        test: Dict[str, Any],
-        column: Optional[UnparsedColumn],
-    ) -> ParsedSchemaTestNode:
-        column_name: Optional[str]
-        if column is None:
-            column_name = None
-        else:
-            column_name = column.name
-            should_quote = (
-                column.quote or
-                (column.quote is None and target.quote_columns)
-            )
-            if should_quote:
-                column_name = get_adapter(self.root_project).quote(column_name)
-
-        tags_sources = [target.source.tags, target.table.tags]
-        if column is not None:
-            tags_sources.append(column.tags)
-        tags = list(itertools.chain.from_iterable(tags_sources))
-
-        node = self._parse_generic_test(
-            target=target,
-            test=test,
-            tags=tags,
-            column_name=column_name
-        )
-        # we can't go through result.add_node - no file... instead!
-        if node.config.enabled:
-            self.manifest.add_node_nofile(node)
-        else:
-            self.manifest.add_disabled_nofile(node)
-        return node
 
     def parse_node(self, block: SchemaTestBlock) -> ParsedSchemaTestNode:
         """In schema parsing, we rewrite most of the part of parse_node that
@@ -601,20 +482,14 @@ class SchemaParser(SimpleParser[SchemaTestBlock, ParsedSchemaTestNode]):
         for test in block.tests:
             self.parse_test(block, test, None)
 
-    def parse_exposures(self, block: YamlBlock) -> None:
-        parser = ExposureParser(self, block)
-        for node in parser.parse():
-            self.manifest.add_exposure(block.file, node)
-
-    def parse_file(self, block: FileBlock) -> None:
-        dct = self._yaml_from_file(block.file)
-
-        # mark the file as seen, in Manifest.files
-        self.manifest.get_file(block.file)
+    def parse_file(self, block: FileBlock, dct: Dict = None) -> None:
+        assert isinstance(block.file, SchemaSourceFile)
+        if not dct:
+            dct = yaml_from_file(block.file)
 
         if dct:
             try:
-                # This does a deep_map to check for circular references
+                # This does a deep_map which will fail if there are circular references
                 dct = self.raw_renderer.render_data(dct)
             except CompilationException as exc:
                 raise CompilationException(
@@ -624,9 +499,6 @@ class SchemaParser(SimpleParser[SchemaTestBlock, ParsedSchemaTestNode]):
 
             # contains the FileBlock and the data (dictionary)
             yaml_block = YamlBlock.from_file_block(block, dct)
-
-            # checks version
-            self._check_format_version(yaml_block)
 
             parser: YamlDocsReader
 
@@ -659,21 +531,40 @@ class SchemaParser(SimpleParser[SchemaTestBlock, ParsedSchemaTestNode]):
                 parser = SourceParser(self, yaml_block, 'sources')
                 parser.parse()
 
-            # NonSourceParser.parse()
+            # NonSourceParser.parse() (but never test_blocks)
             if 'macros' in dct:
                 parser = MacroPatchParser(self, yaml_block, 'macros')
-                for test_block in parser.parse():
-                    self.parse_tests(test_block)
+                parser.parse()
 
-            # NonSourceParser.parse()
+            # NonSourceParser.parse() (but never test_blocks)
             if 'analyses' in dct:
                 parser = AnalysisPatchParser(self, yaml_block, 'analyses')
-                for test_block in parser.parse():
-                    self.parse_tests(test_block)
+                parser.parse()
 
             # parse exposures
             if 'exposures' in dct:
-                self.parse_exposures(yaml_block)
+                exp_parser = ExposureParser(self, yaml_block)
+                for node in exp_parser.parse():
+                    self.manifest.add_exposure(yaml_block.file, node)
+
+
+def check_format_version(
+    file_path, yaml_dct
+) -> None:
+    if 'version' not in yaml_dct:
+        raise_invalid_schema_yml_version(file_path, 'no version is specified')
+
+    version = yaml_dct['version']
+    # if it's not an integer, the version is malformed, or not
+    # set. Either way, only 'version: 2' is supported.
+    if not isinstance(version, int):
+        raise_invalid_schema_yml_version(
+            file_path, 'the version is not an integer'
+        )
+    if version != 2:
+        raise_invalid_schema_yml_version(
+            file_path, 'version {} is not supported'.format(version)
+        )
 
 
 Parsed = TypeVar(
@@ -797,7 +688,7 @@ class SourceParser(YamlDocsReader):
             fqn = self.schema_parser.get_fqn_prefix(fqn_path)
             fqn.extend([source.name, table.name])
 
-            result = UnpatchedSourceDefinition(
+            source_def = UnpatchedSourceDefinition(
                 source=source,
                 table=table,
                 path=original_file_path,
@@ -808,7 +699,7 @@ class SourceParser(YamlDocsReader):
                 resource_type=NodeType.Source,
                 fqn=fqn,
             )
-            self.manifest.add_source(self.yaml.file, result)
+            self.manifest.add_source(self.yaml.file, source_def)
 
 
 # This class has three main subclasses: TestablePatchParser (models,
@@ -854,6 +745,7 @@ class NonSourceParser(YamlDocsReader, Generic[NonSourceTarget, Parsed]):
             # This adds the node_block to self.manifest
             # as a ParsedNodePatch or ParsedMacroPatch
             self.parse_patch(node_block, refs)
+        # This will always be empty if the node a macro or analysis
         return test_blocks
 
     def get_unparsed_target(self) -> Iterable[NonSourceTarget]:
@@ -965,6 +857,8 @@ class ExposureParser(YamlReader):
             name=unparsed.name,
             type=unparsed.type,
             url=unparsed.url,
+            meta=unparsed.meta,
+            tags=unparsed.tags,
             description=unparsed.description,
             owner=unparsed.owner,
             maturity=unparsed.maturity,

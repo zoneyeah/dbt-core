@@ -6,3 +6,8 @@ models:
       tests:
         - type_one
         - type_two
+    - name: model_c
+      tests:
+        - call_pkg_macro
+        - local_utils.pkg_and_dispatch
+        - my_datediff

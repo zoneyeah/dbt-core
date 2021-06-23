@@ -1,15 +1,13 @@
+{% macro default__test_not_null(model, column_name) %}
 
-{% macro default__test_not_null(model) %}
-
-{% set column_name = kwargs.get('column_name', kwargs.get('arg')) %}
-
-select count(*) as validation_errors
+select *
 from {{ model }}
 where {{ column_name }} is null
 
 {% endmacro %}
 
-{% test not_null(model) %}
+
+{% test not_null(model, column_name) %}
     {% set macro = adapter.dispatch('test_not_null') %}
-    {{ macro(model, **kwargs) }}
+    {{ macro(model, column_name) }}
 {% endtest %}

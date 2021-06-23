@@ -43,6 +43,7 @@ class CompiledNode(ParsedNode, CompiledNodeMixin):
     extra_ctes_injected: bool = False
     extra_ctes: List[InjectedCTE] = field(default_factory=list)
     relation_name: Optional[str] = None
+    _pre_injected_sql: Optional[str] = None
 
     def set_cte(self, cte_id: str, sql: str):
         """This is the equivalent of what self.extra_ctes[cte_id] = sql would
@@ -54,6 +55,12 @@ class CompiledNode(ParsedNode, CompiledNodeMixin):
                 break
         else:
             self.extra_ctes.append(InjectedCTE(id=cte_id, sql=sql))
+
+    def __post_serialize__(self, dct):
+        dct = super().__post_serialize__(dct)
+        if '_pre_injected_sql' in dct:
+            del dct['_pre_injected_sql']
+        return dct
 
 
 @dataclass
@@ -111,15 +118,6 @@ class CompiledSchemaTestNode(CompiledNode, HasTestMetadata):
     resource_type: NodeType = field(metadata={'restrict': [NodeType.Test]})
     column_name: Optional[str] = None
     config: TestConfig = field(default_factory=TestConfig)
-
-    def same_config(self, other) -> bool:
-        return (
-            self.unrendered_config.get('severity') ==
-            other.unrendered_config.get('severity')
-        )
-
-    def same_column_name(self, other) -> bool:
-        return self.column_name == other.column_name
 
     def same_contents(self, other) -> bool:
         if other is None:
