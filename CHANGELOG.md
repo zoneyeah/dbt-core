@@ -8,11 +8,13 @@
 ### Under the hood
 - Improve default view and table materialization performance by checking relational cache before attempting to drop temp relations ([#3112](https://github.com/fishtown-analytics/dbt/issues/3112), [#3468](https://github.com/fishtown-analytics/dbt/pull/3468))
 - Add optional `sslcert`, `sslkey`, and `sslrootcert` profile arguments to the Postgres connector. ([#3472](https://github.com/fishtown-analytics/dbt/pull/3472), [#3473](https://github.com/fishtown-analytics/dbt/pull/3473))
+- Remove Big Query specific `create_schema` and `drop_schema` macros given latest updates to [Big Query flavored SQL on March 31, 2021](https://cloud.google.com/bigquery/docs/release-notes#March_31_2021) ([#3482](https://github.com/fishtown-analytics/dbt/pull/3482))
 
 Contributors:
 - [@kostek-pl](https://github.com/kostek-pl) ([#3236](https://github.com/fishtown-analytics/dbt/pull/3408))
 - [@tconbeer](https://github.com/tconbeer) [#3468](https://github.com/fishtown-analytics/dbt/pull/3468))
 - [@JLDLaughlin](https://github.com/JLDLaughlin) ([#3473](https://github.com/fishtown-analytics/dbt/pull/3473))
+- [@coapacetic](https://github.com/coapacetic) ([#3482](https://github.com/fishtown-analytics/dbt/pull/3482))
 
 ## dbt 0.20.0 (Release TBD)
 
