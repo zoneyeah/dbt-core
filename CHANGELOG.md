@@ -1,4 +1,4 @@
-## dbt 0.19.2 (Release TBD)
+## dbt 0.19.2 (June 28, 2021)
 
 ### Fixes
 - Fix infinite recursion when parsing schema tests due to loops in macro calls ([#3444](https://github.com/fishtown-analytics/dbt/issues/3344), [#3454](https://github.com/fishtown-analytics/dbt/pull/3454))
