@@ -1,5 +1,10 @@
 ## dbt 0.20.0 (Release TBD)
 
+### Under the hood
+
+- Partial parsing: handle already deleted nodes when schema block also deleted ([#3516](http://github.com/fishown-analystics/dbt/issues/3516))
+
+
 ## dbt 0.20.0rc2 (June 30, 2021)
 
 
