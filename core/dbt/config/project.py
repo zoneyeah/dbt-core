@@ -341,7 +341,7 @@ class PartialProject(RenderComponents):
         target_path: str = value_or(cfg.target_path, 'target')
         clean_targets: List[str] = value_or(cfg.clean_targets, [target_path])
         log_path: str = value_or(cfg.log_path, 'logs')
-        modules_path: str = value_or(cfg.modules_path, 'dbt_modules')
+        modules_path: str = value_or(cfg.modules_path, 'dbt_packages')
         # in the default case we'll populate this once we know the adapter type
         # It would be nice to just pass along a Quoting here, but that would
         # break many things
