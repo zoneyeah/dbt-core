@@ -5,6 +5,7 @@ from dbt.node_types import NodeType
 from dbt.parser.base import SimpleSQLParser
 from dbt.parser.search import FileBlock
 from dbt_extractor import ExtractionError, py_extract_from_source  # type: ignore
+import random
 
 
 class ModelParser(SimpleSQLParser[ParsedModelNode]):
@@ -26,46 +27,106 @@ class ModelParser(SimpleSQLParser[ParsedModelNode]):
     ) -> None:
         self.manifest._parsing_info.static_analysis_path_count += 1
 
-        # normal dbt run
-        if not flags.USE_EXPERIMENTAL_PARSER:
-            super().render_update(node, config)
+        # True roughly 1/100 times this function is called
+        sample: bool = random.randint(1, 101) == 100
 
-        # if the --use-experimental-parser flag was set
-        else:
+        # run the experimental parser if the flag is on or if we're sampling
+        if flags.USE_EXPERIMENTAL_PARSER or sample:
             try:
-                # run dbt jinja extractor (powered by tree-sitter + rust)
-                # throws an exception if it can't parse the source
-                res = py_extract_from_source(node.raw_sql)
+                experimentally_parsed = py_extract_from_source(node.raw_sql)
 
-                # since it doesn't need python jinja, fit the refs, sources, and configs
-                # into the node. Down the line the rest of the node will be updated with
-                # this information. (e.g. depends_on etc.)
+                # second config format
                 config_calls = []
-                for c in res['configs']:
+                for c in experimentally_parsed['configs']:
                     config_calls.append({c[0]: c[1]})
 
-                config._config_calls = config_calls
+                # format sources TODO change extractot to match this type
+                source_calls = []
+                for s in experimentally_parsed['sources']:
+                    source_calls.append([s[0], s[1]])
+                experimentally_parsed['sources'] = source_calls
 
-                # this uses the updated config to set all the right things in the node
-                # if there are hooks present, it WILL render jinja. Will need to change
-                # when we support hooks
-                self.update_parsed_node(node, config)
+            except ExtractionError as e:
+                experimentally_parsed = e
 
-                # udpate the unrendered config with values from the file
-                # values from yaml files are in there already
-                node.unrendered_config.update(dict(res['configs']))
+        # normal dbt run
+        if not flags.USE_EXPERIMENTAL_PARSER:
+            # normal rendering
+            super().render_update(node, config)
+            # if we're sampling, compare for correctness
+            if sample:
+                value = []
+                # experimental parser couldn't parse
+                if isinstance(experimentally_parsed, Exception):
+                    value += ["01_experimental_parser_couldn't_parse"]
+                else:
+                    # look for false positive configs
+                    for c in experimentally_parsed['configs']:
+                        if c not in config._config_calls:
+                            value += ["02_false_positive_config_value"]
+                            break
 
-                # set refs, sources, and configs on the node object
-                node.refs = node.refs + res['refs']
-                for sourcev in res['sources']:
-                    # TODO change extractor to match type here
-                    node.sources.append([sourcev[0], sourcev[1]])
-                for configv in res['configs']:
-                    node.config[configv[0]] = configv[1]
+                    # look for missed configs
+                    for c in config._config_calls:
+                        if c not in experimentally_parsed['configs']:
+                            value += ["03_missed_config_value"]
+                            break
 
-                self.manifest._parsing_info.static_analysis_parsed_path_count += 1
+                    # look for false positive sources
+                    for c in experimentally_parsed['sources']:
+                        if c not in node.sources:
+                            value += ["04_false_positive_source_value"]
+                            break
 
-            # exception was thrown by dbt jinja extractor meaning it can't
-            # handle this source. fall back to python jinja rendering.
-            except ExtractionError:
-                super().render_update(node, config)
+                    # look for missed sources
+                    for c in node.sources:
+                        if c not in experimentally_parsed['configs']:
+                            value += ["05_missed_source_value"]
+                            break
+
+                    # look for false positive refs
+                    for c in experimentally_parsed['refs']:
+                        if c not in node.refs:
+                            value += ["06_false_positive_ref_value"]
+                            break
+
+                    # look for missed refs
+                    for c in node.refs:
+                        if c not in experimentally_parsed['refs']:
+                            value += ["07_missed_ref_value"]
+                            break
+
+                    # dedup values
+                    value = list(set(value))
+
+                    # set sample results
+                    # TODO set this somewhere so it can be sent
+
+        # if the --use-experimental-parser flag was set, and the experimental parser succeeded
+        elif not isinstance(experimentally_parsed, Exception):
+            # since it doesn't need python jinja, fit the refs, sources, and configs
+            # into the node. Down the line the rest of the node will be updated with
+            # this information. (e.g. depends_on etc.)
+            config._config_calls = config_calls
+
+            # this uses the updated config to set all the right things in the node
+            # if there are hooks present, it WILL render jinja. Will need to change
+            # when we support hooks
+            self.update_parsed_node(node, config)
+
+            # udpate the unrendered config with values from the file
+            # values from yaml files are in there already
+            node.unrendered_config.update(dict(experimentally_parsed['configs']))
+
+            # set refs, sources, and configs on the node object
+            node.refs += experimentally_parsed['refs']
+            node.sources += experimentally_parsed['sources']
+            for configv in experimentally_parsed['configs']:
+                node.config[configv[0]] = configv[1]
+
+            self.manifest._parsing_info.static_analysis_parsed_path_count += 1
+
+        # exception was thrown by dbt jinja extractor meaning it can't
+        # handle this source. fall back to python jinja rendering.
+        else:
+            super().render_update(node, config)
