@@ -40,7 +40,7 @@ class ModelParser(SimpleSQLParser[ParsedModelNode]):
                 for c in experimentally_parsed['configs']:
                     config_calls.append({c[0]: c[1]})
 
-                # format sources TODO change extractot to match this type
+                # format sources TODO change extractor to match this type
                 source_calls = []
                 for s in experimentally_parsed['sources']:
                     source_calls.append([s[0], s[1]])
@@ -126,7 +126,7 @@ class ModelParser(SimpleSQLParser[ParsedModelNode]):
 
             self.manifest._parsing_info.static_analysis_parsed_path_count += 1
 
-        # exception was thrown by dbt jinja extractor meaning it can't
-        # handle this source. fall back to python jinja rendering.
+        # dbt jinja extractor can't attempted, but cannot handle this source.
+        # fall back to python jinja rendering.
         else:
             super().render_update(node, config)
