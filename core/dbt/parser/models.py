@@ -100,7 +100,11 @@ class ModelParser(SimpleSQLParser[ParsedModelNode]):
                     if not result:
                         result = set(["00_exact_match"])
 
-                    # set sample results
+                    # set sample results. results are cumulative across the dbt run,
+                    # so we will only know there exists a false positive config value
+                    # somewhere in the project, not how many files have false positve
+                    # configs. this means a perfectly correct sample will return a
+                    # result of {'00_exact_match'}.
                     self.manifest._parsing_info.static_analysis_result.update(result)
 
         # if the --use-experimental-parser flag was set, and the experimental parser succeeded
