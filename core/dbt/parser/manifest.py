@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from dataclasses import field
 import os
 from typing import (
-    Dict, Optional, Mapping, Callable, Any, List, Type, Union
+    Dict, Optional, Mapping, Callable, Any, List, Type, Union, Set
 )
 import time
 
@@ -90,7 +90,7 @@ class ManifestLoaderInfo(dbtClassMixin, Writable):
     parsed_path_count: int = 0
     static_analysis_path_count: int = 0
     static_analysis_parsed_path_count: int = 0
-    static_analysis_result: int = 0
+    static_analysis_result: Set[str] = field(default_factory=set)
     is_partial_parse_enabled: Optional[bool] = None
     is_static_analysis_enabled: Optional[bool] = None
     read_files_elapsed: Optional[float] = None
