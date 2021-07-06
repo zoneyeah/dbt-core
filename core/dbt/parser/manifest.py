@@ -90,6 +90,7 @@ class ManifestLoaderInfo(dbtClassMixin, Writable):
     parsed_path_count: int = 0
     static_analysis_path_count: int = 0
     static_analysis_parsed_path_count: int = 0
+    static_analysis_result: int = 0
     is_partial_parse_enabled: Optional[bool] = None
     is_static_analysis_enabled: Optional[bool] = None
     read_files_elapsed: Optional[float] = None
@@ -311,6 +312,9 @@ class ManifestLoader:
             # update tracking data
             self._perf_info.process_manifest_elapsed = (
                 time.perf_counter() - start_process
+            )
+            self._perf_info.static_analysis_result = (
+                self.manifest._parsing_info.static_analysis_result
             )
             self._perf_info.static_analysis_parsed_path_count = (
                 self.manifest._parsing_info.static_analysis_parsed_path_count
@@ -634,6 +638,7 @@ class ManifestLoader:
             "is_static_analysis_enabled": self._perf_info.is_static_analysis_enabled,
             "static_analysis_path_count": self._perf_info.static_analysis_path_count,
             "static_analysis_parsed_path_count": self._perf_info.static_analysis_parsed_path_count,
+            "static_analysis_result": self._perf_info.static_analysis_result,
         })
 
     # Takes references in 'refs' array of nodes and exposures, finds the target

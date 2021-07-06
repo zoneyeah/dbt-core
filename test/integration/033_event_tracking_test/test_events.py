@@ -102,6 +102,7 @@ class TestEventTracking(DBTIntegrationTest):
                     'is_static_analysis_enabled': ANY,
                     'static_analysis_path_count': ANY,
                     'static_analysis_parsed_path_count': ANY,
+                    'static_analysis_result': ANY,
                     'load_all_elapsed': ANY,
                     'read_files_elapsed': ANY,
                     'load_macros_elapsed': ANY,
