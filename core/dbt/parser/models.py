@@ -7,7 +7,7 @@ from dbt.parser.search import FileBlock
 from dbt_extractor import ExtractionError, py_extract_from_source  # type: ignore
 import itertools
 import random
-from typing import Any, Dict, List, Tuple
+from typing import Any, Dict, List, Set, Tuple
 
 
 class ModelParser(SimpleSQLParser[ParsedModelNode]):
@@ -35,7 +35,7 @@ class ModelParser(SimpleSQLParser[ParsedModelNode]):
         # run the experimental parser if the flag is on or if we're sampling
         if flags.USE_EXPERIMENTAL_PARSER or sample:
             try:
-                experimentally_parsed = py_extract_from_source(node.raw_sql)
+                experimentally_parsed: Dict[str, List[Any]] = py_extract_from_source(node.raw_sql)
 
                 # second config format
                 config_calls: List[Dict[str, str]] = []
@@ -43,7 +43,7 @@ class ModelParser(SimpleSQLParser[ParsedModelNode]):
                     config_calls.append({c[0]: c[1]})
 
                 # format sources TODO change extractor to match this type
-                source_calls = []
+                source_calls: List[List[str]] = []
                 for s in experimentally_parsed['sources']:
                     source_calls.append([s[0], s[1]])
                 experimentally_parsed['sources'] = source_calls
@@ -57,7 +57,7 @@ class ModelParser(SimpleSQLParser[ParsedModelNode]):
             super().render_update(node, config)
             # if we're sampling, compare for correctness
             if sample:
-                result = set()
+                result: Set[str] = set()
                 # experimental parser couldn't parse
                 if isinstance(experimentally_parsed, Exception):
                     result.add("01_experimental_parser_cannot_parse")
