@@ -55,56 +55,53 @@ class ModelParser(SimpleSQLParser[ParsedModelNode]):
             super().render_update(node, config)
             # if we're sampling, compare for correctness
             if sample:
-                value = []
+                result = set()
                 # experimental parser couldn't parse
                 if isinstance(experimentally_parsed, Exception):
-                    value += ["01_experimental_parser_cannot_parse"]
+                    result.add("01_experimental_parser_cannot_parse")
                 else:
                     # look for false positive configs
                     for c in config_calls:
                         if c not in config._config_calls:
-                            value += ["02_false_positive_config_value"]
+                            result.add("02_false_positive_config_value")
                             break
 
                     # look for missed configs
                     for c in config._config_calls:
                         if c not in config_calls:
-                            value += ["03_missed_config_value"]
+                            result.add("03_missed_config_value")
                             break
 
                     # look for false positive sources
                     for c in experimentally_parsed['sources']:
                         if c not in node.sources:
-                            value += ["04_false_positive_source_value"]
+                            result.add("04_false_positive_source_value")
                             break
 
                     # look for missed sources
                     for c in node.sources:
                         if c not in experimentally_parsed['sources']:
-                            value += ["05_missed_source_value"]
+                            result.add("05_missed_source_value")
                             break
 
                     # look for false positive refs
                     for c in experimentally_parsed['refs']:
                         if c not in node.refs:
-                            value += ["06_false_positive_ref_value"]
+                            result.add("06_false_positive_ref_value")
                             break
 
                     # look for missed refs
                     for c in node.refs:
                         if c not in experimentally_parsed['refs']:
-                            value += ["07_missed_ref_value"]
+                            result.add("07_missed_ref_value")
                             break
 
-                    # dedup values
-                    value = list(set(value))
-
                     # if there are no errors, return a success value
-                    if not value:
-                        value = ["00_exact_match"]
+                    if not result:
+                        result = set(["00_exact_match"])
 
                     # set sample results
-                    # TODO set this somewhere so it can be sent
+                    self.manifest._parsing_info.static_analysis_result.update(result)
 
         # if the --use-experimental-parser flag was set, and the experimental parser succeeded
         elif not isinstance(experimentally_parsed, Exception):
