@@ -58,17 +58,17 @@ class ModelParser(SimpleSQLParser[ParsedModelNode]):
                 value = []
                 # experimental parser couldn't parse
                 if isinstance(experimentally_parsed, Exception):
-                    value += ["01_experimental_parser_couldn't_parse"]
+                    value += ["01_experimental_parser_cannot_parse"]
                 else:
                     # look for false positive configs
-                    for c in experimentally_parsed['configs']:
+                    for c in config_calls:
                         if c not in config._config_calls:
                             value += ["02_false_positive_config_value"]
                             break
 
                     # look for missed configs
                     for c in config._config_calls:
-                        if c not in experimentally_parsed['configs']:
+                        if c not in config_calls:
                             value += ["03_missed_config_value"]
                             break
 
@@ -80,7 +80,7 @@ class ModelParser(SimpleSQLParser[ParsedModelNode]):
 
                     # look for missed sources
                     for c in node.sources:
-                        if c not in experimentally_parsed['configs']:
+                        if c not in experimentally_parsed['sources']:
                             value += ["05_missed_source_value"]
                             break
 
@@ -98,6 +98,10 @@ class ModelParser(SimpleSQLParser[ParsedModelNode]):
 
                     # dedup values
                     value = list(set(value))
+
+                    # if there are no errors, return a success value
+                    if not value:
+                        value = ["00_exact_match"]
 
                     # set sample results
                     # TODO set this somewhere so it can be sent
