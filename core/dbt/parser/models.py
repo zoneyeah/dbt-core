@@ -5,7 +5,9 @@ from dbt.node_types import NodeType
 from dbt.parser.base import SimpleSQLParser
 from dbt.parser.search import FileBlock
 from dbt_extractor import ExtractionError, py_extract_from_source  # type: ignore
+import itertools
 import random
+from typing import Any, Dict, List, Tuple
 
 
 class ModelParser(SimpleSQLParser[ParsedModelNode]):
@@ -36,7 +38,7 @@ class ModelParser(SimpleSQLParser[ParsedModelNode]):
                 experimentally_parsed = py_extract_from_source(node.raw_sql)
 
                 # second config format
-                config_calls = []
+                config_calls: List[Dict[str, str]] = []
                 for c in experimentally_parsed['configs']:
                     config_calls.append({c[0]: c[1]})
 
@@ -60,39 +62,46 @@ class ModelParser(SimpleSQLParser[ParsedModelNode]):
                 if isinstance(experimentally_parsed, Exception):
                     result.add("01_experimental_parser_cannot_parse")
                 else:
+                    # rearrange existing configs to match:
+                    real_configs: List[Tuple[str, Any]] = list(
+                        itertools.chain.from_iterable(
+                            map(lambda x: x.items(), config._config_calls)
+                        )
+                    )
+
                     # look for false positive configs
-                    for c in config_calls:
-                        if c not in config._config_calls:
+                    for c in experimentally_parsed['configs']:
+                        if c not in real_configs:
                             result.add("02_false_positive_config_value")
                             break
 
                     # look for missed configs
-                    for c in config._config_calls:
-                        if c not in config_calls:
+                    for c in real_configs:
+                        if c not in experimentally_parsed['configs']:
                             result.add("03_missed_config_value")
                             break
 
                     # look for false positive sources
-                    for c in experimentally_parsed['sources']:
-                        if c not in node.sources:
+                    for s in experimentally_parsed['sources']:
+                        if s not in node.sources:
                             result.add("04_false_positive_source_value")
                             break
 
                     # look for missed sources
-                    for c in node.sources:
-                        if c not in experimentally_parsed['sources']:
+                    for s in node.sources:
+                        if s not in experimentally_parsed['sources']:
                             result.add("05_missed_source_value")
                             break
 
                     # look for false positive refs
-                    for c in experimentally_parsed['refs']:
-                        if c not in node.refs:
+                    for r in experimentally_parsed['refs']:
+                        if r not in node.refs:
                             result.add("06_false_positive_ref_value")
                             break
 
                     # look for missed refs
-                    for c in node.refs:
-                        if c not in experimentally_parsed['refs']:
+                    for r in node.refs:
+                        if r not in experimentally_parsed['refs']:
                             result.add("07_missed_ref_value")
                             break
 
