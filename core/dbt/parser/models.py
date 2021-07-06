@@ -27,7 +27,7 @@ class ModelParser(SimpleSQLParser[ParsedModelNode]):
     ) -> None:
         self.manifest._parsing_info.static_analysis_path_count += 1
 
-        # True roughly 1/100 times this function is called
+        # `True` roughly 1/100 times this function is called
         sample: bool = random.randint(1, 101) == 100
 
         # run the experimental parser if the flag is on or if we're sampling
@@ -109,12 +109,12 @@ class ModelParser(SimpleSQLParser[ParsedModelNode]):
             # this information. (e.g. depends_on etc.)
             config._config_calls = config_calls
 
-            # this uses the updated config to set all the right things in the node
+            # this uses the updated config to set all the right things in the node.
             # if there are hooks present, it WILL render jinja. Will need to change
-            # when we support hooks
+            # when the experimental parser supports hooks
             self.update_parsed_node(node, config)
 
-            # udpate the unrendered config with values from the file
+            # update the unrendered config with values from the file.
             # values from yaml files are in there already
             node.unrendered_config.update(dict(experimentally_parsed['configs']))
 
@@ -126,7 +126,7 @@ class ModelParser(SimpleSQLParser[ParsedModelNode]):
 
             self.manifest._parsing_info.static_analysis_parsed_path_count += 1
 
-        # dbt jinja extractor can't attempted, but cannot handle this source.
+        # the experimental parser tried and failed on this model.
         # fall back to python jinja rendering.
         else:
             super().render_update(node, config)
