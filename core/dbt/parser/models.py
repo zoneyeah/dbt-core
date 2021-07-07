@@ -4,10 +4,11 @@ import dbt.flags as flags
 from dbt.node_types import NodeType
 from dbt.parser.base import SimpleSQLParser
 from dbt.parser.search import FileBlock
+import dbt.tracking as tracking
 from dbt_extractor import ExtractionError, py_extract_from_source  # type: ignore
 import itertools
 import random
-from typing import Any, Dict, List, Set, Tuple
+from typing import Any, Dict, List, Tuple
 
 
 class ModelParser(SimpleSQLParser[ParsedModelNode]):
@@ -57,10 +58,10 @@ class ModelParser(SimpleSQLParser[ParsedModelNode]):
             super().render_update(node, config)
             # if we're sampling, compare for correctness
             if sample:
-                result: Set[str] = set()
+                result: List[str] = []
                 # experimental parser couldn't parse
                 if isinstance(experimentally_parsed, Exception):
-                    result.add("01_experimental_parser_cannot_parse")
+                    result += ["01_experimental_parser_cannot_parse"]
                 else:
                     # rearrange existing configs to match:
                     real_configs: List[Tuple[str, Any]] = list(
@@ -72,49 +73,49 @@ class ModelParser(SimpleSQLParser[ParsedModelNode]):
                     # look for false positive configs
                     for c in experimentally_parsed['configs']:
                         if c not in real_configs:
-                            result.add("02_false_positive_config_value")
+                            result += ["02_false_positive_config_value"]
                             break
 
                     # look for missed configs
                     for c in real_configs:
                         if c not in experimentally_parsed['configs']:
-                            result.add("03_missed_config_value")
+                            result += ["03_missed_config_value"]
                             break
 
                     # look for false positive sources
                     for s in experimentally_parsed['sources']:
                         if s not in node.sources:
-                            result.add("04_false_positive_source_value")
+                            result += ["04_false_positive_source_value"]
                             break
 
                     # look for missed sources
                     for s in node.sources:
                         if s not in experimentally_parsed['sources']:
-                            result.add("05_missed_source_value")
+                            result += ["05_missed_source_value"]
                             break
 
                     # look for false positive refs
                     for r in experimentally_parsed['refs']:
                         if r not in node.refs:
-                            result.add("06_false_positive_ref_value")
+                            result += ["06_false_positive_ref_value"]
                             break
 
                     # look for missed refs
                     for r in node.refs:
                         if r not in experimentally_parsed['refs']:
-                            result.add("07_missed_ref_value")
+                            result += ["07_missed_ref_value"]
                             break
 
                     # if there are no errors, return a success value
                     if not result:
-                        result = set(["00_exact_match"])
+                        result = ["00_exact_match"]
 
-                    # set sample results. results are cumulative across the dbt run,
-                    # so we will only know there exists a false positive config value
-                    # somewhere in the project, not how many files have false positve
-                    # configs. this means a perfectly correct sample will return a
-                    # result of {'00_exact_match'}.
-                    self.manifest._parsing_info.static_analysis_result.update(result)
+                    # fire a tracking event. this fires one event for every sample
+                    # so that we have data on a per file basis. Not only can we expect
+                    # no false positives or misses, we can expect the number model
+                    # files parseable by the experimental parser to match our internal
+                    # testing.
+                    tracking.track_experimental_parser_sample(result)
 
         # if the --use-experimental-parser flag was set, and the experimental parser succeeded
         elif not isinstance(experimentally_parsed, Exception):

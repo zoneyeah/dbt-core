@@ -539,7 +539,6 @@ class MacroMethods:
 
 @dataclass
 class ParsingInfo:
-    static_analysis_result: Set[str] = field(default_factory=set)
     static_analysis_parsed_path_count: int = 0
     static_analysis_path_count: int = 0
 
