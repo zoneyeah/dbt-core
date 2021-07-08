@@ -5,6 +5,7 @@ from dbt.node_types import NodeType
 from dbt.parser.base import SimpleSQLParser
 from dbt.parser.search import FileBlock
 import dbt.tracking as tracking
+from dbt import utils
 from dbt_extractor import ExtractionError, py_extract_from_source  # type: ignore
 import itertools
 import random
@@ -115,7 +116,11 @@ class ModelParser(SimpleSQLParser[ParsedModelNode]):
                     # no false positives or misses, we can expect the number model
                     # files parseable by the experimental parser to match our internal
                     # testing.
-                    tracking.track_experimental_parser_sample(result)
+                    tracking.track_experimental_parser_sample({
+                        "project_id": self.root_project.hashed_name(),
+                        "file_id": utils.get_hash(node),
+                        "status": result
+                    })
 
         # if the --use-experimental-parser flag was set, and the experimental parser succeeded
         elif not isinstance(experimentally_parsed, Exception):
