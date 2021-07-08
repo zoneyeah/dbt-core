@@ -30,8 +30,7 @@ RPC_REQUEST_SPEC = 'iglu:com.dbt/rpc_request/jsonschema/1-0-1'
 DEPRECATION_WARN_SPEC = 'iglu:com.dbt/deprecation_warn/jsonschema/1-0-0'
 LOAD_ALL_TIMING_SPEC = 'iglu:com.dbt/load_all_timing/jsonschema/1-0-3'
 RESOURCE_COUNTS = 'iglu:com.dbt/resource_counts/jsonschema/1-0-0'
-# TODO wait for iglu PR 'iglu:com.dbt/experimental_parser/jsonschema/1-0-0'
-EXPERIMENTAL_PARSER = ''
+EXPERIMENTAL_PARSER = 'iglu:com.dbt/experimental_parser/jsonschema/1-0-0'
 DBT_INVOCATION_ENV = 'DBT_INVOCATION_ENV'
 
 
