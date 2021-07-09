@@ -94,14 +94,6 @@ class TestEventTracking(DBTIntegrationTest):
             else:
                 populated_contexts.append(context)
 
-        # TODO debugging only
-        print("-----------------")
-        print("ordered_contexts:")
-        print(ordered_contexts)
-        print("populated_contexts:")
-        print(populated_contexts)
-        print("-----------------")
-
         return ordered_contexts == populated_contexts
 
     def load_context(self):
@@ -852,7 +844,7 @@ class TestEventTrackingSnapshot(TestEventTracking):
     def test__postgres_event_tracking_snapshot(self):
         self.run_dbt(["run", "--models", "snapshottable"])
 
-        expected_calls = [
+        expected_calls_A = [
             call(
                 category='dbt',
                 action='invocation',
