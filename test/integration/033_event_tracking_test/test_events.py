@@ -94,6 +94,14 @@ class TestEventTracking(DBTIntegrationTest):
             else:
                 populated_contexts.append(context)
 
+        # TODO debugging only
+        print("-----------------")
+        print("ordered_contexts:")
+        print(ordered_contexts)
+        print("populated_contexts:")
+        print(populated_contexts)
+        print("-----------------")
+
         return ordered_contexts == populated_contexts
 
     def load_context(self):
