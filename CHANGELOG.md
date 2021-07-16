@@ -1,3 +1,9 @@
+## dbt 0.20.1 (Release TBD)
+
+### Fixes
+- Fix `store_failures` config when defined as a modifier for `unique` and `not_null` tests ([#3575](https://github.com/fishtown-analytics/dbt/issues/3575), [#3577](https://github.com/fishtown-analytics/dbt/pull/3577))
+
+
 ## dbt 0.20.0 (July 12, 2021)
 
 ### Fixes
