@@ -6,6 +6,7 @@
 - Partial parsing: don't reprocess SQL file already scheduled ([#3589](https://github.com/dbt-labs/dbt/issues/3589), [#3620](https://github.com/dbt-labs/dbt/pull/3620))
 - Handle interator functions in model config ([#3573](https://github.com/dbt-labs/dbt/issues/3573))
 - Partial parsing: fix error after changing empty yaml file ([#3567](https://gith7ub.com/dbt-labs/dbt/issues/3567), [#3618](https://github.com/dbt-labs/dbt/pull/3618))
+- Partial parsing: handle source tests when changing test macro ([#3584](https://github.com/dbt-labs/dbt/issues/3584), [#3620](https://github.com/dbt-labs/dbt/pull/3620))
 
 
 ## dbt 0.20.0 (July 12, 2021)
