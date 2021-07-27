@@ -73,7 +73,7 @@ setup(
         'networkx>=2.3,<3',
         'packaging~=20.9',
         'sqlparse>=0.2.3,<0.4',
-        'dbt-extractor==0.2.0',
+        'dbt-extractor==0.4.0',
         'typing-extensions>=3.7.4,<3.11',
         'werkzeug>=0.15,<3.0',
         # the following are all to match snowflake-connector-python
