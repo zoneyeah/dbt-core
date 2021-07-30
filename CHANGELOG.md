@@ -4,6 +4,7 @@
 - Adds `install-prerelease` parameter to hub packages in `packages.yml`. When set to `True`, allows prerelease packages to be installed. By default, this parameter is False unless explicitly set to True.
 
 ### Fixes
+- Fix exception on yml files with all comments [3568](https://github.com/dbt-labs/dbt/issues/3568)
 - Fix `store_failures` config when defined as a modifier for `unique` and `not_null` tests ([#3575](https://github.com/fishtown-analytics/dbt/issues/3575), [#3577](https://github.com/fishtown-analytics/dbt/pull/3577))
 - Fix `where` config with `relationships` test by refactoring test SQL. Note: The default `relationships` test now includes CTEs, and may need reimplementing on adapters that don't support CTEs nested inside subqueries. ([#3579](https://github.com/fishtown-analytics/dbt/issues/3579), [#3583](https://github.com/fishtown-analytics/dbt/pull/3583))
 - Partial parsing: don't reprocess SQL file already scheduled ([#3589](https://github.com/dbt-labs/dbt/issues/3589), [#3620](https://github.com/dbt-labs/dbt/pull/3620))
