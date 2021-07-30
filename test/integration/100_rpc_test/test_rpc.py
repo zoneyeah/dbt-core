@@ -1030,7 +1030,7 @@ class TestRPCTaskManagement(HasRPCServer):
         for _ in range(10):
             os.kill(status['pid'], signal.SIGHUP)
 
-        self.wait_for_state('ready', timestamp=status['timestamp'])
+        self.wait_for_state('ready', timeout=200, timestamp=status['timestamp'])
 
         # we should still still see our service:
         self.assertRunning(sleepers)
