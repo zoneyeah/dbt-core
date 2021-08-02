@@ -1,5 +1,8 @@
 ## dbt 0.20.1 (Release TBD)
 
+## dbt 0.20.1rc1 (August 02, 2021)
+
+
 ### Features
 - Adds `install-prerelease` parameter to hub packages in `packages.yml`. When set to `True`, allows prerelease packages to be installed. By default, this parameter is False unless explicitly set to True.
 
