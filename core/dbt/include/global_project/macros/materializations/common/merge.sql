@@ -15,7 +15,7 @@
 {%- endmacro %}
 
 
-{% macro default__get_merge_sql(target, source, unique_key, dest_columns, predicates, incremental_predicates=none) -%}
+{% macro default__get_merge_sql(target, source, unique_key, dest_columns, predicates=none, incremental_predicates=none) -%}
     {%- set predicates = [] if predicates is none else [] + predicates -%}
     {%- set incremental_predicates = [] if incremental_predicates is none else [] + incremental_predicates -%}
     {%- set dest_cols_csv = get_quoted_csv(dest_columns | map(attribute="name")) -%}

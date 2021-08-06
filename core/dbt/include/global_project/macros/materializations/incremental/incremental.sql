@@ -9,7 +9,7 @@
   {%- set full_refresh_mode = (should_full_refresh()) -%}
 
   {% set on_schema_change = incremental_validate_on_schema_change(config.get('on_schema_change'), default='ignore') %}
-  {% set incremental_predicates = config.get('incremental_predicates'), default=None) %}
+  {% set incremental_predicates = config.get('incremental_predicates', default=None) %}
 
   {% set tmp_identifier = model['name'] + '__dbt_tmp' %}
   {% set backup_identifier = model['name'] + "__dbt_backup" %}
