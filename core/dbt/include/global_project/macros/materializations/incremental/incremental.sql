@@ -9,6 +9,7 @@
   {%- set full_refresh_mode = (should_full_refresh()) -%}
 
   {% set on_schema_change = incremental_validate_on_schema_change(config.get('on_schema_change'), default='ignore') %}
+  {% set incremental_predicates = config.get('incremental_predicates'), default=None) %}
 
   {% set tmp_identifier = model['name'] + '__dbt_tmp' %}
   {% set backup_identifier = model['name'] + "__dbt_backup" %}
@@ -54,8 +55,11 @@
              from_relation=tmp_relation,
              to_relation=target_relation) %}
     {% do process_schema_changes(on_schema_change, tmp_relation, existing_relation) %}
-    {% set build_sql = incremental_upsert(tmp_relation, target_relation, unique_key=unique_key) %}
-  
+    {% set build_sql = incremental_upsert(
+        tmp_relation, 
+        target_relation, 
+        unique_key=unique_key,
+        incremental_predicates=incremental_predicates) %}  
   {% endif %}
 
   {% call statement("main") %}

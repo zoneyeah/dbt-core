@@ -406,6 +406,7 @@ class NodeConfig(BaseConfig):
     )
     full_refresh: Optional[bool] = None
     on_schema_change: Optional[str] = 'ignore'
+    incremental_predicates: Optional[list] = None
 
     @classmethod
     def __pre_deserialize__(cls, data):
