@@ -61,7 +61,7 @@
            to_relation=target_relation) %}
     {% do process_schema_changes(on_schema_change, tmp_relation, existing_relation) %}
     {% set dest_columns = adapter.get_columns_in_relation(existing_relation) %}
-    {% set build_sql = dbt_snowflake_get_incremental_sql(strategy, tmp_relation, target_relation, unique_key, dest_columns, incremental_predicates) %}
+    {% set build_sql = dbt_snowflake_get_incremental_sql(strategy, tmp_relation, target_relation, unique_key, dest_columns, incremental_predicates=incremental_predicates) %}
   
   {% endif %}
 

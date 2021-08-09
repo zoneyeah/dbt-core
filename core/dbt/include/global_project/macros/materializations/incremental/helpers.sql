@@ -11,7 +11,11 @@
         select ({{ unique_key }})
         from {{ tmp_relation }}
     )
-    {% if incremental_predicates %} and {{ incremental_predicates | join(' and ') }} {% endif %};
+    {%- if incremental_predicates %}
+        {%- for condition in incremental_predicates %}
+            and {{ target.name }}.{{ condition.source_col }} {{ condition.expression }}
+        {% endfor %}
+    {%- endif %};
     {%- endif %}
 
     insert into {{ target_relation }} ({{ dest_cols_csv }})

@@ -36,6 +36,11 @@
     merge into {{ target }} as DBT_INTERNAL_DEST
         using {{ source }} as DBT_INTERNAL_SOURCE
         on {{ predicates | join(' and ') }}
+        {% if incremental_predicates %}
+            {% for condition in incremental_predicates %}
+                and DBT_INTERNAL_DEST.{{ condition.source_col }} {{ condition.expression }}
+            {% endfor%}
+        {% endif %}
 
     {% if unique_key %}
     when matched then update set
@@ -49,8 +54,6 @@
         ({{ dest_cols_csv }})
     values
         ({{ dest_cols_csv }})
-
-    {% if incremental_predicates %} where {{ incremental_predicates | join(' and ') }} {% endif %}
 
 {% endmacro %}
 
@@ -77,7 +80,11 @@
         from {{ source }}
     )
 
-    {% if incremental_predicates %} and {{ incremental_predicates | join(' and ') }} {% endif %}
+    {% if incremental_predicates %}
+        {% for condition in incremental_predicates %}
+            and {{ target.name }}.{{ condition.source_col }} {{ condition.expression }}
+        {% endfor %}
+    {% endif %}
 
     ;
     {% endif %}
