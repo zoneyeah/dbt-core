@@ -82,6 +82,7 @@ Contributors:
 - Fix type coercion issues when fetching query result sets ([#2984](https://github.com/dbt-labs/dbt/issues/2984), [#3499](https://github.com/dbt-labs/dbt/pull/3499))
 - Handle whitespace after a plus sign on the project config ([#3526](https://github.com/dbt-labs/dbt/pull/3526))
 - Fix table and view materialization issue when switching from one to the other ([#2161](https://github.com/dbt-labs/dbt/issues/2161)), [#3547](https://github.com/dbt-labs/dbt/pull/3547))
+- Fix for RPC requests that raise a RecursionError when serializing Undefined values as JSON ([#3464](https://github.com/dbt-labs/dbt/issues/3464), [#3687](https://github.com/dbt-labs/dbt/pull/3687))
 
 ### Under the hood
 
