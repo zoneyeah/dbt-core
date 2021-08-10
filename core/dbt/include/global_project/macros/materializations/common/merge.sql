@@ -116,13 +116,12 @@
 
     when not matched by source
         {% if predicates %} and {{ predicates | join(' and ') }} {% endif %}
+        {% if incremental_predicates %} and {{ target.name }}.{{ condition.source_col }} {{ condition.expression }} {% endif %}
         then delete
 
     when not matched then insert
         ({{ dest_cols_csv }})
     values
         ({{ dest_cols_csv }})
-
-     {% if incremental_predicates %} where {{ incremental_predicates | join(' and ') }} {% endif %}
 
 {% endmacro %}

@@ -13,7 +13,7 @@
     )
     {%- if incremental_predicates %}
         {%- for condition in incremental_predicates %}
-            and {{ target.name }}.{{ condition.source_col }} {{ condition.expression }}
+            and {{ target_relation.name }}.{{ condition.source_col }} {{ condition.expression }}
         {% endfor %}
     {%- endif %};
     {%- endif %}
