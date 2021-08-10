@@ -26,7 +26,10 @@ snapshot_data = '''
 {% endsnapshot %}
 '''
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> b67e877c ([Backport] #3674 (#3718))
 @pytest.mark.supported('postgres')
 def test_rpc_build_threads(
     project_root, profiles_root, dbt_profile, unique_schema
@@ -113,20 +116,29 @@ def test_rpc_build_state(
 
         get_write_manifest(querier, os.path.join(state_dir, 'manifest.json'))
 
+<<<<<<< HEAD
         project.models['my_model.sql'] =\
             'select * from {{ ref("data" )}} where id = 2'
+=======
+        project.models['my_model.sql'] = 'select * from {{ ref("data" )}} where id = 2'
+>>>>>>> b67e877c ([Backport] #3674 (#3718))
         project.write_models(project_root, remove=True)
         querier.sighup()
         assert querier.wait_for_status('ready') is True
 
         results = querier.async_wait_for_result(
+<<<<<<< HEAD
             querier.build(state='./state', select=['state:modified'])
+=======
+            querier.build(state='./state', models=['state:modified'])
+>>>>>>> b67e877c ([Backport] #3674 (#3718))
         )
         assert len(results['results']) == 3
 
         get_write_manifest(querier, os.path.join(state_dir, 'manifest.json'))
 
         results = querier.async_wait_for_result(
+<<<<<<< HEAD
             querier.build(state='./state', select=['state:modified']),
         )
         assert len(results['results']) == 0
