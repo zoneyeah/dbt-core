@@ -116,7 +116,11 @@
 
     when not matched by source
         {% if predicates %} and {{ predicates | join(' and ') }} {% endif %}
-        {% if incremental_predicates %} and {{ target.name }}.{{ condition.source_col }} {{ condition.expression }} {% endif %}
+        {% if incremental_predicates %} 
+            {% for condition in incremental_predicates %}
+            and DBT_INTERNAL_DEST.{{ condition.source_col }} {{ condition.expression }} 
+            {% endfor %}
+        {% endif %}        
         then delete
 
     when not matched then insert

@@ -33,7 +33,7 @@
         )
       {%- endset -%}
 
-      {{ get_insert_overwrite_merge_sql(target_relation, source_sql, dest_columns, [predicate], include_sql_header=true, incremental_predicates) }}
+      {{ get_insert_overwrite_merge_sql(target_relation, source_sql, dest_columns, [predicate], include_sql_header=true, incremental_predicates=incremental_predicates) }}
 
   {% else %} {# dynamic #}
 
@@ -74,7 +74,7 @@
               the sql_header at the materialization-level instead
       #}
       -- 3. run the merge statement
-      {{ get_insert_overwrite_merge_sql(target_relation, source_sql, dest_columns, [predicate], include_sql_header=false, incremental_predicates) }};
+      {{ get_insert_overwrite_merge_sql(target_relation, source_sql, dest_columns, [predicate], include_sql_header=false, incremental_predicates=incremental_predicates) }};
 
       -- 4. clean up the temp table
       drop table if exists {{ tmp_relation }}
