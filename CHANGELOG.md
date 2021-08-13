@@ -1,7 +1,12 @@
+## dbt 0.20.2 (Release TBD)
+
+### Under the hood
+- Switch to full reparse on partial parsing exceptions. Log and report exception information. ([#3725](https://github.com/dbt-labs/dbt/issues/3725), [#3733](https://github.com/dbt-labs/dbt/pull/3733))
+
+
 ## dbt 0.20.1 (August 11, 2021)
 
 ## dbt 0.20.1rc1 (August 02, 2021)
-
 
 ### Features
 - Adds `install-prerelease` parameter to hub packages in `packages.yml`. When set to `True`, allows prerelease packages to be installed. By default, this parameter is False unless explicitly set to True.
