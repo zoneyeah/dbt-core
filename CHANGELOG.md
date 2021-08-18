@@ -66,7 +66,6 @@ Contributors:
 - Add `build` RPC method, and a subset of flags for `build` task ([#3595](https://github.com/dbt-labs/dbt/issues/3595), [#3674](https://github.com/dbt-labs/dbt/pull/3674))
 - Get more information on partial parsing version mismatches ([#3757](https://github.com/dbt-labs/dbt/issues/3757), [#3758](https://github.com/dbt-labs/dbt/pull/3758))
 
-
 ### Breaking changes
 
 - Add full node selection to source freshness command and align selection syntax with other tasks (`dbt source freshness --select source_name` --> `dbt source freshness --select source:souce_name`) and rename `dbt source snapshot-freshness` -> `dbt source freshness`. ([#2987](https://github.com/dbt-labs/dbt/issues/2987), [#3554](https://github.com/dbt-labs/dbt/pull/3554))
@@ -113,6 +112,7 @@ Contributors:
 
 - Better error handling for BigQuery job labels that are too long. ([#3612](https://github.com/dbt-labs/dbt/pull/3612), [#3703](https://github.com/dbt-labs/dbt/pull/3703))
 - Get more information on partial parsing version mismatches ([#3757](https://github.com/dbt-labs/dbt/issues/3757), [#3758](https://github.com/dbt-labs/dbt/pull/3758))
+- Switch to full reparse on partial parsing exceptions. Log and report exception information. ([#3725](https://github.com/dbt-labs/dbt/issues/3725), [#3733](https://github.com/dbt-labs/dbt/pull/3733))
 
 ### Fixes
 
@@ -129,8 +129,6 @@ Contributors:
 
 - Switch to full reparse on partial parsing exceptions. Log and report exception information. ([#3725](https://github.com/dbt-labs/dbt/issues/3725), [#3733](https://github.com/dbt-labs/dbt/pull/3733))
 - Check for existence of test node when removing. ([#3711](https://github.com/dbt-labs/dbt/issues/3711), [#3750](https://github.com/dbt-labs/dbt/pull/3750))
-
-## dbt 0.20.1 (August 11, 2021)
 
 ## dbt 0.20.1rc1 (August 02, 2021)
 
