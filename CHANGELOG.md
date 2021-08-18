@@ -1,5 +1,11 @@
 ## dbt 0.20.2 (Release TBD)
 
+### Under the hood
+- Better error handling for BigQuery job labels that are too long. ([#3612](https://github.com/dbt-labs/dbt/pull/3612), [#3703](https://github.com/dbt-labs/dbt/pull/3703))
+
+Contributors:
+- [@sungchun12](https://github.com/sungchun12) ([#3703](https://github.com/dbt-labs/dbt/pull/3703))
+
 ## dbt 0.20.2rc1 (August 16, 2021)
 
 
