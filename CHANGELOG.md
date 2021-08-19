@@ -1,5 +1,8 @@
 ## dbt 0.21.0 (Release TBD)
 
+## dbt 0.21.0b2 (August 19, 2021)
+
+
 ### Features
 
 - Experimental parser now detects macro overrides of ref, source, and config builtins. ([#3581](https://github.com/dbt-labs/dbt/issues/3866), [#3582](https://github.com/dbt-labs/dbt/pull/3877))
