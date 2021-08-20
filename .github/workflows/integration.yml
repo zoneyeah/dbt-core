@@ -30,9 +30,6 @@ on:
       - "github-actions-matrix" # TODO: rm after testing
   pull_request_target:
   workflow_dispatch:
-  # everyday at 10:05pm
-  schedule:
-    - cron: "5 22 * * *"
 
 permissions: read-all
 
