@@ -2,6 +2,7 @@
 
 ### Under the hood
 - Get more information on partial parsing version mismatches ([#3757](https://github.com/dbt-labs/dbt/issues/3757), [#3758](https://github.com/dbt-labs/dbt/pull/3758))
+- Use GitHub Actions for CI ([#3688](https://github.com/dbt-labs/dbt/issues/3688), [#3669](https://github.com/dbt-labs/dbt/pull/3669))
 
 ### Fixes
 - Fix bug in finding analysis nodes when applying analysis patch ([#3764](https://github.com/dbt-labs/dbt/issues/3764), [#3767](https://github.com/dbt-labs/dbt/pull/3767))
