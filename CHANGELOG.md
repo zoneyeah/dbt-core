@@ -1,5 +1,8 @@
 ## dbt 0.20.2 (Release TBD)
 
+## dbt 0.20.2rc2 (August 27, 2021)
+
+
 ### Fixes
 - Avoid caching schemas for tests when `store_failures` is not enabled ([#3715](https://github.com/dbt-labs/dbt/issues/3715), [#3716](https://github.com/dbt-labs/dbt/pull/3716))
 
