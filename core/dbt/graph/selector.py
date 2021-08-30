@@ -158,9 +158,9 @@ class NodeSelector(MethodManager):
         - Recurse through spec, select by criteria, combine by set operation
         - Return final (unfiltered) selection set
         """
-
         direct_nodes, indirect_nodes = self.select_nodes_recursively(spec)
-        return direct_nodes
+        indirect_only = indirect_nodes.difference(direct_nodes)
+        return direct_nodes, indirect_only
 
     def _is_graph_member(self, unique_id: UniqueId) -> bool:
         if unique_id in self.manifest.sources:
@@ -258,8 +258,21 @@ class NodeSelector(MethodManager):
                 - selectors can filter the nodes after all of them have been
                   selected
         """
-        selected_nodes = self.select_nodes(spec)
+        selected_nodes, indirect_only = self.select_nodes(spec)
         filtered_nodes = self.filter_selection(selected_nodes)
+        
+        if indirect_only:
+            filtered_unused_nodes = self.filter_selection(indirect_only)
+            # log anything that didn't make the cut
+            if filtered_unused_nodes:
+                unused_node_names = []
+                for unique_id in filtered_unused_nodes:
+                    name = self.manifest.nodes[unique_id].name
+                    unused_node_names.append(name)
+                unused_nodes_str = ("\n  - ").join(unused_node_names)
+                msg = f"\nSome resources were excluded because at least one parent is missing:\n  - {unused_nodes_str}\nUse the --greedy flag to include them"
+                logger.info(msg)
+
         return filtered_nodes
 
     def get_graph_queue(self, spec: SelectionSpec) -> GraphQueue:
