@@ -1,4 +1,5 @@
 # special support for CLI argument parsing.
+from dbt import flags
 import itertools
 from dbt.clients.yaml_helper import yaml, Loader, Dumper  # noqa: F401
 
@@ -66,7 +67,7 @@ def parse_union_from_default(
 def parse_difference(
     include: Optional[List[str]], exclude: Optional[List[str]]
 ) -> SelectionDifference:
-    included = parse_union_from_default(include, DEFAULT_INCLUDES)
+    included = parse_union_from_default(include, DEFAULT_INCLUDES, greedy=flags.GREEDY)
     excluded = parse_union_from_default(exclude, DEFAULT_EXCLUDES, greedy=True)
     return SelectionDifference(components=[included, excluded])
 
