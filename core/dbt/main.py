@@ -753,6 +753,13 @@ def _build_test_subparser(subparsers, base_subparser):
         Store test results (failing rows) in the database
         '''
     )
+    sub.add_argument(
+        '--greedy',
+        action='store_true',
+        help='''
+        Run all tests that touch the selected models, even if they also depend on unselected models
+        '''
+    )
 
     sub.set_defaults(cls=test_task.TestTask, which='test', rpc_method='test')
     return sub
