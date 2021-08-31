@@ -19,7 +19,7 @@ from dbt.context.context_config import (
 from dbt.context.configured import generate_schema_yml
 from dbt.context.target import generate_target_context
 from dbt.context.providers import (
-    generate_parse_exposure, generate_test_context
+    generate_parse_exposure, generate_parse_metrics, generate_test_context
 )
 from dbt.context.macro_resolver import MacroResolver
 from dbt.contracts.files import FileHash, SchemaSourceFile
@@ -30,6 +30,7 @@ from dbt.contracts.graph.parsed import (
     ParsedMacroPatch,
     UnpatchedSourceDefinition,
     ParsedExposure,
+    ParsedMetric,
 )
 from dbt.contracts.graph.unparsed import (
     HasColumnDocs,
@@ -41,6 +42,7 @@ from dbt.contracts.graph.unparsed import (
     UnparsedMacroUpdate,
     UnparsedNodeUpdate,
     UnparsedExposure,
+    UnparsedMetric,
     UnparsedSourceDefinition,
 )
 from dbt.exceptions import (
@@ -527,6 +529,12 @@ class SchemaParser(SimpleParser[SchemaTestBlock, ParsedSchemaTestNode]):
                 for node in exp_parser.parse():
                     self.manifest.add_exposure(yaml_block.file, node)
 
+            # parse metrics
+            if 'metrics' in dct:
+                metric_parser = MetricParser(self, yaml_block)
+                for node in metric_parser.parse():
+                    self.manifest.add_metric(yaml_block.file, node)
+
 
 def check_format_version(
     file_path, yaml_dct
@@ -951,3 +959,58 @@ class ExposureParser(YamlReader):
                 raise CompilationException(msg) from exc
             parsed = self.parse_exposure(unparsed)
             yield parsed
+
+class MetricParser(YamlReader):
+    def __init__(self, schema_parser: SchemaParser, yaml: YamlBlock):
+        super().__init__(schema_parser, yaml, NodeType.Metric.pluralize())
+        self.schema_parser = schema_parser
+        self.yaml = yaml
+
+    def parse_metric(self, unparsed: UnparsedMetric) -> ParsedMetric:
+        package_name = self.project.project_name
+        for definition in unparsed.definitions:
+            unique_id = f'{NodeType.Metric}.{package_name}.{definition.name}'
+            path = self.yaml.path.relative_path
+
+            fqn = self.schema_parser.get_fqn_prefix(path)
+            fqn.append(definition.name)
+
+            parsed = ParsedMetric(
+                package_name=package_name,
+                root_path=self.project.project_root,
+                path=path,
+                original_file_path=self.yaml.path.original_file_path,
+                unique_id=unique_id,
+                fqn=fqn,
+                model=unparsed.model,
+                name=definition.name,
+                description=definition.description,
+                display_name=definition.display_name,
+                agg=definition.agg,
+                sql=definition.sql,
+                timestamp_field=definition.timestamp_field,
+                dimensions=definition.dimensions
+            )
+            ctx = generate_parse_metrics(
+                parsed,
+                self.root_project,
+                self.schema_parser.manifest,
+                package_name,
+            )
+            model_ref = '{{ ' + unparsed.model + '}}'
+            get_rendered(
+                model_ref, ctx, parsed, capture_macros=True
+            )
+            # parsed now has a populated refs/sources
+            yield parsed
+
+    def parse(self) -> Iterable[ParsedMetric]:
+        for data in self.get_key_dicts():
+            try:
+                UnparsedMetric.validate(data)
+                unparsed = UnparsedMetric.from_dict(data)
+            except (ValidationError, JSONValidationException) as exc:
+                msg = error_context(self.yaml.path, self.key, data, exc)
+                raise CompilationException(msg) from exc
+            for parsed in self.parse_metric(unparsed):
+                yield parsed

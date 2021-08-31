@@ -435,3 +435,18 @@ class UnparsedExposure(dbtClassMixin, Replaceable):
     tags: List[str] = field(default_factory=list)
     url: Optional[str] = None
     depends_on: List[str] = field(default_factory=list)
+
+@dataclass
+class UnparsedMetricDefinition(dbtClassMixin, Replaceable):
+    name: str
+    description: str = ''
+    display_name: str = ''
+    agg: str = ''
+    sql: str = ''
+    timestamp_field: str = ''
+    dimensions: List[str] = field(default_factory=list)
+
+@dataclass
+class UnparsedMetric(dbtClassMixin, Replaceable):
+    model: str
+    definitions: List[UnparsedMetricDefinition]

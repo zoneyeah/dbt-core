@@ -782,6 +782,54 @@ class ParsedExposure(UnparsedBaseNode, HasUniqueID, HasFqn):
             True
         )
 
+@dataclass
+class ParsedMetric(UnparsedBaseNode, HasUniqueID, HasFqn):
+    model: str
+    name: str
+    description: str
+    display_name: str
+    agg: str
+    sql: str
+    timestamp_field: str
+    dimensions: List[str]
+    created_at: int = field(default_factory=lambda: int(time.time()))
+    resource_type: NodeType = NodeType.Metric
+
+    @property
+    def depends_on_nodes(self):
+        # TODO - I think this is a hack?
+        return [self.model]
+
+    @property
+    def search_name(self):
+        return self.name
+
+    def same_dimensions(self, old: 'ParsedMetric') -> bool:
+        return set(self.dimensions) == set(old.dimensions)
+
+    def same_everything(self, old: 'ParsedMetric') -> bool:
+        keys = [
+            'model', 'description', 'display_name', 'agg', 'sql',
+            'timestamp_field'
+        ]
+
+        return all(
+            getattr(self, k, None) == getattr(other, k, None)
+            for k in keys
+        )
+
+    def same_contents(self, old: Optional['ParsedMetric']) -> bool:
+        # existing when it didn't before is a change!
+        # metadata/tags changes are not "changes"
+        if old is None:
+            return True
+
+
+        return (
+            self.same_dimensions(old) and
+            self.same_everything(old) and
+            True
+        )
 
 ManifestNodes = Union[
     ParsedAnalysisNode,
@@ -800,5 +848,6 @@ ParsedResource = Union[
     ParsedMacro,
     ParsedNode,
     ParsedExposure,
+    ParsedMetric,
     ParsedSourceDefinition,
 ]

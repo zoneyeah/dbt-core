@@ -32,6 +32,7 @@ from dbt.contracts.graph.compiled import (
 from dbt.contracts.graph.parsed import (
     ParsedMacro,
     ParsedExposure,
+    ParsedMetric,
     ParsedSeedNode,
     ParsedSourceDefinition,
 )
@@ -1399,6 +1400,30 @@ def generate_parse_exposure(
         'source': ExposureSourceResolver(
             None,
             exposure,
+            project,
+            manifest,
+        )
+    }
+
+
+def generate_parse_metrics(
+    metric: ParsedMetric,
+    config: RuntimeConfig,
+    manifest: Manifest,
+    package_name: str,
+) -> Dict[str, Any]:
+    project = config.load_dependencies()[package_name]
+    # TODO : Rename these, probably? Or at least make them generic
+    return {
+        'ref': ExposureRefResolver(
+            None,
+            metric,
+            project,
+            manifest,
+        ),
+        'source': ExposureSourceResolver(
+            None,
+            metric,
             project,
             manifest,
         )
