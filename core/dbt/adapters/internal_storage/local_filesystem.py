@@ -42,7 +42,7 @@ def read(
     """Reads the content of a file on the filesystem.
 
     Args:
-        path: Full path of file to be read.
+        path: Path of resource to be read (full path or relative to cwd).
         strip: Wether or not to strip whitespace.
 
     Returns:
@@ -81,13 +81,16 @@ def write(
     All logical cases outside those outlined above will result in failure
 
     Args:
-        path: Full path of resource to be written.
+        path: Path of resource to be written (full path or relative to cwd).
         content: Data to be written.
         overwrite: Wether or not to overwrite if a file already exists at this path.
         parser: A parser to apply to file data.
 
     Returns:
         `True` for success, `False` otherwise.
+
+    Raises:
+        Some sort of file write error depending on platform.  See TODO regarding exceptions
 
     """
     # create a concrete path object
