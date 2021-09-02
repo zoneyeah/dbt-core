@@ -151,7 +151,7 @@ class NodeSelector(MethodManager):
 
         return direct_nodes, indirect_nodes
 
-    def select_nodes(self, spec: SelectionSpec) -> Set[UniqueId]:
+    def select_nodes(self, spec: SelectionSpec) -> Tuple[Set[UniqueId], Set[UniqueId]]:
         """Select the nodes in the graph according to the spec.
 
         This is the main point of entry for turning a spec into a set of nodes:
