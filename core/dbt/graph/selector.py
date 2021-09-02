@@ -260,7 +260,7 @@ class NodeSelector(MethodManager):
         """
         selected_nodes, indirect_only = self.select_nodes(spec)
         filtered_nodes = self.filter_selection(selected_nodes)
-        
+
         if indirect_only:
             filtered_unused_nodes = self.filter_selection(indirect_only)
             # log anything that didn't make the cut
@@ -270,7 +270,11 @@ class NodeSelector(MethodManager):
                     name = self.manifest.nodes[unique_id].name
                     unused_node_names.append(name)
                 unused_nodes_str = ("\n  - ").join(unused_node_names)
-                msg = f"\nSome resources were excluded because at least one parent is missing:\n  - {unused_nodes_str}\nUse the --greedy flag to include them"
+                msg = (
+                    f"\nSome resources were excluded because at least one parent is missing:"
+                    f"\n  - {unused_nodes_str}"
+                    f"\nUse the --greedy flag to include them"
+                )
                 logger.info(msg)
 
         return filtered_nodes

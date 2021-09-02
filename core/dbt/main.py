@@ -889,7 +889,8 @@ def _build_list_subparser(subparsers, base_subparser):
         '--greedy',
         action='store_true',
         help='''
-        Select all tests that touch the selected models, even if they also depend on unselected models
+        Select all tests that touch the selected models, 
+        even if they also depend on unselected models
         '''
     )
     _add_common_selector_arguments(sub)
