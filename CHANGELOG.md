@@ -91,6 +91,7 @@ Contributors:
 
 - Better error handling for BigQuery job labels that are too long. ([#3612](https://github.com/dbt-labs/dbt/pull/3612), [#3703](https://github.com/dbt-labs/dbt/pull/3703))
 - Get more information on partial parsing version mismatches ([#3757](https://github.com/dbt-labs/dbt/issues/3757), [#3758](https://github.com/dbt-labs/dbt/pull/3758))
+- Removing Python 3.9.7 as supported by dbt ([#3853](https://github.com/dbt-labs/dbt/pull/3853))
 
 ### Fixes
 
