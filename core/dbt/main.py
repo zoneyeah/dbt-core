@@ -637,7 +637,7 @@ def _add_table_mutability_arguments(*subparsers):
             '--full-refresh',
             action='store_true',
             help='''
-            If specified, DBT will drop incremental models and
+            If specified, dbt will drop incremental models and
             fully-recalculate the incremental table from the model definition.
             '''
         )
@@ -884,6 +884,13 @@ def _build_list_subparser(subparsers, base_subparser):
         ''',
         metavar='SELECTOR',
         required=False,
+    )
+    sub.add_argument(
+        '--greedy',
+        action='store_true',
+        help='''
+        Select all tests that touch the selected models, even if they also depend on unselected models
+        '''
     )
     _add_common_selector_arguments(sub)
 
