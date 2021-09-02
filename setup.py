@@ -63,5 +63,5 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
     ],
-    python_requires=">=3.6.2",
+    python_requires=">=3.6.3,!=3.9.7",
 )
