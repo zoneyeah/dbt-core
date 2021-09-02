@@ -20,12 +20,14 @@ class TestSelectionExpansion(DBTIntegrationTest):
             "test-paths": ["tests"]
         }
 
-    def list_tests_and_assert(self, include, exclude, expected_tests):
+    def list_tests_and_assert(self, include, exclude, expected_tests, greedy = False):
         list_args = [ 'ls', '--resource-type', 'test']
         if include:
             list_args.extend(('--select', include))
         if exclude:
             list_args.extend(('--exclude', exclude))
+        if greedy:
+            list_args.append('--greedy')
         
         listed = self.run_dbt(list_args)
         assert len(listed) == len(expected_tests)
@@ -34,7 +36,7 @@ class TestSelectionExpansion(DBTIntegrationTest):
         assert sorted(test_names) == sorted(expected_tests)
 
     def run_tests_and_assert(
-        self, include, exclude, expected_tests, schema = False, data = False
+        self, include, exclude, expected_tests, schema = False, data = False, greedy = False
     ):
         results = self.run_dbt(['run'])
         self.assertEqual(len(results), 2)
@@ -48,6 +50,8 @@ class TestSelectionExpansion(DBTIntegrationTest):
             test_args.append('--schema')
         if data:
             test_args.append('--data')
+        if greedy:
+            test_args.append('--greedy')
         
         results = self.run_dbt(test_args)
         tests_run = [r.node.name for r in results]
@@ -227,4 +231,34 @@ class TestSelectionExpansion(DBTIntegrationTest):
         expected = ['unique_model_a_fun']
         
         self.list_tests_and_assert(select, exclude, expected)
+        self.run_tests_and_assert(select, exclude, expected)
+
+    @use_profile('postgres')
+    def test__postgres__model_a_greedy(self):
+        select = 'model_a'
+        exclude = None
+        greedy = True
+        expected = [
+            'cf_a_b', 'cf_a_src', 'just_a',
+            'relationships_model_a_fun__fun__ref_model_b_',
+            'relationships_model_a_fun__fun__source_my_src_my_tbl_',
+            'source_unique_my_src_my_tbl_fun',
+            'unique_model_a_fun'
+        ]
+            
+        self.list_tests_and_assert(select, exclude, expected, greedy)
+        self.run_tests_and_assert(select, exclude, expected)
+
+    @use_profile('postgres')
+    def test__postgres__model_a_greedy_exclude_unique_tests(self):
+        select = 'model_a'
+        exclude = 'test_name:unique'
+        greedy = True
+        expected = [
+            'cf_a_b', 'cf_a_src', 'just_a',
+            'relationships_model_a_fun__fun__ref_model_b_',
+            'relationships_model_a_fun__fun__source_my_src_my_tbl_',
+        ]
+            
+        self.list_tests_and_assert(select, exclude, expected, greedy)
         self.run_tests_and_assert(select, exclude, expected)
