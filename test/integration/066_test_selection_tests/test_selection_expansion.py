@@ -242,7 +242,6 @@ class TestSelectionExpansion(DBTIntegrationTest):
             'cf_a_b', 'cf_a_src', 'just_a',
             'relationships_model_a_fun__fun__ref_model_b_',
             'relationships_model_a_fun__fun__source_my_src_my_tbl_',
-            'source_unique_my_src_my_tbl_fun',
             'unique_model_a_fun'
         ]
             
