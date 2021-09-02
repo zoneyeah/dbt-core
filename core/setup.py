@@ -7,6 +7,11 @@ if sys.version_info < (3, 6):
     print('Please upgrade to Python 3.6 or higher.')
     sys.exit(1)
 
+if sys.version_info == (3, 9, 7):
+    print('Error: dbt does not support version 3.9.7 of Python.')
+    print('Please downgrade to Python 3.9.6.')
+    sys.exit(1)
+
 
 from setuptools import setup
 try:
@@ -86,5 +91,5 @@ setup(
         'Programming Language :: Python :: 3.8',
         'Programming Language :: Python :: 3.9',
     ],
-    python_requires=">=3.6.3",
+    python_requires=">=3.6.3,!=3.9.7",
 )
