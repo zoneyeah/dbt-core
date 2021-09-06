@@ -14,11 +14,11 @@
   {% do return(strategy) %}
 {% endmacro %}
 
-{% macro dbt_snowflake_get_incremental_sql(strategy, tmp_relation, target_relation, unique_key, dest_columns, predicates=none, incremental_predicates=none) %}
+{% macro dbt_snowflake_get_incremental_sql(strategy, tmp_relation, target_relation, unique_key, dest_columns, predicates) %}
   {% if strategy == 'merge' %}
-    {% do return(get_merge_sql(target_relation, tmp_relation, unique_key, dest_columns, predicates, incremental_predicates)) %}
+    {% do return(get_merge_sql(target_relation, tmp_relation, unique_key, dest_columns, predicates)) %}
   {% elif strategy == 'delete+insert' %}
-    {% do return(get_delete_insert_merge_sql(target_relation, tmp_relation, unique_key, dest_columns, incremental_predicates)) %}
+    {% do return(get_delete_insert_merge_sql(target_relation, tmp_relation, unique_key, dest_columns, predicates)) %}
   {% else %}
     {% do exceptions.raise_compiler_error('invalid strategy: ' ~ strategy) %}
   {% endif %}
@@ -30,7 +30,7 @@
 
   {%- set unique_key = config.get('unique_key') -%}
   {%- set full_refresh_mode = (should_full_refresh()) -%}
-  {% set incremental_predicates = config.get('incremental_predicates', default = None) %}
+  {% set user_predicates = config.get('incremental_predicates', default = None) %}
 
   {% set target_relation = this %}
   {% set existing_relation = load_relation(this) %}
@@ -39,6 +39,7 @@
   {#-- Validate early so we don't run SQL if the strategy is invalid --#}
   {% set strategy = dbt_snowflake_validate_get_incremental_strategy(config) -%}
   {% set on_schema_change = incremental_validate_on_schema_change(config.get('on_schema_change'), default='ignore') %}
+  {% set predicates = get_incremental_predicates(target_relation=target_relation, incremental_strategy=strategy, unique_key=unique_key, user_predicates=user_predicates) %}
 
   {{ run_hooks(pre_hooks) }}
 
@@ -61,7 +62,7 @@
            to_relation=target_relation) %}
     {% do process_schema_changes(on_schema_change, tmp_relation, existing_relation) %}
     {% set dest_columns = adapter.get_columns_in_relation(existing_relation) %}
-    {% set build_sql = dbt_snowflake_get_incremental_sql(strategy, tmp_relation, target_relation, unique_key, dest_columns, incremental_predicates=incremental_predicates) %}
+    {% set build_sql = dbt_snowflake_get_incremental_sql(strategy, tmp_relation, target_relation, unique_key, dest_columns, predicates=predicates) %}
   
   {% endif %}
 
