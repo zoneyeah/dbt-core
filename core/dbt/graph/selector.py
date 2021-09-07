@@ -1,4 +1,3 @@
-
 from typing import Set, List, Optional, Tuple
 
 from .graph import Graph, UniqueId
@@ -29,6 +28,29 @@ def alert_non_existence(raw_spec, nodes):
             f" any nodes"
         )
 
+def alert_unused_nodes(filtered_unused_nodes, manifest):
+    unused_node_names = []
+    for unique_id in filtered_unused_nodes:
+        name = manifest.nodes[unique_id].name
+        unused_node_names.append(name)
+
+    summary_unused_nodes_str = ("\n  - ").join(unused_node_names[:3])
+    debug_unused_nodes_str = ("\n  - ").join(unused_node_names)
+    summary_msg = (
+        f"\nSome resources were excluded because at least one parent is missing:"
+        f"\n  - {summary_unused_nodes_str}"
+        f"\n  - and {len(unused_node_names) - 3} more"
+        f"\nUse the --greedy flag to include them"
+    )
+    debug_msg = (
+        f"\nSome resources were excluded because at least one parent is missing:"
+        f"\n  - {debug_unused_nodes_str}"
+        f"\nUse the --greedy flag to include them"
+    )
+    if len(unused_node_names) <= 4:
+        summary_msg = debug_msg
+    logger.info(summary_msg)
+    logger.debug(debug_msg)
 
 def can_select_indirectly(node):
     """If a node is not selected itself, but its parent(s) are, it may qualify
@@ -265,17 +287,7 @@ class NodeSelector(MethodManager):
             filtered_unused_nodes = self.filter_selection(indirect_only)
             # log anything that didn't make the cut
             if filtered_unused_nodes:
-                unused_node_names = []
-                for unique_id in filtered_unused_nodes:
-                    name = self.manifest.nodes[unique_id].name
-                    unused_node_names.append(name)
-                unused_nodes_str = ("\n  - ").join(unused_node_names)
-                msg = (
-                    f"\nSome resources were excluded because at least one parent is missing:"
-                    f"\n  - {unused_nodes_str}"
-                    f"\nUse the --greedy flag to include them"
-                )
-                logger.info(msg)
+                alert_unused_nodes(filtered_unused_nodes, self.manifest)
 
         return filtered_nodes
 
