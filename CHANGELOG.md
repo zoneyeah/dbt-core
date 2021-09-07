@@ -1,4 +1,4 @@
-## dbt 0.20.2 (Release TBD)
+## dbt 0.20.2 (September 07, 2021)
 
 ### Fixes
 - Fix issue when running the `deps` task after the `list` task in the RPC server ([#3846](https://github.com/dbt-labs/dbt/issues/3846), [#3848](https://github.com/dbt-labs/dbt/pull/3848))
