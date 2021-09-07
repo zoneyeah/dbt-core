@@ -246,7 +246,7 @@ class TestSelectionExpansion(DBTIntegrationTest):
         ]
             
         self.list_tests_and_assert(select, exclude, expected, greedy)
-        self.run_tests_and_assert(select, exclude, expected, greedy)
+        self.run_tests_and_assert(select, exclude, expected, greedy=greedy)
 
     @use_profile('postgres')
     def test__postgres__model_a_greedy_exclude_unique_tests(self):
@@ -260,4 +260,4 @@ class TestSelectionExpansion(DBTIntegrationTest):
         ]
             
         self.list_tests_and_assert(select, exclude, expected, greedy)
-        self.run_tests_and_assert(select, exclude, expected, greedy)
+        self.run_tests_and_assert(select, exclude, expected, greedy=greedy)
