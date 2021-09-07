@@ -16,16 +16,10 @@
 
 
 {% macro bq_insert_overwrite(
-    tmp_relation, target_relation, sql, unique_key, partition_by, partitions, dest_columns, tmp_relation_exists, incremental_predicates=none
+    tmp_relation, target_relation, sql, unique_key, partition_by, partitions, dest_columns, tmp_relation_exists, predicates
 ) %}
 
   {% if partitions is not none and partitions != [] %} {# static #}
-
-      {% set predicate -%}
-          {{ partition_by.render(alias='DBT_INTERNAL_DEST') }} in (
-              {{ partitions | join (', ') }}
-          )
-      {%- endset %}
 
       {%- set source_sql -%}
         (
@@ -33,13 +27,9 @@
         )
       {%- endset -%}
 
-      {{ get_insert_overwrite_merge_sql(target_relation, source_sql, dest_columns, [predicate], include_sql_header=true, incremental_predicates=incremental_predicates) }}
+      {{ get_insert_overwrite_merge_sql(target_relation, source_sql, dest_columns, predicates=predicates, include_sql_header=true) }}
 
   {% else %} {# dynamic #}
-
-      {% set predicate -%}
-          {{ partition_by.render(alias='DBT_INTERNAL_DEST') }} in unnest(dbt_partitions_for_replacement)
-      {%- endset %}
 
       {%- set source_sql -%}
       (
@@ -74,7 +64,7 @@
               the sql_header at the materialization-level instead
       #}
       -- 3. run the merge statement
-      {{ get_insert_overwrite_merge_sql(target_relation, source_sql, dest_columns, [predicate], include_sql_header=false, incremental_predicates=incremental_predicates) }};
+      {{ get_insert_overwrite_merge_sql(target_relation, source_sql, dest_columns, predicates, include_sql_header=false) }};
 
       -- 4. clean up the temp table
       drop table if exists {{ tmp_relation }}
@@ -98,7 +88,7 @@
     {% endif %}
 
     {% set build_sql = bq_insert_overwrite(
-        tmp_relation, target_relation, sql, unique_key, partition_by, partitions, dest_columns, on_schema_change, incremental_predicates
+        tmp_relation, target_relation, sql, unique_key, partition_by, partitions, dest_columns, on_schema_change, predicates
     ) %}
 
   {% else %} {# strategy == 'merge' #}
@@ -114,7 +104,7 @@
       {%- endif -%}
     {%- endset -%}
 
-    {% set build_sql = get_merge_sql(target_relation, source_sql, unique_key, dest_columns, incremental_predicates=incremental_predicates) %}
+    {% set build_sql = get_merge_sql(target_relation, source_sql, unique_key, dest_columns, predicates) %}
 
   {% endif %}
 
@@ -138,9 +128,12 @@
   {%- set partition_by = adapter.parse_partition_by(raw_partition_by) -%}
   {%- set partitions = config.get('partitions', none) -%}
   {%- set cluster_by = config.get('cluster_by', none) -%}
-  {% set incremental_predicates = config.get('incremental_predicates', default = None) %}
+  {% set user_predicates = config.get('incremental_predicates', default = None) %}
 
   {% set on_schema_change = incremental_validate_on_schema_change(config.get('on_schema_change'), default='ignore') %}
+
+  {% set predicates = get_incremental_predicates(target_relation, incremental_strategy, unique_key, user_predicates, partitions) %}
+
 
   {{ run_hooks(pre_hooks) }}
 

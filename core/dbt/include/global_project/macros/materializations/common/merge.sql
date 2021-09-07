@@ -5,13 +5,13 @@
 {%- endmacro %}
 
 
-{% macro get_delete_insert_merge_sql(target, source, unique_key, dest_columns, incremental_predicates=none) -%}
-  {{ adapter.dispatch('get_delete_insert_merge_sql')(target, source, unique_key, dest_columns, incremental_predicates) }}
+{% macro get_delete_insert_merge_sql(target, source, unique_key, dest_columns, predicates) -%}
+  {{ adapter.dispatch('get_delete_insert_merge_sql')(target, source, unique_key, dest_columns, predicates) }}
 {%- endmacro %}
 
 
-{% macro get_insert_overwrite_merge_sql(target, source, dest_columns, predicates, include_sql_header=false, incremental_predicates=none) -%}
-  {{ adapter.dispatch('get_insert_overwrite_merge_sql')(target, source, dest_columns, predicates, include_sql_header, incremental_predicates) }}
+{% macro get_insert_overwrite_merge_sql(target, source, dest_columns, predicates, include_sql_header=false) -%}
+  {{ adapter.dispatch('get_insert_overwrite_merge_sql')(target, source, dest_columns, predicates, include_sql_header) }}
 {%- endmacro %}
 
 
@@ -78,14 +78,12 @@
 
 {%- endmacro %}
 
-{% macro default__get_delete_insert_merge_sql(target, source, unique_key, dest_columns, incremental_predicates=none) -%}
-    {{ common_get_delete_insert_merge_sql(target, source, unique_key, dest_columns, incremental_predicates) }}
+{% macro default__get_delete_insert_merge_sql(target, source, unique_key, dest_columns, predicates) -%}
+    {{ common_get_delete_insert_merge_sql(target, source, unique_key, dest_columns, predicates) }}
 {% endmacro %}
 
 
-{% macro default__get_insert_overwrite_merge_sql(target, source, dest_columns, predicates, include_sql_header, incremental_predicates=none) -%}
-    {%- set predicates = [] if predicates is none else [] + predicates -%}
-    {%- set incremental_predicates = [] if incremental_predicates is none else [] + incremental_predicates -%}
+{% macro default__get_insert_overwrite_merge_sql(target, source, dest_columns, predicates, include_sql_header) -%}
     {%- set dest_cols_csv = get_quoted_csv(dest_columns | map(attribute="name")) -%}
     {%- set sql_header = config.get('sql_header', none) -%}
 
@@ -96,12 +94,7 @@
         on FALSE
 
     when not matched by source
-        {% if predicates %} and {{ predicates | join(' and ') }} {% endif %}
-        {% if incremental_predicates %} 
-            {% for condition in incremental_predicates %}
-            and DBT_INTERNAL_DEST.{{ condition.source_col }} {{ condition.expression }} 
-            {% endfor %}
-        {% endif %}        
+        {% if predicates %} and {{ predicates }} {% endif %}      
         then delete
 
     when not matched then insert
