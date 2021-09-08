@@ -3,6 +3,7 @@ extern crate structopt;
 mod calculate;
 mod exceptions;
 mod measure;
+mod plot;
 
 use crate::calculate::Calculation;
 use crate::exceptions::CalculateError;
@@ -35,6 +36,7 @@ enum Opt {
         #[structopt(short)]
         out_dir: PathBuf,
     },
+    Plot
 }
 
 // enables proper useage of exit() in main.
@@ -128,6 +130,13 @@ fn run_app() -> Result<i32, CalculateError> {
                     }
                     Ok(1)
                 }
+            }
+        },
+        // plot subcommand
+        Opt::Plot => {
+            match plot::draw_plot() {
+                Err(_) => Ok(1),
+                Ok(_)  => Ok(0)
             }
         }
     }
