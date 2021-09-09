@@ -37,13 +37,13 @@ def alert_unused_nodes(filtered_unused_nodes, manifest):
     summary_unused_nodes_str = ("\n  - ").join(unused_node_names[:3])
     debug_unused_nodes_str = ("\n  - ").join(unused_node_names)
     summary_msg = (
-        f"\nSome resources were excluded because at least one parent is missing:"
+        f"\nSome tests were excluded because at least one parent is missing:"
         f"\n  - {summary_unused_nodes_str}"
         f"\n  - and {len(unused_node_names) - 3} more"
         f"\nUse the --greedy flag to include them"
     )
     debug_msg = (
-        f"\nSome resources were excluded because at least one parent is missing:"
+        f"\nSome tests were excluded because at least one parent is missing:"
         f"\n  - {debug_unused_nodes_str}"
         f"\nUse the --greedy flag to include them"
     )
