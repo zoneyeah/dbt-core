@@ -389,8 +389,8 @@ class DelayedFileHandler(logbook.RotatingFileHandler, FormatterMixin):
         level=logbook.DEBUG,
         filter=None,
         bubble=True,
-        max_size=10 * 1024 * 1024,  # 10 mb
-        backup_count=5,
+        max_size=dbt.flags.DBT_LOGGER_MAX_SIZE * 1024 * 1024,  # in megabytes
+        backup_count=dbt.flags.DBT_LOGGER_MAX_SIZE,
     ) -> None:
         self.disabled = False
         self._msg_buffer: Optional[List[logbook.LogRecord]] = []
