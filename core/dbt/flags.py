@@ -102,8 +102,8 @@ def set_from_args(args):
     if use_colors_override is not None:
         USE_COLORS = use_colors_override
 
-    DBT_LOGGER_MAX_SIZE = getattr(args, 'dbt_logger_max_size', DBT_LOGGER_MAX_SIZE)
-    DBT_LOGGER_BACKUP_COUNT = getattr(args, 'dbt_logger_backup_count', DBT_LOGGER_BACKUP_COUNT)
+    DBT_LOGGER_MAX_SIZE = getattr(args, 'logger_max_size', DBT_LOGGER_MAX_SIZE)
+    DBT_LOGGER_BACKUP_COUNT = getattr(args, 'logger_backup_count', DBT_LOGGER_BACKUP_COUNT)
 
 
 # initialize everything to the defaults on module load

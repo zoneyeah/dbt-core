@@ -1031,6 +1031,26 @@ def parse_args(args, cls=DBTArgumentParser):
         '''
     )
 
+    p.add_argument(
+        '--logger-max-size',
+        default=10,
+        type=int,
+        dest='logger_max_size',
+        help='''
+        Set the max size of individual log files. Currently defaults to 10mb per file.
+        '''
+    )
+
+    p.add_argument(
+        '--logger-backup-count',
+        default=5,
+        type=int,
+        dest='logger_max_size',
+        help='''
+        Set the max number of individual backup log files generated. Currently defaults to 5 backups.
+        '''
+    )
+
     subs = p.add_subparsers(title="Available sub-commands")
 
     base_subparser = _build_base_subparser()
