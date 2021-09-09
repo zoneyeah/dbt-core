@@ -18,8 +18,8 @@ WRITE_JSON = None
 PARTIAL_PARSE = None
 USE_COLORS = None
 STORE_FAILURES = None
-DBT_LOGGER_MAX_SIZE = None
-DBT_LOGGER_BACKUP_COUNT = None
+LOGGER_MAX_SIZE = None
+LOGGER_BACKUP_COUNT = None
 
 
 def env_set_truthy(key: str) -> Optional[str]:
@@ -58,7 +58,7 @@ MP_CONTEXT = _get_context()
 def reset():
     global STRICT_MODE, FULL_REFRESH, USE_CACHE, WARN_ERROR, TEST_NEW_PARSER, \
         USE_EXPERIMENTAL_PARSER, WRITE_JSON, PARTIAL_PARSE, MP_CONTEXT, USE_COLORS, \
-        STORE_FAILURES, DBT_LOGGER_MAX_SIZE, DBT_LOGGER_BACKUP_COUNT
+        STORE_FAILURES, LOGGER_MAX_SIZE, LOGGER_BACKUP_COUNT
 
     STRICT_MODE = False
     FULL_REFRESH = False
@@ -71,14 +71,14 @@ def reset():
     MP_CONTEXT = _get_context()
     USE_COLORS = True
     STORE_FAILURES = False
-    DBT_LOGGER_MAX_SIZE = 10 # default 10mb
-    DBT_LOGGER_BACKUP_COUNT = 5
+    LOGGER_MAX_SIZE = 10 # default 10mb
+    LOGGER_BACKUP_COUNT = 5
 
 
 def set_from_args(args):
     global STRICT_MODE, FULL_REFRESH, USE_CACHE, WARN_ERROR, TEST_NEW_PARSER, \
         USE_EXPERIMENTAL_PARSER, WRITE_JSON, PARTIAL_PARSE, MP_CONTEXT, USE_COLORS, \
-        STORE_FAILURES, DBT_LOGGER_MAX_SIZE, DBT_LOGGER_BACKUP_COUNT
+        STORE_FAILURES, LOGGER_MAX_SIZE, LOGGER_BACKUP_COUNT
 
     USE_CACHE = getattr(args, 'use_cache', USE_CACHE)
 
@@ -102,8 +102,8 @@ def set_from_args(args):
     if use_colors_override is not None:
         USE_COLORS = use_colors_override
 
-    DBT_LOGGER_MAX_SIZE = getattr(args, 'logger_max_size', DBT_LOGGER_MAX_SIZE)
-    DBT_LOGGER_BACKUP_COUNT = getattr(args, 'logger_backup_count', DBT_LOGGER_BACKUP_COUNT)
+    LOGGER_MAX_SIZE = getattr(args, 'logger_max_size', LOGGER_MAX_SIZE)
+    LOGGER_BACKUP_COUNT = getattr(args, 'logger_backup_count', LOGGER_BACKUP_COUNT)
 
 
 # initialize everything to the defaults on module load
