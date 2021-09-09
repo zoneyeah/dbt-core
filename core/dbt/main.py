@@ -1045,7 +1045,7 @@ def parse_args(args, cls=DBTArgumentParser):
         '--logger-backup-count',
         default=5,
         type=int,
-        dest='logger_max_size',
+        dest='logger_backup_count',
         help='''
         Set the max number of individual backup log files generated. Currently defaults to 5 backups.
         '''
