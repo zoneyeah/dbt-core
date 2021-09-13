@@ -539,6 +539,7 @@ class LogManager(logbook.NestedSetup):
         self._file_handler.set_path(path)
     
     def set_logger_file_configs(self):
+        """"Refreshes the log file configs with newly defined global flags"""
         self._file_handler = DelayedFileHandler(
             max_size=(dbt.flags.LOGGER_MAX_SIZE * 1024 * 1024), 
             backup_count=dbt.flags.LOGGER_BACKUP_COUNT)
