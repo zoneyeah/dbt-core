@@ -12,23 +12,10 @@ PGPORT="${PGPORT:-5432}"
 export PGPORT
 PGHOST="${PGHOST:-localhost}"
 
-function connect_circle() {
-	# try to handle circleci/docker oddness
-	let rc=1
-	while [[ $rc -eq 1 ]]; do
-		nc -z ${PGHOST} ${PGPORT}
-		let rc=$?
-	done
-	if [[ $rc -ne 0 ]]; then
-		echo "Fatal: Could not connect to $PGHOST"
-		exit 1
-	fi
-}
-
-# appveyor doesn't have 'nc', but it also doesn't have these issues
-if [[ -n $CIRCLECI ]]; then
-	connect_circle
-fi
+until psql -h "$PGHOST" -c '\q'; do
+  >&2 echo "Postgres is unavailable - sleeping"
+  sleep 1
+done
 
 createdb dbt
 psql -c "CREATE ROLE root WITH PASSWORD 'password';"
