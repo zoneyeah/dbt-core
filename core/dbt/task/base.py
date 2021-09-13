@@ -68,8 +68,7 @@ class BaseTask(metaclass=ABCMeta):
             log_manager.format_json()
         else:
             log_manager.format_text()
-        if args.logger_max_size != None or args.logger_backup_count != None:
-            log_manager.set_logger_file_configs()
+        log_manager.set_logger_file_configs()
 
     @classmethod
     def from_args(cls, args):
