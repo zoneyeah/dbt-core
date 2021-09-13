@@ -1,0 +1,22 @@
+[
+  {
+    "metric": "median_parse_01_2000_simple_models.json",
+    "regression": false,
+    "data": {
+      "threshold": 1.05,
+      "difference": 1.0056562994543286,
+      "baseline": 45.788152022575,
+      "dev": 46.047143521875
+    }
+  },
+  {
+    "metric": "stddev_parse_01_2000_simple_models.json",
+    "regression": false,
+    "data": {
+      "threshold": 1.2,
+      "difference": 0.059642843168131406,
+      "baseline": 4.533318677939969,
+      "dev": 0.27038001493953434
+    }
+  }
+]
