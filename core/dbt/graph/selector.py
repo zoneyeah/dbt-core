@@ -235,6 +235,8 @@ class NodeSelector(MethodManager):
         #  - If ANY parent is missing, return it separately. We'll keep it around
         #    for later and see if its other parents show up.
         # We use this for INCLUSION.
+        # 
+        # Users can also opt in to inclusive GREEDY mode by passing --greedy
 
         direct_nodes = set(selected)
         indirect_nodes = set()
@@ -285,8 +287,8 @@ class NodeSelector(MethodManager):
 
         if indirect_only:
             filtered_unused_nodes = self.filter_selection(indirect_only)
-            # log anything that didn't make the cut
             if filtered_unused_nodes:
+                # log anything that didn't make the cut
                 alert_unused_nodes(filtered_unused_nodes, self.manifest)
 
         return filtered_nodes
