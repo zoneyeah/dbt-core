@@ -537,6 +537,11 @@ class LogManager(logbook.NestedSetup):
 
     def set_path(self, path):
         self._file_handler.set_path(path)
+    
+    def set_logger_file_configs(self):
+        self._file_handler = DelayedFileHandler(max_size=(dbt.flags.LOGGER_MAX_SIZE * 1024 * 1024), backup_count=dbt.flags.LOGGER_BACKUP_COUNT)  # in megabytes
+        print(dbt.flags.LOGGER_MAX_SIZE)
+        print(dbt.flags.LOGGER_BACKUP_COUNT)
 
     def initialized(self):
         return self._file_handler.initialized
