@@ -28,29 +28,22 @@ def alert_non_existence(raw_spec, nodes):
             f" any nodes"
         )
 
-def alert_unused_nodes(filtered_unused_nodes, manifest):
-    unused_node_names = []
-    for unique_id in filtered_unused_nodes:
-        name = manifest.nodes[unique_id].name
-        unused_node_names.append(name)
-
-    summary_unused_nodes_str = ("\n  - ").join(unused_node_names[:3])
-    debug_unused_nodes_str = ("\n  - ").join(unused_node_names)
+def alert_unused_nodes(raw_spec, node_names):
+    summary_nodes_str = ("\n  - ").join(node_names[:3])
+    debug_nodes_str = ("\n  - ").join(node_names)
+    and_more_str = f"\n  - and {len(node_names) - 3} more" if len(node_names) > 4 else ""
     summary_msg = (
-        f"\nSome tests were excluded because at least one parent is missing:"
-        f"\n  - {summary_unused_nodes_str}"
-        f"\n  - and {len(unused_node_names) - 3} more"
-        f"\nUse the --greedy flag to include them"
+        f"\nSome tests were excluded because at least one parent is not selected. "
+        f"Use the --greedy flag to include them."
+        f"\n  - {summary_nodes_str}{and_more_str}"
     )
-    debug_msg = (
-        f"\nSome tests were excluded because at least one parent is missing:"
-        f"\n  - {debug_unused_nodes_str}"
-        f"\nUse the --greedy flag to include them"
-    )
-    if len(unused_node_names) <= 4:
-        summary_msg = debug_msg
     logger.info(summary_msg)
-    logger.debug(debug_msg)
+    if len(node_names) > 4:
+        debug_msg = (
+            f"Full list of tests that were excluded:"
+            f"\n  - {debug_nodes_str}"
+        )
+        logger.debug(debug_msg)
 
 def can_select_indirectly(node):
     """If a node is not selected itself, but its parent(s) are, it may qualify
@@ -275,9 +268,7 @@ class NodeSelector(MethodManager):
 
             - node selection. Based on the include/exclude sets, the set
                 of matched unique IDs is returned
-                - expand the graph at each leaf node, before combination
-                    - selectors might override this. for example, this is where
-                        tests are added
+                - includes direct + indirect selection (for tests)
             - filtering:
                 - selectors can filter the nodes after all of them have been
                   selected
@@ -287,9 +278,13 @@ class NodeSelector(MethodManager):
 
         if indirect_only:
             filtered_unused_nodes = self.filter_selection(indirect_only)
-            if filtered_unused_nodes:
+            if filtered_unused_nodes and spec.greedy_warning:
                 # log anything that didn't make the cut
-                alert_unused_nodes(filtered_unused_nodes, self.manifest)
+                unused_node_names = []
+                for unique_id in filtered_unused_nodes:
+                    name = self.manifest.nodes[unique_id].name
+                    unused_node_names.append(name)
+                alert_unused_nodes(spec, unused_node_names)
 
         return filtered_nodes
 

@@ -124,11 +124,11 @@ class SelectionCriteria:
             parents_depth=parents_depth,
             children=bool(dct.get('children')),
             children_depth=children_depth,
-            greedy=greedy
+            greedy=(greedy or bool(dct.get('greedy')))
         )
 
     @classmethod
-    def dict_from_single_spec(cls, raw: str, greedy: bool = False):
+    def dict_from_single_spec(cls, raw: str):
         result = RAW_SELECTOR_PATTERN.match(raw)
         if result is None:
             return {'error': 'Invalid selector spec'}
@@ -145,6 +145,8 @@ class SelectionCriteria:
             dct['parents'] = bool(dct.get('parents'))
         if 'children' in dct:
             dct['children'] = bool(dct.get('children'))
+        if 'greedy' in dct:
+            dct['greedy'] = bool(dct.get('greedy'))
         return dct
 
     @classmethod
@@ -162,10 +164,12 @@ class BaseSelectionGroup(Iterable[SelectionSpec], metaclass=ABCMeta):
         self,
         components: Iterable[SelectionSpec],
         expect_exists: bool = False,
+        greedy_warning: bool = True,
         raw: Any = None,
     ):
         self.components: List[SelectionSpec] = list(components)
         self.expect_exists = expect_exists
+        self.greedy_warning = greedy_warning
         self.raw = raw
 
     def __iter__(self) -> Iterator[SelectionSpec]:

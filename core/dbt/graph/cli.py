@@ -181,7 +181,7 @@ def parse_union_definition(definition: Dict[str, Any]) -> SelectionSpec:
     union_def_parts = _get_list_dicts(definition, 'union')
     include, exclude = _parse_include_exclude_subdefs(union_def_parts)
 
-    union = SelectionUnion(components=include)
+    union = SelectionUnion(components=include, greedy_warning=False)
 
     if exclude is None:
         union.raw = definition
@@ -189,7 +189,8 @@ def parse_union_definition(definition: Dict[str, Any]) -> SelectionSpec:
     else:
         return SelectionDifference(
             components=[union, exclude],
-            raw=definition
+            raw=definition,
+            greedy_warning=False
         )
 
 
@@ -198,7 +199,7 @@ def parse_intersection_definition(
 ) -> SelectionSpec:
     intersection_def_parts = _get_list_dicts(definition, 'intersection')
     include, exclude = _parse_include_exclude_subdefs(intersection_def_parts)
-    intersection = SelectionIntersection(components=include)
+    intersection = SelectionIntersection(components=include, greedy_warning=False)
 
     if exclude is None:
         intersection.raw = definition
@@ -206,7 +207,8 @@ def parse_intersection_definition(
     else:
         return SelectionDifference(
             components=[intersection, exclude],
-            raw=definition
+            raw=definition,
+            greedy_warning=False
         )
 
 
@@ -238,9 +240,9 @@ def parse_dict_definition(definition: Dict[str, Any]) -> SelectionSpec:
     # if key isn't a valid method name, this will raise
     base = SelectionCriteria.selection_criteria_from_dict(definition, dct)
     if diff_arg is None:
-        return base
+        return SelectionUnion(components=[base], greedy_warning=False)
     else:
-        return SelectionDifference(components=[base, diff_arg])
+        return SelectionDifference(components=[base, diff_arg], greedy_warning=False)
 
 
 def parse_from_definition(
@@ -256,7 +258,8 @@ def parse_from_definition(
             f"in a root level selector definition; found {keys}."
         )
     if isinstance(definition, str):
-        return SelectionCriteria.from_single_spec(definition)
+        base = SelectionCriteria.from_single_spec(definition)
+        return SelectionUnion(components=[base], greedy_warning=False)
     elif 'union' in definition:
         return parse_union_definition(definition)
     elif 'intersection' in definition:
