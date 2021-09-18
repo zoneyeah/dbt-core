@@ -28,6 +28,7 @@ def alert_non_existence(raw_spec, nodes):
             f" any nodes"
         )
 
+
 def alert_unused_nodes(raw_spec, node_names):
     summary_nodes_str = ("\n  - ").join(node_names[:3])
     debug_nodes_str = ("\n  - ").join(node_names)
@@ -44,6 +45,7 @@ def alert_unused_nodes(raw_spec, node_names):
             f"\n  - {debug_nodes_str}"
         )
         logger.debug(debug_msg)
+
 
 def can_select_indirectly(node):
     """If a node is not selected itself, but its parent(s) are, it may qualify
@@ -228,8 +230,8 @@ class NodeSelector(MethodManager):
         #  - If ANY parent is missing, return it separately. We'll keep it around
         #    for later and see if its other parents show up.
         # We use this for INCLUSION.
-        # 
-        # Users can also opt in to inclusive GREEDY mode by passing --greedy
+        # Users can also opt in to inclusive GREEDY mode by passing --greedy flag,
+        # or by specifying `greedy: true` in a yaml selector
 
         direct_nodes = set(selected)
         indirect_nodes = set()
