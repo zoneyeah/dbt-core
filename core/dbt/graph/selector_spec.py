@@ -67,6 +67,7 @@ class SelectionCriteria:
     children: bool
     children_depth: Optional[int]
     greedy: bool = False
+    greedy_warning: bool = False # do not raise warning for yaml selectors
 
     def __post_init__(self):
         if self.children and self.childrens_parents:
@@ -124,7 +125,7 @@ class SelectionCriteria:
             parents_depth=parents_depth,
             children=bool(dct.get('children')),
             children_depth=children_depth,
-            greedy=(greedy or bool(dct.get('greedy')))
+            greedy=(greedy or bool(dct.get('greedy'))),
         )
 
     @classmethod

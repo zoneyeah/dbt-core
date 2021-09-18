@@ -240,7 +240,7 @@ def parse_dict_definition(definition: Dict[str, Any]) -> SelectionSpec:
     # if key isn't a valid method name, this will raise
     base = SelectionCriteria.selection_criteria_from_dict(definition, dct)
     if diff_arg is None:
-        return SelectionUnion(components=[base], greedy_warning=False)
+        return base
     else:
         return SelectionDifference(components=[base, diff_arg], greedy_warning=False)
 
@@ -258,8 +258,7 @@ def parse_from_definition(
             f"in a root level selector definition; found {keys}."
         )
     if isinstance(definition, str):
-        base = SelectionCriteria.from_single_spec(definition)
-        return SelectionUnion(components=[base], greedy_warning=False)
+        return SelectionCriteria.from_single_spec(definition)
     elif 'union' in definition:
         return parse_union_definition(definition)
     elif 'intersection' in definition:
