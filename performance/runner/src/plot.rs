@@ -18,17 +18,23 @@ struct Graph {
 }
 
 impl Graph {
+    const DEFAULT_MIN_Y: f32 = -15.0;
+    const DEFAULT_MAX_Y: f32 = 15.0;
+    const DEFAULT_X_PADDING: f32 = 86400.0;
+
     fn min_x(&self) -> f32 {
-        self.data.clone().into_iter().map(|(x, _)| x).reduce(f32::min).unwrap()
+        self.data.clone().into_iter().map(|(x, _)| x).reduce(f32::min).unwrap() - Graph::DEFAULT_X_PADDING
     }
     fn min_y(&self) -> f32 {
-        self.data.clone().into_iter().map(|(_, y)| y).reduce(f32::min).unwrap()
+        let min_data_point = self.data.clone().into_iter().map(|(_, y)| y).reduce(f32::min).unwrap();
+        f32::min(Graph::DEFAULT_MIN_Y, min_data_point)
     }
     fn max_x(&self) -> f32 {
-        self.data.clone().into_iter().map(|(x, _)| x).reduce(f32::max).unwrap()
+        self.data.clone().into_iter().map(|(x, _)| x).reduce(f32::max).unwrap() + Graph::DEFAULT_X_PADDING
     }
     fn max_y(&self) -> f32 {
-        self.data.clone().into_iter().map(|(_, y)| y).reduce(f32::max).unwrap()
+        let max_data_point = self.data.clone().into_iter().map(|(_, y)| y).reduce(f32::max).unwrap();
+        f32::max(Graph::DEFAULT_MAX_Y, max_data_point)
     }
 }
 
