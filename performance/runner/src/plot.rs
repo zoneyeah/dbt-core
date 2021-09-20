@@ -4,71 +4,107 @@ use crate::exceptions::{
     PlotError,
 };
 use chrono::prelude::*;
+use itertools::Itertools;
 use plotters::prelude::*;
+use std::cmp::Ordering;
 use std::fs;
 use std::fs::DirEntry;
 use std::path::{Path, PathBuf};
 
+
+struct Graph {
+    title: String,
+    data: Vec<(f32, f32)>
+}
+
+impl Graph {
+    fn min_x(&self) -> f32 {
+        self.data.clone().into_iter().map(|(x, _)| x).reduce(f32::min).unwrap()
+    }
+    fn min_y(&self) -> f32 {
+        self.data.clone().into_iter().map(|(_, y)| y).reduce(f32::min).unwrap()
+    }
+    fn max_x(&self) -> f32 {
+        self.data.clone().into_iter().map(|(x, _)| x).reduce(f32::max).unwrap()
+    }
+    fn max_y(&self) -> f32 {
+        self.data.clone().into_iter().map(|(_, y)| y).reduce(f32::max).unwrap()
+    }
+}
+
 pub fn draw_plot() -> Result<(), PlotError> {
     // TODO `as` type coersion sucks. swap it out for something safer.
-    let ts_diff: Vec<(f32, f32)> = read_data(Path::new("plots/raw_data/"))?
+    let mut sorted_data: Vec<(NaiveDateTime, Calculation)> = read_data(Path::new("plots/raw_data/"))?;
+    sorted_data.sort_by(|(ts_x, x), (ts_y, y)| {
+        // sort by calculation type, then by timestamp
+        match (&x.metric).cmp(&y.metric) {
+            Ordering::Equal => (&ts_x).cmp(&ts_y),
+            x => x
+        }
+    });
+    
+    let data_lines: Vec<Graph> = sorted_data
         .into_iter()
-        .map(|(ts, calc)| (ts.timestamp() as f32, calc.data.difference as f32))
+        .group_by(|(_, calc)| calc.metric.clone())
+        .into_iter()
+        .map(|(title, line)| {
+            Graph {
+                title: title.to_owned(),
+                data: line
+                    .map(|(ts, calc)| (ts.timestamp() as f32, calc.data.difference as f32))
+                    .collect()
+            }
+        })
         .collect();
 
-    let min_x = ts_diff.clone().into_iter().map(|(ts, _)| ts).reduce(f32::min).unwrap();
-    let max_x = ts_diff.clone().into_iter().map(|(ts, _)| ts).reduce(f32::max).unwrap();
+    for graph in data_lines {
+        let title = format!("plots/{}.png", graph.title);
+        let root = BitMapBackend::new(&title, (1600, 1200)).into_drawing_area();
+        root.fill(&WHITE)
+            .or_else(|e| Err(PlotError::ChartErr(Box::new(e))))?;
+        let root = root.margin(10, 10, 10, 10);
+        // After this point, we should be able to draw construct a chart context
+        let mut chart = ChartBuilder::on(&root)
+            // Set the caption of the chart
+            .caption(&graph.title, ("sans-serif", 40).into_font())
+            // Set the size of the label region
+            .x_label_area_size(20)
+            .y_label_area_size(40)
+            // Finally attach a coordinate on the drawing area and make a chart context
+            .build_cartesian_2d(graph.min_x()..graph.max_x(), graph.min_y()..graph.max_y())
+            .or_else(|e| Err(PlotError::ChartErr(Box::new(e))))?;
 
-    let min_y = ts_diff.clone().into_iter().map(|(_, data)| data).reduce(f32::min).unwrap();
-    let max_y = ts_diff.clone().into_iter().map(|(_, data)| data).reduce(f32::max).unwrap();
+        // Then we can draw a mesh
+        chart
+            .configure_mesh()
+            // We can customize the maximum number of labels allowed for each axis
+            .x_labels(5)
+            .y_labels(5)
+            // We can also change the format of the label text
+            .y_label_formatter(&|x| format!("{:.3}", x))
+            .draw()
+            .or_else(|e| Err(PlotError::ChartErr(Box::new(e))))?;
 
-    // TODO debugging
-    println!("data: {:?}", ts_diff);
-
-    let root = BitMapBackend::new("plots/5.png", (1600, 1200)).into_drawing_area();
-    root.fill(&WHITE)
+        // And we can draw something in the drawing area
+        chart.draw_series(LineSeries::new(
+            graph.data.clone(),
+            &RED,
+        ))
         .or_else(|e| Err(PlotError::ChartErr(Box::new(e))))?;
-    let root = root.margin(10, 10, 10, 10);
-    // After this point, we should be able to draw construct a chart context
-    let mut chart = ChartBuilder::on(&root)
-        // Set the caption of the chart
-        .caption("This is our first plot", ("sans-serif", 40).into_font())
-        // Set the size of the label region
-        .x_label_area_size(20)
-        .y_label_area_size(40)
-        // Finally attach a coordinate on the drawing area and make a chart context
-        .build_cartesian_2d(min_x..max_x, min_y..max_y)
+        // Similarly, we can draw point series
+        chart.draw_series(PointSeries::of_element(
+            graph.data.clone(),
+            5,
+            &RED,
+            &|c, s, st| {
+                return EmptyElement::at(c)    // We want to construct a composed element on-the-fly
+                + Circle::new((0,0),s,st.filled()) // At this point, the new pixel coordinate is established
+                + Text::new(format!("{:?}", c), (10, 0), ("sans-serif", 20).into_font());
+            },
+        ))
         .or_else(|e| Err(PlotError::ChartErr(Box::new(e))))?;
-
-    // Then we can draw a mesh
-    chart
-        .configure_mesh()
-        // We can customize the maximum number of labels allowed for each axis
-        .x_labels(5)
-        .y_labels(5)
-        // We can also change the format of the label text
-        .y_label_formatter(&|x| format!("{:.3}", x))
-        .draw()
-        .or_else(|e| Err(PlotError::ChartErr(Box::new(e))))?;
-
-    // And we can draw something in the drawing area
-    chart.draw_series(LineSeries::new(
-        ts_diff.clone(),
-        &RED,
-    ))
-    .or_else(|e| Err(PlotError::ChartErr(Box::new(e))))?;
-    // Similarly, we can draw point series
-    chart.draw_series(PointSeries::of_element(
-        ts_diff.clone(),
-        5,
-        &RED,
-        &|c, s, st| {
-            return EmptyElement::at(c)    // We want to construct a composed element on-the-fly
-            + Circle::new((0,0),s,st.filled()) // At this point, the new pixel coordinate is established
-            + Text::new(format!("{:?}", c), (10, 0), ("sans-serif", 20).into_font());
-        },
-    ))
-    .or_else(|e| Err(PlotError::ChartErr(Box::new(e))))?;
+    }
+    
     Ok(())
 
     // let root = BitMapBackend::new("plots/0.png", (640, 480)).into_drawing_area();
