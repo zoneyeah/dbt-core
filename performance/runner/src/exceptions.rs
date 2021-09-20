@@ -42,6 +42,15 @@ pub enum CalculateError {
     BadBranchNameErr(String, String),
 }
 
+// Parent exception type for the different sub commands of the runner app.
+#[derive(Debug, Error)]
+pub enum RunnerError {
+    #[error("CalculateErr: {}", .0)]
+    CalculateErr(CalculateError),
+    #[error("PlotErr: {}", .0)]
+    PlotErr(Box<dyn std::error::Error>),
+}
+
 // Tests for exceptions
 #[cfg(test)]
 mod tests {

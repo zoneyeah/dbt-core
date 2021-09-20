@@ -5,11 +5,16 @@ mod exceptions;
 mod measure;
 mod plot;
 
-use crate::calculate::Calculation;
-use crate::exceptions::CalculateError;
 use chrono::offset::Utc;
-use std::fs::metadata;
-use std::fs::File;
+use crate::calculate::Calculation;
+use crate::exceptions:: {
+    CalculateError,
+    RunnerError,
+};
+use std::fs::{
+    File,
+    metadata
+};
 use std::io::Write;
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -44,7 +49,7 @@ enum Opt {
 //
 // This is where all the printing should happen. Exiting happens
 // in main, and module functions should only return values.
-fn run_app() -> Result<i32, CalculateError> {
+fn run_app() -> Result<i32, RunnerError> {
     // match what the user inputs from the cli
     match Opt::from_args() {
         // measure subcommand
@@ -55,7 +60,8 @@ fn run_app() -> Result<i32, CalculateError> {
             // if there are any nonzero exit codes from the hyperfine runs,
             // return the first one. otherwise return zero.
             measure::measure(&projects_dir, &branch_name)
-                .or_else(|e| Err(CalculateError::CalculateIOError(e)))?
+                .or_else(|e| Err(CalculateError::CalculateIOError(e)))
+                .or_else(|e| Err(RunnerError::CalculateErr(e)))?
                 .iter()
                 .map(|status| status.code())
                 .flatten()
@@ -82,7 +88,8 @@ fn run_app() -> Result<i32, CalculateError> {
             }
 
             // get all the calculations or gracefully show the user an exception
-            let calculations = calculate::regressions(&results_dir)?;
+            let calculations = calculate::regressions(&results_dir)
+                .or_else(|e| Err(RunnerError::CalculateErr(e)))?;
 
             // print all calculations to stdout so they can be easily debugged
             // via CI.
@@ -132,12 +139,13 @@ fn run_app() -> Result<i32, CalculateError> {
                 }
             }
         },
+
         // plot subcommand
         Opt::Plot => {
-            match plot::draw_plot() {
-                Err(_) => Ok(1),
-                Ok(_)  => Ok(0)
-            }
+            plot::draw_plot()
+                .or_else(|e| Err(RunnerError::PlotErr(e)))?;
+
+            Ok(0)
         }
     }
 }
