@@ -44,11 +44,24 @@ pub enum CalculateError {
 
 // Parent exception type for the different sub commands of the runner app.
 #[derive(Debug, Error)]
+pub enum PlotError {
+    #[error("{}", .0)]
+    PlotIOErr(IOError),
+    #[error("FilenameNotTimestampErr: {}", .0)]
+    FilenameNotTimestampErr(String),
+    #[error("BadJSONErr: JSON in file cannot be deserialized as expected.\nFilepath: {}\nOriginating Exception: {}", .0.to_string_lossy().into_owned(), .1.as_ref().map_or("None".to_owned(), |e| format!("{}", e)))]
+    BadJSONErr(PathBuf, Option<serde_json::Error>),
+    #[error("ChartErr: {}", .0)]
+    ChartErr(Box<dyn std::error::Error>),
+}
+
+// Parent exception type for the different sub commands of the runner app.
+#[derive(Debug, Error)]
 pub enum RunnerError {
     #[error("CalculateErr: {}", .0)]
     CalculateErr(CalculateError),
     #[error("PlotErr: {}", .0)]
-    PlotErr(Box<dyn std::error::Error>),
+    PlotErr(PlotError),
 }
 
 // Tests for exceptions
