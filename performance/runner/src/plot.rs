@@ -69,42 +69,39 @@ pub fn draw_plot() -> Result<(), PlotError> {
         root.fill(&WHITE)
             .or_else(|e| Err(PlotError::ChartErr(Box::new(e))))?;
         let root = root.margin(10, 10, 10, 10);
-        // After this point, we should be able to draw construct a chart context
+
+        // build chart foundation
         let mut chart = ChartBuilder::on(&root)
-            // Set the caption of the chart
             .caption(&graph.title, ("sans-serif", 40).into_font())
-            // Set the size of the label region
             .x_label_area_size(20)
             .y_label_area_size(40)
-            // Finally attach a coordinate on the drawing area and make a chart context
             .build_cartesian_2d(graph.min_x()..graph.max_x(), graph.min_y()..graph.max_y())
             .or_else(|e| Err(PlotError::ChartErr(Box::new(e))))?;
 
-        // Then we can draw a mesh
+        // Draw Mesh
         chart
             .configure_mesh()
-            // We can customize the maximum number of labels allowed for each axis
             .x_labels(5)
             .y_labels(5)
-            // We can also change the format of the label text
             .y_label_formatter(&|x| format!("{:.3}", x))
             .draw()
             .or_else(|e| Err(PlotError::ChartErr(Box::new(e))))?;
 
-        // And we can draw something in the drawing area
+        // Draw Line
         chart.draw_series(LineSeries::new(
             graph.data.clone(),
             &RED,
         ))
         .or_else(|e| Err(PlotError::ChartErr(Box::new(e))))?;
-        // Similarly, we can draw point series
+        
+        // Draw Points on Line
         chart.draw_series(PointSeries::of_element(
             graph.data.clone(),
             5,
             &RED,
             &|c, s, st| {
-                return EmptyElement::at(c)    // We want to construct a composed element on-the-fly
-                + Circle::new((0,0),s,st.filled()) // At this point, the new pixel coordinate is established
+                return EmptyElement::at(c)
+                + Circle::new((0,0),s,st.filled())
                 + Text::new(format!("{:?}", c), (10, 0), ("sans-serif", 20).into_font());
             },
         ))
@@ -112,37 +109,6 @@ pub fn draw_plot() -> Result<(), PlotError> {
     }
     
     Ok(())
-
-    // let root = BitMapBackend::new("plots/0.png", (640, 480)).into_drawing_area();
-    // root.fill(&WHITE)
-    //     .or_else(|e| Err(PlotError::ChartErr(Box::new(e))))?;
-    // let mut chart = ChartBuilder::on(&root)
-    //     .caption("y=x^2", ("sans-serif", 50).into_font())
-    //     .margin(5)
-    //     .x_label_area_size(30)
-    //     .y_label_area_size(30)
-    //     .build_cartesian_2d(-1f32..1f32, -0.1f32..1f32)
-    //     .or_else(|e| Err(PlotError::ChartErr(Box::new(e))))?;
-
-    // chart.configure_mesh().draw()
-    //     .or_else(|e| Err(PlotError::ChartErr(Box::new(e))))?;
-
-    // chart
-    //     .draw_series(LineSeries::new(
-    //         ts_diff,
-    //         &RED,
-    //     ))
-    //     .or_else(|e| Err(PlotError::ChartErr(Box::new(e))))?;
-    //     //.legend(|(x, y)| PathElement::new(vec![(x, y), (x + 20, y)], &RED));
-
-    // chart
-    //     .configure_series_labels()
-    //     .background_style(&WHITE.mix(0.8))
-    //     .border_style(&BLACK)
-    //     .draw()
-    //     .or_else(|e| Err(PlotError::ChartErr(Box::new(e))))?;
-
-    // Ok(())
 }
 
 fn read_data(results_directory: &Path) -> Result<Vec<(NaiveDateTime, Calculation)>, PlotError> {
