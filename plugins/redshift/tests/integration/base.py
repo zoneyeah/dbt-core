@@ -115,7 +115,7 @@ def _pytest_get_test_root():
         path_parts.append(tail)
     path_parts.reverse()
     # dbt tests are all of the form 'test/integration/XXX_suite_name'
-    target = os.path.join(*path_parts[:3])
+    target = os.path.join(*path_parts[:5])  # TODO: try to not hard code this
     return os.path.join(relative_to, target)
 
 
@@ -380,7 +380,6 @@ class DBTIntegrationTest(unittest.TestCase):
         self.test_root_dir = self._generate_test_root_dir()
 
         os.chdir(self.test_root_dir)
-        breakpoint()
         try:
             self._symlink_test_folders()
         except Exception as exc:
@@ -439,7 +438,6 @@ class DBTIntegrationTest(unittest.TestCase):
         if not os.path.exists(self.test_root_dir):
             os.makedirs(self.test_root_dir)
 
-        flags.PROFILES_DIR = self.test_root_dir
         profiles_path = os.path.join(self.test_root_dir, 'profiles.yml')
         with open(profiles_path, 'w') as f:
             yaml.safe_dump(profile_config, f, default_flow_style=True)
@@ -624,7 +622,6 @@ class DBTIntegrationTest(unittest.TestCase):
         return dbt.handle_and_check(final_args)
 
     def run_sql_file(self, path, kwargs=None):
-        breakpoint()
         with open(path, 'r') as f:
             statements = f.read().split(";")
             for statement in statements:
