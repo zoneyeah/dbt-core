@@ -5,16 +5,10 @@ mod exceptions;
 mod measure;
 mod plot;
 
-use chrono::offset::Utc;
 use crate::calculate::Calculation;
-use crate::exceptions:: {
-    CalculateError,
-    RunnerError,
-};
-use std::fs::{
-    File,
-    metadata
-};
+use crate::exceptions::{CalculateError, RunnerError};
+use chrono::offset::Utc;
+use std::fs::{metadata, File};
 use std::io::Write;
 use std::path::PathBuf;
 use structopt::StructOpt;
@@ -41,7 +35,7 @@ enum Opt {
         #[structopt(short)]
         out_dir: PathBuf,
     },
-    Plot
+    Plot,
 }
 
 // enables proper useage of exit() in main.
@@ -138,12 +132,11 @@ fn run_app() -> Result<i32, RunnerError> {
                     Ok(1)
                 }
             }
-        },
+        }
 
         // plot subcommand
         Opt::Plot => {
-            plot::draw_plot()
-                .or_else(|e| Err(RunnerError::PlotErr(e)))?;
+            plot::draw_plot().or_else(|e| Err(RunnerError::PlotErr(e)))?;
 
             Ok(0)
         }
