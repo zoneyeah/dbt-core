@@ -62,14 +62,6 @@ class TestAdapterMacroDeprecation(BaseTestDeprecations):
         exc_str = ' '.join(str(exc.exception).split())  # flatten all whitespace
         assert 'The "adapter_macro" macro has been deprecated' in exc_str
 
-    @use_profile('redshift')
-    def test_redshift_adapter_macro(self):
-        self.assertEqual(deprecations.active_deprecations, set())
-        # pick up the postgres macro
-        self.run_dbt()
-        expected = {'adapter-macro'}
-        self.assertEqual(expected, deprecations.active_deprecations)
-        
     @use_profile('bigquery')
     def test_bigquery_adapter_macro(self):
         self.assertEqual(deprecations.active_deprecations, set())
@@ -106,15 +98,6 @@ class TestAdapterMacroDeprecationPackages(BaseTestDeprecations):
             self.run_dbt(['--warn-error', 'run'])
         exc_str = ' '.join(str(exc.exception).split())  # flatten all whitespace
         assert 'The "adapter_macro" macro has been deprecated' in exc_str
-
-    @use_profile('redshift')
-    def test_redshift_adapter_macro_pkg(self):
-        self.assertEqual(deprecations.active_deprecations, set())
-        # pick up the postgres macro
-        self.assertEqual(deprecations.active_deprecations, set())
-        self.run_dbt()
-        expected = {'adapter-macro'}
-        self.assertEqual(expected, deprecations.active_deprecations)
 
     @use_profile('bigquery')
     def test_bigquery_adapter_macro_pkg(self):
