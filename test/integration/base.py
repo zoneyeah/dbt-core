@@ -380,7 +380,6 @@ class DBTIntegrationTest(unittest.TestCase):
         self.test_root_dir = self._generate_test_root_dir()
 
         os.chdir(self.test_root_dir)
-        breakpoint()
         try:
             self._symlink_test_folders()
         except Exception as exc:
@@ -624,7 +623,6 @@ class DBTIntegrationTest(unittest.TestCase):
         return dbt.handle_and_check(final_args)
 
     def run_sql_file(self, path, kwargs=None):
-        breakpoint()
         with open(path, 'r') as f:
             statements = f.read().split(";")
             for statement in statements:
