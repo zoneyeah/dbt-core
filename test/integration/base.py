@@ -17,6 +17,7 @@ import yaml
 from unittest.mock import patch
 
 import dbt.main as dbt
+from dbt import flags
 from dbt.deprecations import reset_deprecations
 from dbt.adapters.factory import get_adapter, reset_adapters, register_adapter
 from dbt.clients.jinja import template_cache
