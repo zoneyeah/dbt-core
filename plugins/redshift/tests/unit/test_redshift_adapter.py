@@ -5,16 +5,12 @@ from unittest.mock import Mock
 import agate
 import boto3
 
-import dbt.adapters  # noqa
-import dbt.flags as flags
-
 from dbt.adapters.redshift import (
     RedshiftAdapter,
     Plugin as RedshiftPlugin,
 )
 from dbt.clients import agate_helper
 from dbt.exceptions import FailedToConnectException
-from dbt.logger import GLOBAL_LOGGER as logger  # noqa
 
 from .utils import config_from_parts_or_dicts, mock_connection, TestAdapterConversions, inject_adapter
 
