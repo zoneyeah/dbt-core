@@ -230,6 +230,7 @@ class UserConfig(ExtensibleDbtClassMixin, Replaceable, UserConfigContract):
     use_colors: Optional[bool] = None
     partial_parse: Optional[bool] = None
     printer_width: Optional[int] = None
+    #TODO: add the yaml config options here
 
     def set_values(self, cookie_dir):
         if self.send_anonymous_usage_stats:
