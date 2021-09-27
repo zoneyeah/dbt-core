@@ -1,5 +1,8 @@
 ## dbt 0.21.0 (Release TBD)
 
+## dbt 0.21.0rc2 (September 27, 2021)
+
+
 ### Fixes
 - Fix batching for large seeds on Snowflake ([#3941](https://github.com/dbt-labs/dbt/issues/3941), [#3942](https://github.com/dbt-labs/dbt/pull/3942))
 - Avoid infinite recursion in `state:modified.macros` check ([#3904](https://github.com/dbt-labs/dbt/issues/3904), [#3957](https://github.com/dbt-labs/dbt/pull/3957))
