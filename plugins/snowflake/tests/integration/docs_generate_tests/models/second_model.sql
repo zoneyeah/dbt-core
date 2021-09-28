@@ -1,7 +1,7 @@
 {{
     config(
         materialized='view',
-        schema='test',
+        schema='TEST',
     )
 }}
 

@@ -4,7 +4,7 @@ from dbt.adapters.factory import FACTORY
 class TestBaseCaching(DBTIntegrationTest):
     @property
     def schema(self):
-        return "caching_038"
+        return "caching"
 
     @property
     def project_config(self):
@@ -39,8 +39,8 @@ class TestCachingLowercaseModel(TestBaseCaching):
     def models(self):
         return "models"
 
-    @use_profile('postgres')
-    def test_postgres_cache(self):
+    @use_profile('snowflake')
+    def test_snowflake_cache(self):
         self.cache_run()
 
 class TestCachingUppercaseModel(TestBaseCaching):
@@ -48,6 +48,6 @@ class TestCachingUppercaseModel(TestBaseCaching):
     def models(self):
         return "shouting_models"
 
-    @use_profile('postgres')
-    def test_postgres_cache(self):
+    @use_profile('snowflake')
+    def test_snowflake_cache(self):
         self.cache_run()

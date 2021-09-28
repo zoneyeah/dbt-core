@@ -1,16 +1,14 @@
-from test.integration.base import DBTIntegrationTest, use_profile
+from tests.integration.base import DBTIntegrationTest, use_profile
 import copy
 import json
 import os
 import shutil
 
-import pytest
-
 
 class TestDeferState(DBTIntegrationTest):
     @property
     def schema(self):
-        return "defer_state_062"
+        return "defer_state"
 
     @property
     def models(self):
@@ -35,6 +33,7 @@ class TestDeferState(DBTIntegrationTest):
     def get_profile(self, adapter_type):
         if self.other_schema is None:
             self.other_schema = self.unique_schema() + '_other'
+            self.other_schema = self.other_schema.upper()
         profile = super().get_profile(adapter_type)
         default_name = profile['test']['target']
         profile['test']['outputs']['otherschema'] = copy.deepcopy(profile['test']['outputs'][default_name])
@@ -148,30 +147,6 @@ class TestDeferState(DBTIntegrationTest):
         assert self.other_schema not in results[0].node.compiled_sql
         assert self.unique_schema() in results[0].node.compiled_sql
 
-    @use_profile('postgres')
-    def test_postgres_state_changetarget(self):
-        self.run_and_defer()
-        # these should work without --defer!
-        self.run_dbt(['snapshot'])
-        # make sure these commands don't work with --defer
-        with pytest.raises(SystemExit):
-            self.run_dbt(['seed', '--defer'])
-
-        with pytest.raises(SystemExit):
-            self.run_dbt(['snapshot', '--defer'])
-
-    @use_profile('postgres')
-    def test_postgres_state_changedir(self):
-        self.run_switchdirs_defer()
-
-    @use_profile('postgres')
-    def test_postgres_state_defer_iffnotexists(self):
-        self.run_defer_iff_not_exists()
-
-    @use_profile('postgres')
-    def test_postgres_state_defer_deleted_upstream(self):
-        self.run_defer_deleted_upstream()
-
-    @use_profile('bigquery')
-    def test_bigquery_state_changetarget(self):
+    @use_profile('snowflake')
+    def test_snowflake_state_changetarget(self):
         self.run_and_defer()

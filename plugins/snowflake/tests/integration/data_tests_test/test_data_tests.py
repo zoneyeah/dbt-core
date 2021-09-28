@@ -17,7 +17,7 @@ class TestDataTests(DBTIntegrationTest):
 
     @property
     def schema(self):
-        return "data_tests_009"
+        return "data_tests"
 
     @property
     def models(self):
@@ -30,9 +30,9 @@ class TestDataTests(DBTIntegrationTest):
         test_task = TestTask(args, self.config)
         return test_task.run()
 
-    @use_profile('postgres')
-    def test_postgres_data_tests(self):
-        self.use_profile('postgres')
+    @use_profile('snowflake')
+    def test_snowflake_data_tests(self):
+        self.use_profile('snowflake')
 
         self.run_sql_file("seed.sql")
 
@@ -43,16 +43,12 @@ class TestDataTests(DBTIntegrationTest):
         for result in test_results:
             # assert that all deliberately failing tests actually fail
             if 'fail' in result.node.name:
-                self.assertEqual(result.status, "fail")
+                self.assertEqual(result.status, 'fail')
                 self.assertFalse(result.skipped)
                 self.assertTrue(result.failures > 0)
+
             # assert that actual tests pass
             else:
                 self.assertEqual(result.status, 'pass')
                 self.assertFalse(result.skipped)
                 self.assertEqual(result.failures, 0)
-
-        # check that all tests were run
-        defined_tests = os.listdir(self.test_path)
-        self.assertNotEqual(len(test_results), 0)
-        self.assertEqual(len(test_results), len(defined_tests))
