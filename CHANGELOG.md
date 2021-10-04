@@ -1,4 +1,4 @@
-## dbt 0.21.0 (Release TBD)
+## dbt 0.21.0 (October 04, 2021)
 
 ## dbt 0.21.0rc2 (September 27, 2021)
 
