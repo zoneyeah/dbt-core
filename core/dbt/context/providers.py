@@ -6,7 +6,6 @@ from typing import (
 )
 from typing_extensions import Protocol
 
-from dbt import deprecations
 from dbt.adapters.base.column import Column
 from dbt.adapters.factory import (
     get_adapter, get_adapter_package_names, get_adapter_type_names
@@ -41,6 +40,7 @@ from dbt.exceptions import (
     InternalException,
     ValidationException,
     RuntimeException,
+    macro_invalid_dispatch_arg,
     missing_config,
     raise_compiler_error,
     ref_invalid_args,
@@ -121,24 +121,24 @@ class BaseDatabaseWrapper:
         self,
         macro_name: str,
         macro_namespace: Optional[str] = None,
-        packages: Optional[List[str]] = None,
+        packages: Optional[List[str]] = None,  # eventually remove since it's fully deprecated
     ) -> MacroGenerator:
         search_packages: List[Optional[str]]
 
         if '.' in macro_name:
-            suggest_package, suggest_macro_name = macro_name.split('.', 1)
+            suggest_macro_namespace, suggest_macro_name = macro_name.split('.', 1)
             msg = (
                 f'In adapter.dispatch, got a macro name of "{macro_name}", '
                 f'but "." is not a valid macro name component. Did you mean '
                 f'`adapter.dispatch("{suggest_macro_name}", '
-                f'packages=["{suggest_package}"])`?'
+                f'macro_namespace="{suggest_macro_namespace}")`?'
             )
             raise CompilationException(msg)
 
         if packages is not None:
-            deprecations.warn('dispatch-packages', macro_name=macro_name)
+            raise macro_invalid_dispatch_arg(macro_name)
 
-        namespace = packages if packages else macro_namespace
+        namespace = macro_namespace
 
         if namespace is None:
             search_packages = [None]
@@ -146,14 +146,12 @@ class BaseDatabaseWrapper:
             search_packages = self._adapter.config.get_macro_search_order(namespace)
             if not search_packages and namespace in self._adapter.config.dependencies:
                 search_packages = [namespace]
-            if not search_packages:
-                raise CompilationException(
-                    f'In adapter.dispatch, got a string packages argument '
-                    f'("{packages}"), but packages should be None or a list.'
-                )
         else:
             # Not a string and not None so must be a list
-            search_packages = namespace
+            raise CompilationException(
+                f'In adapter.dispatch, got a list macro_namespace argument '
+                f'("{macro_namespace}"), but macro_namespace should be None or a string.'
+            )
 
         attempts = []
 
@@ -1152,65 +1150,17 @@ class ProviderContext(ManifestContext):
 
     @contextmember
     def adapter_macro(self, name: str, *args, **kwargs):
-        """Find the most appropriate macro for the name, considering the
-        adapter type currently in use, and call that with the given arguments.
-
-        If the name has a `.` in it, the first section before the `.` is
-        interpreted as a package name, and the remainder as a macro name.
-
-        If no adapter is found, raise a compiler exception. If an invalid
-        package name is specified, raise a compiler exception.
-
-
-        Some examples:
-
-            {# dbt will call this macro by name, providing any arguments #}
-            {% macro create_table_as(temporary, relation, sql) -%}
-
-              {# dbt will dispatch the macro call to the relevant macro #}
-              {{ adapter_macro('create_table_as', temporary, relation, sql) }}
-            {%- endmacro %}
-
-
-            {#
-                If no macro matches the specified adapter, "default" will be
-                used
-            #}
-            {% macro default__create_table_as(temporary, relation, sql) -%}
-               ...
-            {%- endmacro %}
-
-
-
-            {# Example which defines special logic for Redshift #}
-            {% macro redshift__create_table_as(temporary, relation, sql) -%}
-               ...
-            {%- endmacro %}
-
-
-
-            {# Example which defines special logic for BigQuery #}
-            {% macro bigquery__create_table_as(temporary, relation, sql) -%}
-               ...
-            {%- endmacro %}
+        """This was deprecated in v0.18 in favor of adapter.dispatch
         """
-        deprecations.warn('adapter-macro', macro_name=name)
-        original_name = name
-        package_name = None
-        if '.' in name:
-            package_name, name = name.split('.', 1)
-
-        try:
-            macro = self.db_wrapper.dispatch(
-                macro_name=name, macro_namespace=package_name
-            )
-        except CompilationException as exc:
-            raise CompilationException(
-                f'In adapter_macro: {exc.msg}\n'
-                f"    Original name: '{original_name}'",
-                node=self.model
-            ) from exc
-        return macro(*args, **kwargs)
+        msg = (
+            'The "adapter_macro" macro has been deprecated. Instead, use '
+            'the `adapter.dispatch` method to find a macro and call the '
+            'result.  For more information, see: '
+            'https://docs.getdbt.com/reference/dbt-jinja-functions/dispatch)'
+            ' adapter_macro was called for: {macro_name}'
+            .format(macro_name=name)
+        )
+        raise CompilationException(msg)
 
 
 class MacroContext(ProviderContext):

@@ -5,10 +5,11 @@ import sys
 from typing import Optional, Dict, Any, List
 
 from dbt.logger import GLOBAL_LOGGER as logger
+from dbt import flags
 import dbt.clients.system
 import dbt.exceptions
 from dbt.adapters.factory import get_adapter, register_adapter
-from dbt.config import Project, Profile, PROFILES_DIR
+from dbt.config import Project, Profile
 from dbt.config.renderer import DbtProjectYamlRenderer, ProfileRenderer
 from dbt.config.utils import parse_cli_vars
 from dbt.context.base import generate_base_context
@@ -16,6 +17,7 @@ from dbt.context.target import generate_target_context
 from dbt.clients.yaml_helper import load_yaml_text
 from dbt.links import ProfileConfigDocs
 from dbt.ui import green, red
+from dbt.utils import pluralize
 from dbt.version import get_installed_version
 
 from dbt.task.base import BaseTask, get_nearest_project_dir
@@ -68,7 +70,7 @@ class QueryCommentedProfile(Profile):
 class DebugTask(BaseTask):
     def __init__(self, args, config):
         super().__init__(args, config)
-        self.profiles_dir = getattr(self.args, 'profiles_dir', PROFILES_DIR)
+        self.profiles_dir = flags.PROFILES_DIR
         self.profile_path = os.path.join(self.profiles_dir, 'profiles.yml')
         try:
             self.project_dir = get_nearest_project_dir(self.args)
@@ -125,6 +127,11 @@ class DebugTask(BaseTask):
         self.test_dependencies()
         self.test_connection()
 
+        if self.any_failure:
+            print(red(f"{(pluralize(len(self.messages), 'check'))} failed:"))
+        else:
+            print(green('All checks passed!'))
+
         for message in self.messages:
             print(message)
             print('')
@@ -150,7 +157,7 @@ class DebugTask(BaseTask):
             self.project = Project.from_project_root(
                 self.project_dir,
                 renderer,
-                verify_version=getattr(self.args, 'version_check', False),
+                verify_version=flags.VERSION_CHECK,
             )
         except dbt.exceptions.DbtConfigError as exc:
             self.project_fail_details = str(exc)
@@ -189,7 +196,7 @@ class DebugTask(BaseTask):
             try:
                 partial = Project.partial_load(
                     os.path.dirname(self.project_path),
-                    verify_version=getattr(self.args, 'version_check', False),
+                    verify_version=bool(flags.VERSION_CHECK),
                 )
                 renderer = DbtProjectYamlRenderer(
                     generate_base_context(self.cli_vars)
@@ -321,9 +328,12 @@ class DebugTask(BaseTask):
         self.any_failure = True
         if self.project_fail_details == FILE_NOT_FOUND:
             return
-        print('Project loading failed for the following reason:')
-        print(self.project_fail_details)
-        print('')
+        msg = (
+            f'Project loading failed for the following reason:'
+            f'\n{self.project_fail_details}'
+            f'\n'
+        )
+        self.messages.append(msg)
 
     def _log_profile_fail(self):
         if not self.profile_fail_details:
@@ -332,9 +342,12 @@ class DebugTask(BaseTask):
         self.any_failure = True
         if self.profile_fail_details == FILE_NOT_FOUND:
             return
-        print('Profile loading failed for the following reason:')
-        print(self.profile_fail_details)
-        print('')
+        msg = (
+            f'Profile loading failed for the following reason:'
+            f'\n{self.profile_fail_details}'
+            f'\n'
+        )
+        self.messages.append(msg)
 
     @staticmethod
     def attempt_connection(profile):
@@ -368,7 +381,7 @@ class DebugTask(BaseTask):
         print('Connection:')
         for k, v in self.profile.credentials.connection_info():
             print('  {}: {}'.format(k, v))
-        print('  Connection test: {}'.format(self._connection_result()))
+        print('  Connection test: [{}]'.format(self._connection_result()))
         print('')
 
     @classmethod

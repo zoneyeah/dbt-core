@@ -1,7 +1,7 @@
 import os
 import tempfile
 from test.integration.base import DBTIntegrationTest, use_profile
-from dbt.exceptions import CompilationException
+from dbt.exceptions import CompilationException, DependencyException
 from dbt import deprecations
 
 
@@ -25,7 +25,7 @@ class TestSimpleDependency(DBTIntegrationTest):
             "packages": [
                 {
                     'git': 'https://github.com/dbt-labs/dbt-integration-project',
-                    'revision': '1.0',
+                    'revision': '1.1',
                 }
             ]
         }
@@ -110,10 +110,7 @@ class TestSimpleDependencyUnpinned(DBTIntegrationTest):
 
     @use_profile('postgres')
     def test_postgres_simple_dependency(self):
-        with self.assertRaises(CompilationException) as exc:
-            self.run_dbt(["deps"])
-        assert 'is not pinned' in str(exc.exception)
-        self.run_dbt(['deps'], strict=False)
+        self.run_dbt(["deps"])
 
 
 class TestSimpleDependencyWithDuplicates(DBTIntegrationTest):
@@ -132,11 +129,11 @@ class TestSimpleDependencyWithDuplicates(DBTIntegrationTest):
             "packages": [
                 {
                     'git': 'https://github.com/dbt-labs/dbt-integration-project',
-                    'revision': 'dbt/0.17.0',
+                    'revision': 'dbt/1.0.0',
                 },
                 {
                     'git': 'https://github.com/dbt-labs/dbt-integration-project.git',
-                    'revision': 'dbt/0.17.0',
+                    'revision': 'dbt/1.0.0',
                 }
             ]
         }
@@ -164,7 +161,7 @@ class TestRekeyedDependencyWithSubduplicates(DBTIntegrationTest):
                 {
 
                     'git': 'https://github.com/dbt-labs/dbt-integration-project',
-                    'revision': 'config-version-2-deps'
+                    'revision': 'config-1.0.0-deps'
                 },
                 {
                     'git': 'https://github.com/dbt-labs/dbt-utils',
@@ -176,7 +173,7 @@ class TestRekeyedDependencyWithSubduplicates(DBTIntegrationTest):
     @use_profile('postgres')
     def test_postgres_simple_dependency_deps(self):
         self.run_dbt(["deps"])
-        self.assertEqual(len(os.listdir('dbt_modules')), 2)
+        self.assertEqual(len(os.listdir('dbt_packages')), 2)
 
 
 class TestSimpleDependencyBranch(DBTIntegrationTest):
@@ -199,7 +196,7 @@ class TestSimpleDependencyBranch(DBTIntegrationTest):
             "packages": [
                 {
                     'git': 'https://github.com/dbt-labs/dbt-integration-project',
-                    'revision': 'dbt/0.17.0',
+                    'revision': 'dbt/1.0.0',
                 },
             ]
         }

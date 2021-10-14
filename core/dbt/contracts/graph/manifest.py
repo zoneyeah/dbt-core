@@ -5,7 +5,7 @@ from mashumaro import DataClassMessagePackMixin
 from multiprocessing.synchronize import Lock
 from typing import (
     Dict, List, Optional, Union, Mapping, MutableMapping, Any, Set, Tuple,
-    TypeVar, Callable, Iterable, Generic, cast, AbstractSet, ClassVar
+    TypeVar, Callable, Generic, cast, AbstractSet, ClassVar
 )
 from typing_extensions import Protocol
 from uuid import UUID
@@ -223,9 +223,7 @@ class ManifestMetadata(BaseArtifactMetadata):
             self.user_id = tracking.active_user.id
 
         if self.send_anonymous_usage_stats is None:
-            self.send_anonymous_usage_stats = (
-                not tracking.active_user.do_not_track
-            )
+            self.send_anonymous_usage_stats = flags.SEND_ANONYMOUS_USAGE_STATS
 
     @classmethod
     def default(cls):
@@ -384,7 +382,7 @@ N = TypeVar('N', bound=Searchable)
 
 
 @dataclass
-class NameSearcher(Generic[N]):
+class DisabledNameSearcher():
     name: str
     package: Optional[str]
     nodetypes: List[NodeType]
@@ -404,11 +402,12 @@ class NameSearcher(Generic[N]):
 
         return self.package is None or self.package == model.package_name
 
-    def search(self, haystack: Iterable[N]) -> Optional[N]:
+    def search(self, haystack) -> Optional[N]:
         """Find an entry in the given iterable by name."""
-        for model in haystack:
-            if self._matches(model):
-                return model
+        for model_list in haystack.values():
+            for model in model_list:
+                if self._matches(model):
+                    return model
         return None
 
 
@@ -562,15 +561,13 @@ class Manifest(MacroMethods, DataClassMessagePackMixin, dbtClassMixin):
     exposures: MutableMapping[str, ParsedExposure] = field(default_factory=dict)
     metrics: MutableMapping[str, ParsedMetric] = field(default_factory=dict)
     selectors: MutableMapping[str, Any] = field(default_factory=dict)
-    disabled: List[CompileResultNode] = field(default_factory=list)
     files: MutableMapping[str, AnySourceFile] = field(default_factory=dict)
     metadata: ManifestMetadata = field(default_factory=ManifestMetadata)
     flat_graph: Dict[str, Any] = field(default_factory=dict)
     state_check: ManifestStateCheck = field(default_factory=ManifestStateCheck)
-    # Moved from the ParseResult object
     source_patches: MutableMapping[SourceKey, SourcePatch] = field(default_factory=dict)
-    # following is from ParseResult
-    _disabled: MutableMapping[str, List[CompileResultNode]] = field(default_factory=dict)
+    disabled: MutableMapping[str, List[CompileResultNode]] = field(default_factory=dict)
+
     _doc_lookup: Optional[DocLookup] = field(
         default=None, metadata={'serialize': lambda x: None, 'deserialize': lambda x: None}
     )
@@ -663,7 +660,7 @@ class Manifest(MacroMethods, DataClassMessagePackMixin, dbtClassMixin):
     def find_disabled_by_name(
         self, name: str, package: Optional[str] = None
     ) -> Optional[ManifestNode]:
-        searcher: NameSearcher = NameSearcher(
+        searcher: DisabledNameSearcher = DisabledNameSearcher(
             name, package, NodeType.refable()
         )
         result = searcher.search(self.disabled)
@@ -673,7 +670,7 @@ class Manifest(MacroMethods, DataClassMessagePackMixin, dbtClassMixin):
         self, source_name: str, table_name: str, package: Optional[str] = None
     ) -> Optional[ParsedSourceDefinition]:
         search_name = f'{source_name}.{table_name}'
-        searcher: NameSearcher = NameSearcher(
+        searcher: DisabledNameSearcher = DisabledNameSearcher(
             search_name, package, [NodeType.Source]
         )
         result = searcher.search(self.disabled)
@@ -737,7 +734,6 @@ class Manifest(MacroMethods, DataClassMessagePackMixin, dbtClassMixin):
             chain(self.nodes.values(), self.sources.values())
         )
 
-    # This is used in dbt.task.rpc.sql_commands 'add_new_refs'
     def deepcopy(self):
         return Manifest(
             nodes={k: _deepcopy(v) for k, v in self.nodes.items()},
@@ -748,7 +744,7 @@ class Manifest(MacroMethods, DataClassMessagePackMixin, dbtClassMixin):
             metrics={k: _deepcopy(v) for k, v in self.metrics.items()},
             selectors={k: _deepcopy(v) for k, v in self.selectors.items()},
             metadata=self.metadata,
-            disabled=[_deepcopy(n) for n in self.disabled],
+            disabled={k: _deepcopy(v) for k, v in self.disabled.items()},
             files={k: _deepcopy(v) for k, v in self.files.items()},
             state_check=_deepcopy(self.state_check),
         )
@@ -1025,10 +1021,11 @@ class Manifest(MacroMethods, DataClassMessagePackMixin, dbtClassMixin):
         source_file.metrics.append(metric.unique_id)
 
     def add_disabled_nofile(self, node: CompileResultNode):
-        if node.unique_id in self._disabled:
-            self._disabled[node.unique_id].append(node)
+        # There can be multiple disabled nodes for the same unique_id
+        if node.unique_id in self.disabled:
+            self.disabled[node.unique_id].append(node)
         else:
-            self._disabled[node.unique_id] = [node]
+            self.disabled[node.unique_id] = [node]
 
     def add_disabled(self, source_file: AnySourceFile, node: CompileResultNode, test_from=None):
         self.add_disabled_nofile(node)
@@ -1060,13 +1057,12 @@ class Manifest(MacroMethods, DataClassMessagePackMixin, dbtClassMixin):
             self.docs,
             self.exposures,
             self.selectors,
-            self.disabled,
             self.files,
             self.metadata,
             self.flat_graph,
             self.state_check,
             self.source_patches,
-            self._disabled,
+            self.disabled,
             self._doc_lookup,
             self._source_lookup,
             self._ref_lookup,
@@ -1087,7 +1083,7 @@ AnyManifest = Union[Manifest, MacroManifest]
 
 
 @dataclass
-@schema_version('manifest', 2)
+@schema_version('manifest', 3)
 class WritableManifest(ArtifactMixin):
     nodes: Mapping[UniqueID, ManifestNode] = field(
         metadata=dict(description=(
@@ -1124,8 +1120,8 @@ class WritableManifest(ArtifactMixin):
             'The selectors defined in selectors.yml'
         ))
     )
-    disabled: Optional[List[CompileResultNode]] = field(metadata=dict(
-        description='A list of the disabled nodes in the target'
+    disabled: Optional[Mapping[UniqueID, List[CompileResultNode]]] = field(metadata=dict(
+        description='A mapping of the disabled nodes in the target'
     ))
     parent_map: Optional[NodeEdgeMap] = field(metadata=dict(
         description='A mapping from child nodes to their dependencies',

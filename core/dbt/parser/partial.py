@@ -1,3 +1,4 @@
+from copy import deepcopy
 from typing import MutableMapping, Dict, List
 from dbt.contracts.graph.manifest import Manifest
 from dbt.contracts.files import (
@@ -32,10 +33,21 @@ parse_file_type_to_key = {
 }
 
 
+# These macro names have special treatment in the ManifestLoader and
+# partial parsing. If they have changed we will skip partial parsing
+special_override_macros = [
+    'ref', 'source', 'config', 'generate_schema_name',
+    'generate_database_name', 'generate_alias_name'
+]
+
+
 # Partial parsing. Create a diff of files from saved manifest and current
 # files and produce a project_parser_file dictionary to drive parsing of
 # only the necessary changes.
 # Will produce a 'skip_parsing' method, and a project_parser_file dictionary
+# All file objects from the new manifest are deepcopied, because we need
+# to preserve an unchanged file object in case we need to drop back to a
+# a full parse (such as for certain macro changes)
 class PartialParsing:
     def __init__(self, saved_manifest: Manifest, new_files: MutableMapping[str, AnySourceFile]):
         self.saved_manifest = saved_manifest
@@ -47,6 +59,7 @@ class PartialParsing:
         self.macro_child_map: Dict[str, List[str]] = {}
         self.build_file_diff()
         self.processing_file = None
+        self.deleted_special_override_macro = False
 
     def skip_parsing(self):
         return (
@@ -105,10 +118,10 @@ class PartialParsing:
         }
         if changed_or_deleted_macro_file:
             self.macro_child_map = self.saved_manifest.build_macro_child_map()
-        logger.info(f"Partial parsing enabled: "
-                    f"{len(deleted) + len(deleted_schema_files)} files deleted, "
-                    f"{len(added)} files added, "
-                    f"{len(changed) + len(changed_schema_files)} files changed.")
+        logger.debug(f"Partial parsing enabled: "
+                     f"{len(deleted) + len(deleted_schema_files)} files deleted, "
+                     f"{len(added)} files added, "
+                     f"{len(changed) + len(changed_schema_files)} files changed.")
         self.file_diff = file_diff
 
     # generate the list of files that need parsing
@@ -168,7 +181,7 @@ class PartialParsing:
     # Add new files, including schema files
     def add_to_saved(self, file_id):
         # add file object to saved manifest.files
-        source_file = self.new_files[file_id]
+        source_file = deepcopy(self.new_files[file_id])
         if source_file.parse_file_type == ParseFileType.Schema:
             self.handle_added_schema_file(source_file)
         self.saved_files[file_id] = source_file
@@ -210,7 +223,7 @@ class PartialParsing:
 
     # Updates for non-schema files
     def update_in_saved(self, file_id):
-        new_source_file = self.new_files[file_id]
+        new_source_file = deepcopy(self.new_files[file_id])
         old_source_file = self.saved_files[file_id]
 
         if new_source_file.parse_file_type in mssat_files:
@@ -233,23 +246,37 @@ class PartialParsing:
             return
 
         # These files only have one node.
-        unique_id = old_source_file.nodes[0]
+        unique_id = None
+        if old_source_file.nodes:
+            unique_id = old_source_file.nodes[0]
+        else:
+            # It's not clear when this would actually happen.
+            # Logging in case there are other associated errors.
+            logger.debug(f"Partial parsing: node not found for source_file {old_source_file}")
 
         # replace source_file in saved and add to parsing list
         file_id = new_source_file.file_id
         self.deleted_manifest.files[file_id] = old_source_file
-        self.saved_files[file_id] = new_source_file
+        self.saved_files[file_id] = deepcopy(new_source_file)
         self.add_to_pp_files(new_source_file)
-        self.remove_node_in_saved(new_source_file, unique_id)
+        if unique_id:
+            self.remove_node_in_saved(new_source_file, unique_id)
 
     def remove_node_in_saved(self, source_file, unique_id):
-        # Has already been deleted by another action
-        if unique_id not in self.saved_manifest.nodes:
+        if unique_id in self.saved_manifest.nodes:
+            # delete node in saved
+            node = self.saved_manifest.nodes.pop(unique_id)
+            self.deleted_manifest.nodes[unique_id] = node
+        elif unique_id in self.saved_manifest.disabled:
+            for dis_index, dis_node in enumerate(self.saved_manifest.disabled[unique_id]):
+                if dis_node.file_id == source_file.file_id:
+                    node = dis_node
+                    break
+            if dis_node:
+                del self.saved_manifest.disabled[dis_index]
+        else:
+            # Has already been deleted by another action
             return
-
-        # delete node in saved
-        node = self.saved_manifest.nodes.pop(unique_id)
-        self.deleted_manifest.nodes[unique_id] = node
 
         # look at patch_path in model node to see if we need
         # to reapply a patch from a schema_file.
@@ -261,36 +288,44 @@ class PartialParsing:
                 schema_file = self.saved_files[file_id]
                 dict_key = parse_file_type_to_key[source_file.parse_file_type]
                 # look for a matching list dictionary
-                for elem in schema_file.dict_from_yaml[dict_key]:
-                    if elem['name'] == node.name:
-                        elem_patch = elem
-                        break
+                elem_patch = None
+                if dict_key in schema_file.dict_from_yaml:
+                    for elem in schema_file.dict_from_yaml[dict_key]:
+                        if elem['name'] == node.name:
+                            elem_patch = elem
+                            break
                 if elem_patch:
                     self.delete_schema_mssa_links(schema_file, dict_key, elem_patch)
                     self.merge_patch(schema_file, dict_key, elem_patch)
                     if unique_id in schema_file.node_patches:
                         schema_file.node_patches.remove(unique_id)
+            if unique_id in self.saved_manifest.disabled:
+                # We have a patch_path in disabled nodes with a patch so
+                # that we can connect the patch to the node
+                for node in self.saved_manifest.disabled[unique_id]:
+                    node.patch_path = None
 
     def update_macro_in_saved(self, new_source_file, old_source_file):
         if self.already_scheduled_for_parsing(old_source_file):
             return
         self.handle_macro_file_links(old_source_file, follow_references=True)
         file_id = new_source_file.file_id
-        self.saved_files[file_id] = new_source_file
+        self.saved_files[file_id] = deepcopy(new_source_file)
         self.add_to_pp_files(new_source_file)
 
     def update_doc_in_saved(self, new_source_file, old_source_file):
         if self.already_scheduled_for_parsing(old_source_file):
             return
         self.delete_doc_node(old_source_file)
-        self.saved_files[new_source_file.file_id] = new_source_file
+        self.saved_files[new_source_file.file_id] = deepcopy(new_source_file)
         self.add_to_pp_files(new_source_file)
 
     def remove_mssat_file(self, source_file):
         # nodes [unique_ids] -- SQL files
         # There should always be a node for a SQL file
         if not source_file.nodes:
-            raise Exception(f"No nodes found for source file {source_file.file_id}")
+            logger.debug(f"No nodes found for source file {source_file.file_id}")
+            return
         # There is generally only 1 node for SQL files, except for macros
         for unique_id in source_file.nodes:
             self.remove_node_in_saved(source_file, unique_id)
@@ -299,7 +334,10 @@ class PartialParsing:
     # We need to re-parse nodes that reference another removed node
     def schedule_referencing_nodes_for_parsing(self, unique_id):
         # Look at "children", i.e. nodes that reference this node
-        self.schedule_nodes_for_parsing(self.saved_manifest.child_map[unique_id])
+        if unique_id in self.saved_manifest.child_map:
+            self.schedule_nodes_for_parsing(self.saved_manifest.child_map[unique_id])
+        else:
+            logger.debug(f"Partial parsing: {unique_id} not found in child_map")
 
     def schedule_nodes_for_parsing(self, unique_ids):
         for unique_id in unique_ids:
@@ -313,7 +351,7 @@ class PartialParsing:
                     source_file = self.saved_files[file_id]
                     self.remove_mssat_file(source_file)
                     # content of non-schema files is only in new files
-                    self.saved_files[file_id] = self.new_files[file_id]
+                    self.saved_files[file_id] = deepcopy(self.new_files[file_id])
                     self.add_to_pp_files(self.saved_files[file_id])
             elif unique_id in self.saved_manifest.sources:
                 source = self.saved_manifest.sources[unique_id]
@@ -346,13 +384,24 @@ class PartialParsing:
                 if file_id in self.saved_files and file_id not in self.file_diff['deleted']:
                     source_file = self.saved_files[file_id]
                     self.delete_macro_file(source_file)
-                    self.saved_files[file_id] = self.new_files[file_id]
+                    self.saved_files[file_id] = deepcopy(self.new_files[file_id])
                     self.add_to_pp_files(self.saved_files[file_id])
 
     def delete_macro_file(self, source_file, follow_references=False):
+        self.check_for_special_deleted_macros(source_file)
         self.handle_macro_file_links(source_file, follow_references)
         file_id = source_file.file_id
         self.deleted_manifest.files[file_id] = self.saved_files.pop(file_id)
+
+    def check_for_special_deleted_macros(self, source_file):
+        for unique_id in source_file.macros:
+            if unique_id in self.saved_manifest.macros:
+                package_name = unique_id.split('.')[1]
+                if package_name == 'dbt':
+                    continue
+                macro = self.saved_manifest.macros[unique_id]
+                if macro.name in special_override_macros:
+                    self.deleted_special_override_macro = True
 
     def recursively_gather_macro_references(self, macro_unique_id, referencing_nodes):
         for unique_id in self.macro_child_map[macro_unique_id]:
@@ -434,7 +483,7 @@ class PartialParsing:
                         source_file = self.saved_files[file_id]
                         self.remove_mssat_file(source_file)
                         # content of non-schema files is only in new files
-                        self.saved_files[file_id] = self.new_files[file_id]
+                        self.saved_files[file_id] = deepcopy(self.new_files[file_id])
                         self.add_to_pp_files(self.saved_files[file_id])
             elif unique_id in self.saved_manifest.macros:
                 macro = self.saved_manifest.macros[unique_id]
@@ -442,7 +491,7 @@ class PartialParsing:
                 if file_id in self.saved_files and file_id not in self.file_diff['deleted']:
                     source_file = self.saved_files[file_id]
                     self.delete_macro_file(source_file)
-                    self.saved_files[file_id] = self.new_files[file_id]
+                    self.saved_files[file_id] = deepcopy(self.new_files[file_id])
                     self.add_to_pp_files(self.saved_files[file_id])
 
     def delete_doc_node(self, source_file):
@@ -460,7 +509,7 @@ class PartialParsing:
     # Changed schema files
     def change_schema_file(self, file_id):
         saved_schema_file = self.saved_files[file_id]
-        new_schema_file = self.new_files[file_id]
+        new_schema_file = deepcopy(self.new_files[file_id])
         saved_yaml_dict = saved_schema_file.dict_from_yaml
         new_yaml_dict = new_schema_file.dict_from_yaml
         if 'version' in new_yaml_dict:
@@ -639,7 +688,7 @@ class PartialParsing:
                 file_id = node.file_id
                 # need to copy new file to saved files in order to get content
                 if file_id in self.new_files:
-                    self.saved_files[file_id] = self.new_files[file_id]
+                    self.saved_files[file_id] = deepcopy(self.new_files[file_id])
                 if self.saved_files[file_id]:
                     source_file = self.saved_files[file_id]
                     self.add_to_pp_files(source_file)
@@ -687,7 +736,7 @@ class PartialParsing:
             self.deleted_manifest.macros[macro_unique_id] = macro
             macro_file_id = macro.file_id
             if macro_file_id in self.new_files:
-                self.saved_files[macro_file_id] = self.new_files[macro_file_id]
+                self.saved_files[macro_file_id] = deepcopy(self.new_files[macro_file_id])
                 self.add_to_pp_files(self.saved_files[macro_file_id])
 
     # exposures are created only from schema files, so just delete

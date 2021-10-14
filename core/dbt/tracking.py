@@ -5,6 +5,7 @@ from dbt.clients.yaml_helper import (  # noqa:F401
 )
 from dbt.logger import GLOBAL_LOGGER as logger
 from dbt import version as dbt_version
+from dbt import flags
 from snowplow_tracker import Subject, Tracker, Emitter, logger as sp_logger
 from snowplow_tracker import SelfDescribingJson
 from datetime import datetime
@@ -21,7 +22,7 @@ sp_logger.setLevel(100)
 COLLECTOR_URL = "fishtownanalytics.sinter-collect.com"
 COLLECTOR_PROTOCOL = "https"
 
-INVOCATION_SPEC = 'iglu:com.dbt/invocation/jsonschema/1-0-1'
+INVOCATION_SPEC = 'iglu:com.dbt/invocation/jsonschema/1-0-2'
 PLATFORM_SPEC = 'iglu:com.dbt/platform/jsonschema/1-0-0'
 RUN_MODEL_SPEC = 'iglu:com.dbt/run_model/jsonschema/1-0-1'
 INVOCATION_ENV_SPEC = 'iglu:com.dbt/invocation_env/jsonschema/1-0-0'
@@ -132,7 +133,7 @@ class User:
         # will change in every dbt invocation until the user points to a
         # profile dir file which contains a valid profiles.yml file.
         #
-        # See: https://github.com/dbt-labs/dbt/issues/1645
+        # See: https://github.com/dbt-labs/dbt-core/issues/1645
 
         user = {"id": str(uuid.uuid4())}
 
@@ -166,10 +167,15 @@ def get_run_type(args):
 
 
 def get_invocation_context(user, config, args):
+    # this adapter might not have implemented the type or unique_field properties
     try:
         adapter_type = config.credentials.type
     except Exception:
         adapter_type = None
+    try:
+        adapter_unique_id = config.credentials.hashed_unique_field()
+    except Exception:
+        adapter_unique_id = None
 
     return {
         "project_id": None if config is None else config.hashed_name(),
@@ -179,9 +185,9 @@ def get_invocation_context(user, config, args):
         "command": args.which,
         "options": None,
         "version": str(dbt_version.installed),
-
         "run_type": get_run_type(args),
         "adapter_type": adapter_type,
+        "adapter_unique_id": adapter_unique_id,
     }
 
 
@@ -503,3 +509,11 @@ class InvocationProcessor(logbook.Processor):
                 "run_started_at": active_user.run_started_at.isoformat(),
                 "invocation_id": active_user.invocation_id,
             })
+
+
+def initialize_from_flags():
+    # Setting these used to be in UserConfig, but had to be moved here
+    if flags.SEND_ANONYMOUS_USAGE_STATS:
+        initialize_tracking(flags.PROFILES_DIR)
+    else:
+        do_not_track()

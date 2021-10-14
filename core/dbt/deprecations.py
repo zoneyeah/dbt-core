@@ -43,91 +43,28 @@ class DBTDeprecation:
             active_deprecations.add(self.name)
 
 
-class DispatchPackagesDeprecation(DBTDeprecation):
-    _name = 'dispatch-packages'
+class PackageRedirectDeprecation(DBTDeprecation):
+    _name = 'package-redirect'
     _description = '''\
-    The "packages" argument of adapter.dispatch() has been deprecated.
-    Use the "macro_namespace" argument instead.
-
-    Raised during dispatch for: {macro_name}
-
-    For more information, see:
-
-    https://docs.getdbt.com/reference/dbt-jinja-functions/dispatch
+    The `{old_name}` package is deprecated in favor of `{new_name}`. Please update
+    your `packages.yml` configuration to use `{new_name}` instead.
     '''
 
 
-class MaterializationReturnDeprecation(DBTDeprecation):
-    _name = 'materialization-return'
-
+class PackageInstallPathDeprecation(DBTDeprecation):
+    _name = 'install-packages-path'
     _description = '''\
-    The materialization ("{materialization}") did not explicitly return a list
-    of relations to add to the cache. By default the target relation will be
-    added, but this behavior will be removed in a future version of dbt.
-
-
-
-    For more information, see:
-
-    https://docs.getdbt.com/v0.15/docs/creating-new-materializations#section-6-returning-relations
+    The default package install path has changed from `dbt_modules` to `dbt_packages`.
+    Please update `clean-targets` in `dbt_project.yml` and check `.gitignore` as well.
+    Or, set `packages-install-path: dbt_modules` if you'd like to keep the current value.
     '''
 
 
-class NotADictionaryDeprecation(DBTDeprecation):
-    _name = 'not-a-dictionary'
-
+class ConfigPathDeprecation(DBTDeprecation):
+    _name = 'project_config_path'
     _description = '''\
-    The object ("{obj}") was used as a dictionary. In a future version of dbt
-    this capability will be removed from objects of this type.
-    '''
-
-
-class ColumnQuotingDeprecation(DBTDeprecation):
-    _name = 'column-quoting-unset'
-
-    _description = '''\
-    The quote_columns parameter was not set for seeds, so the default value of
-    False was chosen. The default will change to True in a future release.
-
-
-
-    For more information, see:
-
-    https://docs.getdbt.com/v0.15/docs/seeds#section-specify-column-quoting
-    '''
-
-
-class ModelsKeyNonModelDeprecation(DBTDeprecation):
-    _name = 'models-key-mismatch'
-
-    _description = '''\
-    "{node.name}" is a {node.resource_type} node, but it is specified in
-    the {patch.yaml_key} section of {patch.original_file_path}.
-
-
-
-    To fix this warning, place the `{node.name}` specification under
-    the {expected_key} key instead.
-
-    This warning will become an error in a future release.
-    '''
-
-
-class ExecuteMacrosReleaseDeprecation(DBTDeprecation):
-    _name = 'execute-macro-release'
-    _description = '''\
-    The "release" argument to execute_macro is now ignored, and will be removed
-    in a future relase of dbt. At that time, providing a `release` argument
-    will result in an error.
-    '''
-
-
-class AdapterMacroDeprecation(DBTDeprecation):
-    _name = 'adapter-macro'
-    _description = '''\
-    The "adapter_macro" macro has been deprecated. Instead, use the
-    `adapter.dispatch` method to find a macro and call the result.
-    adapter_macro was called for: {macro_name}
+    The `{deprecated_path}` config has been deprecated in favor of `{exp_path}`.
+    Please update your `dbt_project.yml` configuration to reflect this change.
     '''
 
 
@@ -169,13 +106,9 @@ def warn(name, *args, **kwargs):
 active_deprecations: Set[str] = set()
 
 deprecations_list: List[DBTDeprecation] = [
-    DispatchPackagesDeprecation(),
-    MaterializationReturnDeprecation(),
-    NotADictionaryDeprecation(),
-    ColumnQuotingDeprecation(),
-    ModelsKeyNonModelDeprecation(),
-    ExecuteMacrosReleaseDeprecation(),
-    AdapterMacroDeprecation(),
+    ConfigPathDeprecation(),
+    PackageInstallPathDeprecation(),
+    PackageRedirectDeprecation()
 ]
 
 deprecations: Dict[str, DBTDeprecation] = {

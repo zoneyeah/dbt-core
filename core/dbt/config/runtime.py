@@ -12,6 +12,7 @@ from .profile import Profile
 from .project import Project
 from .renderer import DbtProjectYamlRenderer, ProfileRenderer
 from .utils import parse_cli_vars
+from dbt import flags
 from dbt import tracking
 from dbt.adapters.factory import get_relation_class_by_name, get_include_paths
 from dbt.helper_types import FQNPath, PathSet
@@ -86,9 +87,9 @@ class RuntimeConfig(Project, Profile, AdapterRequiredConfig):
             project_name=project.project_name,
             version=project.version,
             project_root=project.project_root,
-            source_paths=project.source_paths,
+            model_paths=project.model_paths,
             macro_paths=project.macro_paths,
-            data_paths=project.data_paths,
+            seed_paths=project.seed_paths,
             test_paths=project.test_paths,
             analysis_paths=project.analysis_paths,
             docs_paths=project.docs_paths,
@@ -97,7 +98,7 @@ class RuntimeConfig(Project, Profile, AdapterRequiredConfig):
             snapshot_paths=project.snapshot_paths,
             clean_targets=project.clean_targets,
             log_path=project.log_path,
-            modules_path=project.modules_path,
+            packages_install_path=project.packages_install_path,
             quoting=quoting,
             models=project.models,
             on_run_start=project.on_run_start,
@@ -117,7 +118,7 @@ class RuntimeConfig(Project, Profile, AdapterRequiredConfig):
             unrendered=project.unrendered,
             profile_name=profile.profile_name,
             target_name=profile.target_name,
-            config=profile.config,
+            user_config=profile.user_config,
             threads=profile.threads,
             credentials=profile.credentials,
             args=args,
@@ -144,7 +145,7 @@ class RuntimeConfig(Project, Profile, AdapterRequiredConfig):
         project = Project.from_project_root(
             project_root,
             renderer,
-            verify_version=getattr(self.args, 'version_check', False),
+            verify_version=bool(flags.VERSION_CHECK),
         )
 
         cfg = self.from_parts(
@@ -197,7 +198,7 @@ class RuntimeConfig(Project, Profile, AdapterRequiredConfig):
     ) -> Tuple[Project, Profile]:
         # profile_name from the project
         project_root = args.project_dir if args.project_dir else os.getcwd()
-        version_check = getattr(args, 'version_check', False)
+        version_check = bool(flags.VERSION_CHECK)
         partial = Project.partial_load(
             project_root,
             verify_version=version_check
@@ -337,7 +338,7 @@ class RuntimeConfig(Project, Profile, AdapterRequiredConfig):
                     f'dbt found {count_packages_specified} package(s) '
                     f'specified in packages.yml, but only '
                     f'{count_packages_installed} package(s) installed '
-                    f'in {self.modules_path}. Run "dbt deps" to '
+                    f'in {self.packages_install_path}. Run "dbt deps" to '
                     f'install package dependencies.'
                 )
             project_paths = itertools.chain(
@@ -375,7 +376,7 @@ class RuntimeConfig(Project, Profile, AdapterRequiredConfig):
                 yield project.project_name, project
 
     def _get_project_directories(self) -> Iterator[Path]:
-        root = Path(self.project_root) / self.modules_path
+        root = Path(self.project_root) / self.packages_install_path
 
         if root.exists():
             for path in root.iterdir():
@@ -389,6 +390,10 @@ class UnsetCredentials(Credentials):
 
     @property
     def type(self):
+        return None
+
+    @property
+    def unique_field(self):
         return None
 
     def connection_info(self, *args, **kwargs):
@@ -412,7 +417,7 @@ class UnsetConfig(UserConfig):
 class UnsetProfile(Profile):
     def __init__(self):
         self.credentials = UnsetCredentials()
-        self.config = UnsetConfig()
+        self.user_config = UnsetConfig()
         self.profile_name = ''
         self.target_name = ''
         self.threads = -1
@@ -478,9 +483,9 @@ class UnsetProfileConfig(RuntimeConfig):
             project_name=project.project_name,
             version=project.version,
             project_root=project.project_root,
-            source_paths=project.source_paths,
+            model_paths=project.model_paths,
             macro_paths=project.macro_paths,
-            data_paths=project.data_paths,
+            seed_paths=project.seed_paths,
             test_paths=project.test_paths,
             analysis_paths=project.analysis_paths,
             docs_paths=project.docs_paths,
@@ -489,7 +494,7 @@ class UnsetProfileConfig(RuntimeConfig):
             snapshot_paths=project.snapshot_paths,
             clean_targets=project.clean_targets,
             log_path=project.log_path,
-            modules_path=project.modules_path,
+            packages_install_path=project.packages_install_path,
             quoting=project.quoting,  # we never use this anyway.
             models=project.models,
             on_run_start=project.on_run_start,
@@ -509,7 +514,7 @@ class UnsetProfileConfig(RuntimeConfig):
             unrendered=project.unrendered,
             profile_name='',
             target_name='',
-            config=UnsetConfig(),
+            user_config=UnsetConfig(),
             threads=getattr(args, 'threads', 1),
             credentials=UnsetCredentials(),
             args=args,

@@ -10,31 +10,35 @@ from pathlib import Path
 
 import dbt.version
 import dbt.flags as flags
-import dbt.task.run as run_task
 import dbt.task.build as build_task
+import dbt.task.clean as clean_task
 import dbt.task.compile as compile_task
 import dbt.task.debug as debug_task
-import dbt.task.clean as clean_task
 import dbt.task.deps as deps_task
-import dbt.task.init as init_task
-import dbt.task.seed as seed_task
-import dbt.task.test as test_task
-import dbt.task.snapshot as snapshot_task
-import dbt.task.generate as generate_task
-import dbt.task.serve as serve_task
 import dbt.task.freshness as freshness_task
-import dbt.task.run_operation as run_operation_task
+import dbt.task.generate as generate_task
+import dbt.task.init as init_task
+import dbt.task.list as list_task
 import dbt.task.parse as parse_task
+import dbt.task.run as run_task
+import dbt.task.run_operation as run_operation_task
+import dbt.task.seed as seed_task
+import dbt.task.serve as serve_task
+import dbt.task.snapshot as snapshot_task
+import dbt.task.test as test_task
 from dbt.profiler import profiler
-from dbt.task.list import ListTask
-from dbt.task.rpc.server import RPCServerTask
 from dbt.adapters.factory import reset_adapters, cleanup_connections
 
 import dbt.tracking
 
 from dbt.utils import ExitCodes
-from dbt.config import PROFILES_DIR, read_user_config
-from dbt.exceptions import RuntimeException, InternalException
+from dbt.config.profile import DEFAULT_PROFILES_DIR, read_user_config
+from dbt.exceptions import (
+    RuntimeException,
+    InternalException,
+    NotImplementedException,
+    FailedToConnectException
+)
 
 
 class DBTVersion(argparse.Action):
@@ -111,14 +115,6 @@ class DBTArgumentParser(argparse.ArgumentParser):
         return mutex_group
 
 
-class RPCArgumentParser(DBTArgumentParser):
-    def exit(self, status=0, message=None):
-        if status == 0:
-            return
-        else:
-            raise TypeError(message)
-
-
 def main(args=None):
     if args is None:
         args = sys.argv[1:]
@@ -160,17 +156,6 @@ def handle(args):
     return res
 
 
-def initialize_config_values(parsed):
-    """Given the parsed args, initialize the dbt tracking code.
-
-    It would be nice to re-use this profile later on instead of parsing it
-    twice, but dbt's intialization is not structured in a way that makes that
-    easy.
-    """
-    cfg = read_user_config(parsed.profiles_dir)
-    cfg.set_values(parsed.profiles_dir)
-
-
 @contextmanager
 def adapter_management():
     reset_adapters()
@@ -184,8 +169,15 @@ def handle_and_check(args):
     with log_manager.applicationbound():
         parsed = parse_args(args)
 
-        # we've parsed the args - we can now decide if we're debug or not
-        if parsed.debug:
+        # Set flags from args, user config, and env vars
+        user_config = read_user_config(flags.PROFILES_DIR)  # This is read again later
+        flags.set_from_args(parsed, user_config)
+        dbt.tracking.initialize_from_flags()
+        # Set log_format from flags
+        parsed.cls.set_log_format()
+
+        # we've parsed the args and set the flags - we can now decide if we're debug or not
+        if flags.DEBUG:
             log_manager.set_debug()
 
         profiler_enabled = False
@@ -197,8 +189,6 @@ def handle_and_check(args):
             enable=profiler_enabled,
             outfile=parsed.record_timing_info
         ):
-
-            initialize_config_values(parsed)
 
             with adapter_management():
 
@@ -216,8 +206,8 @@ def track_run(task):
         dbt.tracking.track_invocation_end(
             config=task.config, args=task.args, result_type="ok"
         )
-    except (dbt.exceptions.NotImplementedException,
-            dbt.exceptions.FailedToConnectException) as e:
+    except (NotImplementedException,
+            FailedToConnectException) as e:
         logger.error('ERROR: {}'.format(e))
         dbt.tracking.track_invocation_end(
             config=task.config, args=task.args, result_type="error"
@@ -233,15 +223,17 @@ def track_run(task):
 
 def run_from_args(parsed):
     log_cache_events(getattr(parsed, 'log_cache_events', False))
-    flags.set_from_args(parsed)
 
-    parsed.cls.pre_init_hook(parsed)
     # we can now use the logger for stdout
+    # set log_format in the logger
+    parsed.cls.pre_init_hook(parsed)
 
     logger.info("Running with dbt{}".format(dbt.version.installed))
 
     # this will convert DbtConfigErrors into RuntimeExceptions
+    # task could be any one of the task objects
     task = parsed.cls.from_args(args=parsed)
+
     logger.debug("running dbt with arguments {parsed}", parsed=str(parsed))
 
     log_path = None
@@ -275,11 +267,12 @@ def _build_base_subparser():
 
     base_subparser.add_argument(
         '--profiles-dir',
-        default=PROFILES_DIR,
+        default=None,
+        dest='sub_profiles_dir',  # Main cli arg precedes subcommand
         type=str,
         help='''
         Which directory to look in for the profiles.yml file. Default = {}
-        '''.format(PROFILES_DIR)
+        '''.format(DEFAULT_PROFILES_DIR)
     )
 
     base_subparser.add_argument(
@@ -317,15 +310,6 @@ def _build_base_subparser():
         '--log-cache-events',
         action='store_true',
         help=argparse.SUPPRESS,
-    )
-
-    base_subparser.add_argument(
-        '--bypass-cache',
-        action='store_false',
-        dest='use_cache',
-        help='''
-        If set, bypass the adapter-level cache of database state
-        ''',
     )
 
     base_subparser.set_defaults(defer=None, state=None)
@@ -394,11 +378,46 @@ def _build_build_subparser(subparsers, base_subparser):
     sub.add_argument(
         '-x',
         '--fail-fast',
+        dest='sub_fail_fast',
         action='store_true',
         help='''
         Stop execution upon a first failure.
         '''
     )
+    sub.add_argument(
+        '--store-failures',
+        action='store_true',
+        help='''
+        Store test results (failing rows) in the database
+        '''
+    )
+    sub.add_argument(
+        '--greedy',
+        action='store_true',
+        help='''
+        Select all tests that touch the selected resources,
+        even if they also depend on unselected resources
+        '''
+    )
+    resource_values: List[str] = [
+        str(s) for s in build_task.BuildTask.ALL_RESOURCE_VALUES
+    ] + ['all']
+    sub.add_argument('--resource-type',
+                     choices=resource_values,
+                     action='append',
+                     default=[],
+                     dest='resource_types')
+    # explicity don't support --models
+    sub.add_argument(
+        '-s',
+        '--select',
+        dest='select',
+        nargs='+',
+        help='''
+            Specify the nodes to include.
+        ''',
+    )
+    _add_common_selector_arguments(sub)
     return sub
 
 
@@ -408,7 +427,7 @@ def _build_clean_subparser(subparsers, base_subparser):
         parents=[base_subparser],
         help='''
         Delete all folders in the clean-targets list
-        (usually the dbt_modules and target directories.)
+        (usually the dbt_packages and target directories.)
         '''
     )
     sub.set_defaults(cls=clean_task.CleanTask, which='clean', rpc_method=None)
@@ -497,6 +516,7 @@ def _build_run_subparser(subparsers, base_subparser):
     run_sub.add_argument(
         '-x',
         '--fail-fast',
+        dest='sub_fail_fast',
         action='store_true',
         help='''
         Stop execution upon a first failure.
@@ -611,7 +631,7 @@ def _add_table_mutability_arguments(*subparsers):
             '--full-refresh',
             action='store_true',
             help='''
-            If specified, DBT will drop incremental models and
+            If specified, dbt will drop incremental models and
             fully-recalculate the incremental table from the model definition.
             '''
         )
@@ -620,8 +640,9 @@ def _add_table_mutability_arguments(*subparsers):
 def _add_version_check(sub):
     sub.add_argument(
         '--no-version-check',
-        dest='version_check',
+        dest='sub_version_check',  # main cli arg precedes subcommands
         action='store_false',
+        default=None,
         help='''
         If set, skip ensuring dbt's version matches the one specified in
         the dbt_project.yml file ('require-dbt-version')
@@ -699,22 +720,9 @@ def _build_test_subparser(subparsers, base_subparser):
         '''
     )
     sub.add_argument(
-        '--data',
-        action='store_true',
-        help='''
-        Run data tests defined in "tests" directory.
-        '''
-    )
-    sub.add_argument(
-        '--schema',
-        action='store_true',
-        help='''
-        Run constraint validations from schema.yml files
-        '''
-    )
-    sub.add_argument(
         '-x',
         '--fail-fast',
+        dest='sub_fail_fast',
         action='store_true',
         help='''
         Stop execution upon a first test failure.
@@ -725,6 +733,14 @@ def _build_test_subparser(subparsers, base_subparser):
         action='store_true',
         help='''
         Store test results (failing rows) in the database
+        '''
+    )
+    sub.add_argument(
+        '--greedy',
+        action='store_true',
+        help='''
+        Select all tests that touch the selected resources,
+        even if they also depend on unselected resources
         '''
     )
 
@@ -776,36 +792,6 @@ def _build_source_freshness_subparser(subparsers, base_subparser):
     return sub
 
 
-def _build_rpc_subparser(subparsers, base_subparser):
-    sub = subparsers.add_parser(
-        'rpc',
-        parents=[base_subparser],
-        help='''
-        Start a json-rpc server
-        ''',
-    )
-    sub.add_argument(
-        '--host',
-        default='0.0.0.0',
-        help='''
-        Specify the host to listen on for the rpc server.
-        ''',
-    )
-    sub.add_argument(
-        '--port',
-        default=8580,
-        type=int,
-        help='''
-        Specify the port number for the rpc server.
-        ''',
-    )
-    sub.set_defaults(cls=RPCServerTask, which='rpc', rpc_method=None)
-    # the rpc task does a 'compile', so we need these attributes to exist, but
-    # we don't want users to be allowed to set them.
-    sub.set_defaults(models=None, exclude=None)
-    return sub
-
-
 def _build_list_subparser(subparsers, base_subparser):
     sub = subparsers.add_parser(
         'list',
@@ -815,9 +801,9 @@ def _build_list_subparser(subparsers, base_subparser):
         ''',
         aliases=['ls'],
     )
-    sub.set_defaults(cls=ListTask, which='list', rpc_method=None)
+    sub.set_defaults(cls=list_task.ListTask, which='list', rpc_method=None)
     resource_values: List[str] = [
-        str(s) for s in ListTask.ALL_RESOURCE_VALUES
+        str(s) for s in list_task.ListTask.ALL_RESOURCE_VALUES
     ] + ['default', 'all']
     sub.add_argument('--resource-type',
                      choices=resource_values,
@@ -827,6 +813,7 @@ def _build_list_subparser(subparsers, base_subparser):
     sub.add_argument('--output',
                      choices=['json', 'name', 'path', 'selector'],
                      default='selector')
+    sub.add_argument('--output-keys')
 
     sub.add_argument(
         '-m',
@@ -850,6 +837,14 @@ def _build_list_subparser(subparsers, base_subparser):
         ''',
         metavar='SELECTOR',
         required=False,
+    )
+    sub.add_argument(
+        '--greedy',
+        action='store_true',
+        help='''
+        Select all tests that touch the selected resources,
+        even if they also depend on unselected resources
+        '''
     )
     _add_common_selector_arguments(sub)
 
@@ -921,6 +916,7 @@ def parse_args(args, cls=DBTArgumentParser):
         '-d',
         '--debug',
         action='store_true',
+        default=None,
         help='''
         Display debug logging during dbt execution. Useful for debugging and
         making bug reports.
@@ -930,13 +926,14 @@ def parse_args(args, cls=DBTArgumentParser):
     p.add_argument(
         '--log-format',
         choices=['text', 'json', 'default'],
-        default='default',
+        default=None,
         help='''Specify the log format, overriding the command's default.'''
     )
 
     p.add_argument(
         '--no-write-json',
         action='store_false',
+        default=None,
         dest='write_json',
         help='''
         If set, skip writing the manifest and run_results.json files to disk
@@ -947,6 +944,7 @@ def parse_args(args, cls=DBTArgumentParser):
         '--use-colors',
         action='store_const',
         const=True,
+        default=None,
         dest='use_colors',
         help='''
         Colorize the output DBT prints to the terminal. Output is colorized by
@@ -968,23 +966,33 @@ def parse_args(args, cls=DBTArgumentParser):
     )
 
     p.add_argument(
-        '-S',
-        '--strict',
-        action='store_true',
+        '--printer-width',
+        dest='printer_width',
         help='''
-        Run schema validations at runtime. This will surface bugs in dbt, but
-        may incur a performance penalty.
+        Sets the width of terminal output
         '''
     )
 
     p.add_argument(
         '--warn-error',
         action='store_true',
+        default=None,
         help='''
         If dbt would normally warn, instead raise an exception. Examples
         include --models that selects nothing, deprecations, configurations
         with no associated models, invalid test configurations, and missing
         sources/refs in tests.
+        '''
+    )
+
+    p.add_argument(
+        '--no-version-check',
+        dest='version_check',
+        action='store_false',
+        default=None,
+        help='''
+        If set, skip ensuring dbt's version matches the one specified in
+        the dbt_project.yml file ('require-dbt-version')
         '''
     )
 
@@ -1010,23 +1018,57 @@ def parse_args(args, cls=DBTArgumentParser):
         help=argparse.SUPPRESS,
     )
 
-    # if set, extract all models and blocks with the jinja block extractor, and
-    # verify that we don't fail anywhere the actual jinja parser passes. The
-    # reverse (passing files that ends up failing jinja) is fine.
-    # TODO remove?
-    p.add_argument(
-        '--test-new-parser',
-        action='store_true',
-        help=argparse.SUPPRESS
-    )
-
-    # if set, will use the tree-sitter-jinja2 parser and extractor instead of
-    # jinja rendering when possible.
+    # if set, will use the latest features from the static parser instead of
+    # the stable static parser.
     p.add_argument(
         '--use-experimental-parser',
         action='store_true',
+        default=None,
         help='''
-        Uses an experimental parser to extract jinja values.
+        Enables experimental parsing features.
+        '''
+    )
+
+    # if set, will disable the use of the stable static parser and instead
+    # always rely on jinja rendering.
+    p.add_argument(
+        '--no-static-parser',
+        default=None,
+        dest='static_parser',
+        action='store_false',
+        help='''
+        Disables the static parser.
+        '''
+    )
+
+    p.add_argument(
+        '--profiles-dir',
+        default=None,
+        dest='profiles_dir',
+        type=str,
+        help='''
+        Which directory to look in for the profiles.yml file. Default = {}
+        '''.format(DEFAULT_PROFILES_DIR)
+    )
+
+    p.add_argument(
+        '--no-anonymous-usage-stats',
+        action='store_false',
+        default=None,
+        dest='send_anonymous_usage_stats',
+        help='''
+        Do not send anonymous usage stat to dbt Labs
+        '''
+    )
+
+    p.add_argument(
+        '-x',
+        '--fail-fast',
+        dest='fail_fast',
+        action='store_true',
+        default=None,
+        help='''
+        Stop execution upon a first failure.
         '''
     )
 
@@ -1048,7 +1090,6 @@ def parse_args(args, cls=DBTArgumentParser):
 
     build_sub = _build_build_subparser(subs, base_subparser)
     snapshot_sub = _build_snapshot_subparser(subs, base_subparser)
-    rpc_sub = _build_rpc_subparser(subs, base_subparser)
     run_sub = _build_run_subparser(subs, base_subparser)
     compile_sub = _build_compile_subparser(subs, base_subparser)
     parse_sub = _build_parse_subparser(subs, base_subparser)
@@ -1057,11 +1098,11 @@ def parse_args(args, cls=DBTArgumentParser):
     seed_sub = _build_seed_subparser(subs, base_subparser)
     # --threads, --no-version-check
     _add_common_arguments(run_sub, compile_sub, generate_sub, test_sub,
-                          rpc_sub, seed_sub, parse_sub, build_sub)
+                          seed_sub, parse_sub, build_sub)
     # --select, --exclude
     # list_sub sets up its own arguments.
     _add_selection_arguments(
-        build_sub, run_sub, compile_sub, generate_sub, test_sub, snapshot_sub, seed_sub)
+        run_sub, compile_sub, generate_sub, test_sub, snapshot_sub, seed_sub)
     # --defer
     _add_defer_argument(run_sub, test_sub, build_sub)
     # --full-refresh
@@ -1077,8 +1118,31 @@ def parse_args(args, cls=DBTArgumentParser):
 
     parsed = p.parse_args(args)
 
+    # profiles_dir is set before subcommands and after, so normalize
+    if hasattr(parsed, 'sub_profiles_dir'):
+        if parsed.sub_profiles_dir is not None:
+            parsed.profiles_dir = parsed.sub_profiles_dir
+        delattr(parsed, 'sub_profiles_dir')
     if hasattr(parsed, 'profiles_dir'):
-        parsed.profiles_dir = os.path.abspath(parsed.profiles_dir)
+        if parsed.profiles_dir is None:
+            parsed.profiles_dir = flags.PROFILES_DIR
+        else:
+            parsed.profiles_dir = os.path.abspath(parsed.profiles_dir)
+            # needs to be set before the other flags, because it's needed to
+            # read the profile that contains them
+            flags.PROFILES_DIR = parsed.profiles_dir
+
+    # version_check is set before subcommands and after, so normalize
+    if hasattr(parsed, 'sub_version_check'):
+        if parsed.sub_version_check is False:
+            parsed.version_check = False
+        delattr(parsed, 'sub_version_check')
+
+    # fail_fast is set before subcommands and after, so normalize
+    if hasattr(parsed, 'sub_fail_fast'):
+        if parsed.sub_fail_fast is True:
+            parsed.fail_fast = True
+        delattr(parsed, 'sub_fail_fast')
 
     if getattr(parsed, 'project_dir', None) is not None:
         expanded_user = os.path.expanduser(parsed.project_dir)

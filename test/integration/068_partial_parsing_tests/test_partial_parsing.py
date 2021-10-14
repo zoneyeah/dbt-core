@@ -2,23 +2,14 @@ from dbt.exceptions import CompilationException
 from dbt.contracts.graph.manifest import Manifest
 from dbt.contracts.files import ParseFileType
 from dbt.contracts.results import TestStatus
-from test.integration.base import DBTIntegrationTest, use_profile, normalize
+from dbt.parser.partial import special_override_macros
+from test.integration.base import DBTIntegrationTest, use_profile, normalize, get_manifest
 import shutil
 import os
 
 
 # Note: every test case needs to have separate directories, otherwise
 # they will interfere with each other when tests are multi-threaded
-
-def get_manifest():
-    path = './target/partial_parse.msgpack'
-    if os.path.exists(path):
-        with open(path, 'rb') as fp:
-            manifest_mp = fp.read()
-        manifest: Manifest = Manifest.from_msgpack(manifest_mp)
-        return manifest
-    else:
-        return None
 
 class TestModels(DBTIntegrationTest):
 
@@ -74,9 +65,18 @@ class TestModels(DBTIntegrationTest):
         self.assertEqual(type(schema_file).__name__, 'SchemaSourceFile')
         self.assertEqual(len(schema_file.tests), 1)
         tests = schema_file.get_all_test_ids()
-        self.assertEqual(tests, ['test.test.unique_model_three_id.1358521a1c'])
+        self.assertEqual(tests, ['test.test.unique_model_three_id.6776ac8160'])
         unique_test_id = tests[0]
         self.assertIn(unique_test_id, manifest.nodes)
+
+        # modify model sql file, ensure description still there
+        shutil.copyfile('extra-files/model_three_modified.sql', 'models-a/model_three.sql')
+        results = self.run_dbt(["--partial-parse", "run"])
+        manifest = get_manifest()
+        model_id = 'model.test.model_three'
+        self.assertIn(model_id, manifest.nodes)
+        model_three_node = manifest.nodes[model_id]
+        self.assertEqual(model_three_node.description, 'The third model')
 
         # Change the model 3 test from unique to not_null
         shutil.copyfile('extra-files/models-schema2b.yml', 'models-a/schema.yml')
@@ -85,7 +85,7 @@ class TestModels(DBTIntegrationTest):
         schema_file_id = 'test://' + normalize('models-a/schema.yml')
         schema_file = manifest.files[schema_file_id]
         tests = schema_file.get_all_test_ids()
-        self.assertEqual(tests, ['test.test.not_null_model_three_id.8f3f13afd0'])
+        self.assertEqual(tests, ['test.test.not_null_model_three_id.3162ce0a6f'])
         not_null_test_id = tests[0]
         self.assertIn(not_null_test_id, manifest.nodes.keys())
         self.assertNotIn(unique_test_id, manifest.nodes.keys())
@@ -113,7 +113,7 @@ class TestModels(DBTIntegrationTest):
         shutil.copyfile('extra-files/models-schema2.yml', 'models-a/schema.yml')
         os.remove(normalize('models-a/model_three.sql'))
         with self.assertRaises(CompilationException):
-            results = self.run_dbt(["--partial-parse", "run"])
+            results = self.run_dbt(["--partial-parse", "--warn-error", "run"])
 
         # Put model back again
         shutil.copyfile('extra-files/model_three.sql', 'models-a/model_three.sql')
@@ -161,7 +161,7 @@ class TestModels(DBTIntegrationTest):
         # Remove the macro
         os.remove(normalize('macros/my_macro.sql'))
         with self.assertRaises(CompilationException):
-            results = self.run_dbt(["--partial-parse", "run"])
+            results = self.run_dbt(["--partial-parse", "--warn-error", "run"])
 
         # put back macro file, got back to schema file with no macro
         # add separate macro patch schema file
@@ -186,6 +186,33 @@ class TestModels(DBTIntegrationTest):
         shutil.copyfile('extra-files/empty_schema_with_version.yml', 'models-a/eschema.yml')
         results = self.run_dbt(["--partial-parse", "run"])
         self.assertEqual(len(results), 3)
+
+        # Disable model_three
+        shutil.copyfile('extra-files/model_three_disabled.sql', 'models-a/model_three.sql')
+        results = self.run_dbt(["--partial-parse", "run"])
+        self.assertEqual(len(results), 2)
+        manifest = get_manifest()
+        model_id = 'model.test.model_three'
+        self.assertIn(model_id, manifest.disabled)
+        self.assertNotIn(model_id, manifest.nodes)
+
+        # Edit disabled model three
+        shutil.copyfile('extra-files/model_three_disabled2.sql', 'models-a/model_three.sql')
+        results = self.run_dbt(["--partial-parse", "run"])
+        self.assertEqual(len(results), 2)
+        manifest = get_manifest()
+        model_id = 'model.test.model_three'
+        self.assertIn(model_id, manifest.disabled)
+        self.assertNotIn(model_id, manifest.nodes)
+
+        # Remove disabled from model three
+        shutil.copyfile('extra-files/model_three.sql', 'models-a/model_three.sql')
+        results = self.run_dbt(["--partial-parse", "run"])
+        self.assertEqual(len(results), 3)
+        manifest = get_manifest()
+        model_id = 'model.test.model_three'
+        self.assertIn(model_id, manifest.nodes)
+        self.assertNotIn(model_id, manifest.disabled)
 
     def tearDown(self):
         if os.path.exists(normalize('models-a/model_two.sql')):
@@ -220,10 +247,10 @@ class TestSources(DBTIntegrationTest):
     def project_config(self):
         cfg = {
             'config-version': 2,
-            'data-paths': ['seed'],
+            'seed-paths': ['seed'],
             'test-paths': ['tests'],
             'macro-paths': ['macros-b'],
-            'analysis-paths': ['analysis'],
+            'analysis-paths': ['analyses'],
             'seeds': {
                 'quote_columns': False,
             },
@@ -247,8 +274,8 @@ class TestSources(DBTIntegrationTest):
             os.remove(normalize('target/partial_parse.msgpack'))
         if os.path.exists(normalize('tests/my_test.sql')):
             os.remove(normalize('tests/my_test.sql'))
-        if os.path.exists(normalize('analysis/my_analysis.sql')):
-            os.remove(normalize('analysis/my_analysis.sql'))
+        if os.path.exists(normalize('analyses/my_analysis.sql')):
+            os.remove(normalize('analyses/my_analysis.sql'))
         if os.path.exists(normalize('macros-b/tests.sql')):
             os.remove(normalize('macros-b/tests.sql'))
 
@@ -317,7 +344,7 @@ class TestSources(DBTIntegrationTest):
         # Change seed name to wrong name
         shutil.copyfile('extra-files/schema-sources5.yml', 'models-b/sources.yml')
         with self.assertRaises(CompilationException):
-            results = self.run_dbt(["--partial-parse", "run"])
+            results = self.run_dbt(["--partial-parse", "--warn-error", "run"])
 
         # Put back seed name to right name
         shutil.copyfile('extra-files/schema-sources4.yml', 'models-b/sources.yml')
@@ -344,7 +371,7 @@ class TestSources(DBTIntegrationTest):
         self.assertIn(test_id, manifest.nodes)
 
         # Add an analysis
-        shutil.copyfile('extra-files/my_analysis.sql', 'analysis/my_analysis.sql')
+        shutil.copyfile('extra-files/my_analysis.sql', 'analyses/my_analysis.sql')
         results = self.run_dbt(["--partial-parse", "run"])
         manifest = get_manifest()
 
@@ -355,7 +382,7 @@ class TestSources(DBTIntegrationTest):
         self.assertEqual(len(manifest.nodes), 9)
 
         # Remove analysis
-        os.remove(normalize('analysis/my_analysis.sql'))
+        os.remove(normalize('analyses/my_analysis.sql'))
         results = self.run_dbt(["--partial-parse", "run"])
         manifest = get_manifest()
         self.assertEqual(len(manifest.nodes), 8)
@@ -406,7 +433,7 @@ class TestPartialParsingDependency(DBTIntegrationTest):
         self.assertIn(source_id, manifest.sources)
         # We have 1 root model, 1 local_dep model, 1 local_dep seed, 1 local_dep source test, 2 root source tests
         self.assertEqual(len(manifest.nodes), 5)
-        test_id = 'test.local_dep.source_unique_seed_source_seed_id.c37cdbabae'
+        test_id = 'test.local_dep.source_unique_seed_source_seed_id.afa94935ed'
         test_node = manifest.nodes[test_id]
 
 
@@ -436,12 +463,16 @@ class TestMacros(DBTIntegrationTest):
     def tearDown(self):
         if os.path.exists(normalize('macros-macros/custom_schema_tests.sql')):
             os.remove(normalize('macros-macros/custom_schema_tests.sql'))
+        if os.path.exists(normalize('macros-macros/ref_override.sql')):
+            os.remove(normalize('macros-macros/ref_override.sql'))
+        if os.path.exists(normalize('macros-macros/gsm_override.sql')):
+            os.remove(normalize('macros-macros/gsm_override.sql'))
 
     @use_profile('postgres')
     def test_postgres_nested_macros(self):
 
         shutil.copyfile('extra-files/custom_schema_tests1.sql', 'macros-macros/custom_schema_tests.sql')
-        results = self.run_dbt(strict=False)
+        results = self.run_dbt()
         self.assertEqual(len(results), 2)
         manifest = get_manifest()
         macro_child_map = manifest.build_macro_child_map()
@@ -454,13 +485,13 @@ class TestMacros(DBTIntegrationTest):
         self.assertEqual(results[0].status, TestStatus.Fail)
         self.assertRegex(results[0].node.compiled_sql, r'union all')
         # type_two_model_a_
-        self.assertEqual(results[1].status, TestStatus.Fail)
+        self.assertEqual(results[1].status, TestStatus.Warn)
         self.assertEqual(results[1].node.config.severity, 'WARN')
 
         shutil.copyfile('extra-files/custom_schema_tests2.sql', 'macros-macros/custom_schema_tests.sql')
         results = self.run_dbt(["--partial-parse", "test"], expect_pass=False)
         manifest = get_manifest()
-        test_node_id = 'test.test.type_two_model_a_.05477328b9'
+        test_node_id = 'test.test.type_two_model_a_.842bc6c2a7'
         self.assertIn(test_node_id, manifest.nodes)
         results = sorted(results, key=lambda r: r.node.name)
         self.assertEqual(len(results), 2)
@@ -468,3 +499,88 @@ class TestMacros(DBTIntegrationTest):
         self.assertEqual(results[1].status, TestStatus.Fail)
         self.assertEqual(results[1].node.config.severity, 'ERROR')
 
+    @use_profile('postgres')
+    def test_postgres_skip_macros(self):
+        expected_special_override_macros = [
+            'ref', 'source', 'config', 'generate_schema_name',
+            'generate_database_name', 'generate_alias_name'
+        ]
+        self.assertEqual(special_override_macros, expected_special_override_macros)
+
+        # initial run so we have a msgpack file
+        results = self.run_dbt()
+
+        # add a new ref override macro
+        shutil.copyfile('extra-files/ref_override.sql', 'macros-macros/ref_override.sql')
+        results, log_output = self.run_dbt_and_capture(['--partial-parse', 'run'])
+        self.assertTrue('Starting full parse.' in log_output)
+
+        # modify a ref override macro
+        shutil.copyfile('extra-files/ref_override2.sql', 'macros-macros/ref_override.sql')
+        results, log_output = self.run_dbt_and_capture(['--partial-parse', 'run'])
+        self.assertTrue('Starting full parse.' in log_output)
+
+        # remove a ref override macro
+        os.remove(normalize('macros-macros/ref_override.sql'))
+        results, log_output = self.run_dbt_and_capture(['--partial-parse', 'run'])
+        self.assertTrue('Starting full parse.' in log_output)
+
+        # custom generate_schema_name macro
+        shutil.copyfile('extra-files/gsm_override.sql', 'macros-macros/gsm_override.sql')
+        results, log_output = self.run_dbt_and_capture(['--partial-parse', 'run'])
+        self.assertTrue('Starting full parse.' in log_output)
+
+        # change generate_schema_name macro
+        shutil.copyfile('extra-files/gsm_override2.sql', 'macros-macros/gsm_override.sql')
+        results, log_output = self.run_dbt_and_capture(['--partial-parse', 'run'])
+        self.assertTrue('Starting full parse.' in log_output)
+
+class TestSnapshots(DBTIntegrationTest):
+
+    @property
+    def schema(self):
+        return "test_068A"
+
+    @property
+    def models(self):
+        return "models-d"
+
+    @property
+    def project_config(self):
+        return {
+            'config-version': 2,
+            'snapshot-paths': ['snapshots-d'],
+        }
+
+    def tearDown(self):
+        if os.path.exists(normalize('snapshots-d/snapshot.sql')):
+            os.remove(normalize('snapshots-d/snapshot.sql'))
+
+    @use_profile('postgres')
+    def test_postgres_pp_snapshots(self):
+
+        # initial run 
+        results = self.run_dbt() 
+        self.assertEqual(len(results), 1)
+
+        # add snapshot
+        shutil.copyfile('extra-files/snapshot.sql', 'snapshots-d/snapshot.sql')
+        results = self.run_dbt(["--partial-parse", "run"])
+        self.assertEqual(len(results), 1)
+        manifest = get_manifest()
+        snapshot_id = 'snapshot.test.orders_snapshot'
+        self.assertIn(snapshot_id, manifest.nodes)
+
+        # run snapshot
+        results = self.run_dbt(["--partial-parse", "snapshot"])
+        self.assertEqual(len(results), 1)
+
+        # modify snapshot
+        shutil.copyfile('extra-files/snapshot2.sql', 'snapshots-d/snapshot.sql')
+        results = self.run_dbt(["--partial-parse", "run"])
+        self.assertEqual(len(results), 1)
+
+        # delete snapshot
+        os.remove(normalize('snapshots-d/snapshot.sql'))
+        results = self.run_dbt(["--partial-parse", "run"])
+        self.assertEqual(len(results), 1)
