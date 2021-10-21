@@ -65,7 +65,7 @@ def parse_union_from_default(
 def parse_difference(
     include: Optional[List[str]], exclude: Optional[List[str]]
 ) -> SelectionDifference:
-    included = parse_union_from_default(include, DEFAULT_INCLUDES, greedy=bool(flags.GREEDY))
+    included = parse_union_from_default(include, DEFAULT_INCLUDES, greedy=flags.EAGER_INDIRECT_SELECTION)
     excluded = parse_union_from_default(exclude, DEFAULT_EXCLUDES, greedy=True)
     return SelectionDifference(components=[included, excluded])
 
