@@ -532,7 +532,6 @@ class TestTests(BasePPTest):
         manifest = get_manifest()
         test_id = 'test.test.is_odd_orders_id.82834fdc5b'
         self.assertIn(test_id, manifest.nodes)
-        self.assertEqual(len(manifest.nodes), 3)
 
         # edit generic test in test-path
         self.copy_file('test-files/generic_test_edited.sql', 'tests/generic/generic_test.sql')
@@ -541,4 +540,3 @@ class TestTests(BasePPTest):
         manifest = get_manifest()
         test_id = 'test.test.is_odd_orders_id.82834fdc5b'
         self.assertIn(test_id, manifest.nodes)
-        self.assertEqual(len(manifest.nodes), 3)
