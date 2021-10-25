@@ -49,7 +49,7 @@ setup(
         'scripts/dbt',
     ],
     install_requires=[
-        'Jinja2==2.11.3',
+        'Jinja2==3.0.2',
         'agate>=1.6,<1.6.2',
         'click>=8,<9',
         'colorama>=0.3.9,<0.4.5',
