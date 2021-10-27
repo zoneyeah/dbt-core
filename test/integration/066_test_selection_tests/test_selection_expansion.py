@@ -21,7 +21,7 @@ class TestSelectionExpansion(DBTIntegrationTest):
             "test-paths": ["tests"]
         }
 
-    def list_tests_and_assert(self, include, exclude, expected_tests, greedy=False, selector_name=None):
+    def list_tests_and_assert(self, include, exclude, expected_tests, eagerly_expand=True, selector_name=None):
         list_args = [ 'ls', '--resource-type', 'test']
         if include:
             list_args.extend(('--select', include))
@@ -29,8 +29,8 @@ class TestSelectionExpansion(DBTIntegrationTest):
             list_args.extend(('--exclude', exclude))
         if exclude:
             list_args.extend(('--exclude', exclude))
-        if greedy:
-            list_args.append('--greedy')
+        if eagerly_expand:
+            list_args.extend('--indirect-selection', 'eager')
         if selector_name:
             list_args.extend(('--selector', selector_name))
 
@@ -40,7 +40,7 @@ class TestSelectionExpansion(DBTIntegrationTest):
         test_names = [name.split('.')[-1] for name in listed]
         assert sorted(test_names) == sorted(expected_tests)
 
-    def run_tests_and_assert(self, include, exclude, expected_tests, greedy=False, selector_name=None):
+    def run_tests_and_assert(self, include, exclude, expected_tests, eagerly_expand=True, selector_name=None):
         results = self.run_dbt(['run'])
         self.assertEqual(len(results), 2)
 
@@ -49,8 +49,8 @@ class TestSelectionExpansion(DBTIntegrationTest):
             test_args.extend(('--models', include))
         if exclude:
             test_args.extend(('--exclude', exclude))
-        if greedy:
-            test_args.append('--greedy')
+        if eagerly_expand:
+            test_args.append('--indirect-selection', 'eager')
         if selector_name:
             test_args.extend(('--selector', selector_name))
 
@@ -231,10 +231,9 @@ class TestSelectionExpansion(DBTIntegrationTest):
         self.run_tests_and_assert(select, exclude, expected)
 
     @use_profile('postgres')
-    def test__postgres__model_a_greedy(self):
+    def test__postgres__model_a_eagerly_expand(self):
         select = 'model_a'
         exclude = None
-        greedy = True
         expected = [
             'cf_a_b', 'cf_a_src', 'just_a',
             'relationships_model_a_fun__fun__ref_model_b_',
@@ -242,22 +241,22 @@ class TestSelectionExpansion(DBTIntegrationTest):
             'unique_model_a_fun'
         ]
 
-        self.list_tests_and_assert(select, exclude, expected, greedy)
-        self.run_tests_and_assert(select, exclude, expected, greedy=greedy)
+        self.list_tests_and_assert(select, exclude, expected)
+        self.run_tests_and_assert(select, exclude, expected)
 
     @use_profile('postgres')
-    def test__postgres__model_a_greedy_exclude_unique_tests(self):
+    def test__postgres__model_a_eagerly_expand_exclude_unique_tests(self):
         select = 'model_a'
         exclude = 'test_name:unique'
-        greedy = True
+        eagerly_expand = True
         expected = [
             'cf_a_b', 'cf_a_src', 'just_a',
             'relationships_model_a_fun__fun__ref_model_b_',
             'relationships_model_a_fun__fun__source_my_src_my_tbl_',
         ]
 
-        self.list_tests_and_assert(select, exclude, expected, greedy)
-        self.run_tests_and_assert(select, exclude, expected, greedy=greedy)
+        self.list_tests_and_assert(select, exclude, expected, eagerly_expand)
+        self.run_tests_and_assert(select, exclude, expected, eagerly_expand=eagerly_expand)
 
 class TestExpansionWithSelectors(TestSelectionExpansion):
 
@@ -265,37 +264,24 @@ class TestExpansionWithSelectors(TestSelectionExpansion):
     def selectors_config(self):
         return yaml.safe_load('''
             selectors:
-            - name: model_a_greedy_none
+            - name: model_a_eagerly_expand_unspecified
               definition:
                 method: fqn
                 value: model_a
-            - name: model_a_greedy_false
+            - name: model_a_eagerly_expand_false
               definition:
                 method: fqn
                 value: model_a
-                greedy: false
-            - name: model_a_greedy_true
+                eagerly_expand: false
+            - name: model_a_eagerly_expand_true
               definition:
                 method: fqn
                 value: model_a
-                greedy: true
+                eagerly_expand: true
         ''')
 
     @use_profile('postgres')
-    def test__postgres__selector_model_a_not_greedy(self):
-        expected = ['just_a','unique_model_a_fun']
-
-        # when greedy is not specified, so implicitly False
-        self.list_tests_and_assert(include=None, exclude=None, expected_tests=expected, selector_name='model_a_greedy_none')
-        self.run_tests_and_assert(include=None, exclude=None, expected_tests=expected, selector_name='model_a_greedy_none')
-
-        # when greedy is explicitly False
-        self.list_tests_and_assert(include=None, exclude=None, expected_tests=expected, selector_name='model_a_greedy_false')
-        self.run_tests_and_assert(include=None, exclude=None, expected_tests=expected, selector_name='model_a_greedy_false')
-
-
-    @use_profile('postgres')
-    def test__postgres__selector_model_a_yes_greedy(self):
+    def test__postgres__selector_model_a_unset_eagerly_expand(self):
         expected = [
             'cf_a_b', 'cf_a_src', 'just_a',
             'relationships_model_a_fun__fun__ref_model_b_',
@@ -303,6 +289,25 @@ class TestExpansionWithSelectors(TestSelectionExpansion):
             'unique_model_a_fun'
         ]
 
-        # when greedy is explicitly False
-        self.list_tests_and_assert(include=None, exclude=None, expected_tests=expected, selector_name='model_a_greedy_true')
-        self.run_tests_and_assert(include=None, exclude=None, expected_tests=expected, selector_name='model_a_greedy_true')
+        self.list_tests_and_assert(include=None, exclude=None, expected_tests=expected, selector_name='model_a_eagerly_expand_unspecified')
+        self.run_tests_and_assert(include=None, exclude=None, expected_tests=expected, selector_name='model_a_eagerly_expand_unspecified')
+
+    @use_profile('postgres')
+    def test__postgres__selector_model_a_no_eagerly_expand(self):
+        expected = ['just_a','unique_model_a_fun']
+
+        self.list_tests_and_assert(include=None, exclude=None, expected_tests=expected, eagerly_expand=False, selector_name='model_a_eagerly_expand_false')
+        self.run_tests_and_assert(include=None, exclude=None, expected_tests=expected, eagerly_expand=False, selector_name='model_a_eagerly_expand_false')
+
+
+    @use_profile('postgres')
+    def test__postgres__selector_model_a_yes_eagerly_expand(self):
+        expected = [
+            'cf_a_b', 'cf_a_src', 'just_a',
+            'relationships_model_a_fun__fun__ref_model_b_',
+            'relationships_model_a_fun__fun__source_my_src_my_tbl_',
+            'unique_model_a_fun'
+        ]
+
+        self.list_tests_and_assert(include=None, exclude=None, expected_tests=expected, eagerly_expand=True, selector_name='model_a_eagerly_expand_true')
+        self.run_tests_and_assert(include=None, exclude=None, expected_tests=expected, eagerly_expand=True, selector_name='model_a_eagerly_expand_true')
