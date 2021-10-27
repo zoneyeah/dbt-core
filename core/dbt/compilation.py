@@ -418,7 +418,7 @@ class Compiler:
             else:
                 dependency_not_found(node, dependency)
 
-    def link_graph(self, linker: Linker, manifest: Manifest):
+    def link_graph(self, linker: Linker, manifest: Manifest, resolve: bool):
         for source in manifest.sources.values():
             linker.add_node(source.unique_id)
         for node in manifest.nodes.values():
@@ -431,9 +431,9 @@ class Compiler:
         if cycle:
             raise RuntimeError("Found a cycle: {}".format(cycle))
 
-        manifest.build_parent_and_child_maps()
-
-        self.resolve_graph(linker, manifest)
+        if resolve:
+            manifest.build_parent_and_child_maps()
+            self.resolve_graph(linker, manifest)
 
     def resolve_graph(self, linker: Linker, manifest: Manifest) -> None:
         """ This method adds additional edges to the DAG. For a given non-test
@@ -501,11 +501,11 @@ class Compiler:
                             node_id
                         )
 
-    def compile(self, manifest: Manifest, write=True) -> Graph:
+    def compile(self, manifest: Manifest, resolve=False, write=True) -> Graph:
         self.initialize()
         linker = Linker()
 
-        self.link_graph(linker, manifest)
+        self.link_graph(linker, manifest, resolve)
 
         stats = _generate_stats(manifest)
 
