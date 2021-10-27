@@ -103,7 +103,7 @@ def set_from_args(args, user_config):
     # cli args without user_config or env var option
     FULL_REFRESH = getattr(args, 'full_refresh', FULL_REFRESH)
     STORE_FAILURES = getattr(args, 'store_failures', STORE_FAILURES)
-    EAGER_INDIRECT_SELECTION = getattr(args, 'indirect_selection')[0] != 'cautious'
+    EAGER_INDIRECT_SELECTION = getattr(args, 'indirect_selection') != 'cautious'
     WHICH = getattr(args, 'which', WHICH)
 
     # global cli flags with env var and user_config alternatives

@@ -66,7 +66,7 @@ class SelectionCriteria:
     parents_depth: Optional[int]
     children: bool
     children_depth: Optional[int]
-    eagerly_expand: bool = False
+    eagerly_expand: bool = True
 
     def __post_init__(self):
         if self.children and self.childrens_parents:
@@ -104,7 +104,7 @@ class SelectionCriteria:
 
     @classmethod
     def selection_criteria_from_dict(
-        cls, raw: Any, dct: Dict[str, Any], eagerly_expand: bool = False
+        cls, raw: Any, dct: Dict[str, Any], eagerly_expand: bool = True
     ) -> 'SelectionCriteria':
         if 'value' not in dct:
             raise RuntimeException(
@@ -150,7 +150,7 @@ class SelectionCriteria:
         return dct
 
     @classmethod
-    def from_single_spec(cls, raw: str, eagerly_expand: bool = False) -> 'SelectionCriteria':
+    def from_single_spec(cls, raw: str, eagerly_expand: bool = True) -> 'SelectionCriteria':
         result = RAW_SELECTOR_PATTERN.match(raw)
         if result is None:
             # bad spec!

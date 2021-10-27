@@ -25,7 +25,7 @@ DEFAULT_EXCLUDES: List[str] = []
 
 
 def parse_union(
-    components: List[str], expect_exists: bool, eagerly_expand: bool = False
+    components: List[str], expect_exists: bool, eagerly_expand: bool = True
 ) -> SelectionUnion:
     # turn ['a b', 'c'] -> ['a', 'b', 'c']
     raw_specs = itertools.chain.from_iterable(
@@ -52,7 +52,7 @@ def parse_union(
 
 
 def parse_union_from_default(
-    raw: Optional[List[str]], default: List[str], eagerly_expand: bool = False
+    raw: Optional[List[str]], default: List[str], eagerly_expand: bool = True
 ) -> SelectionUnion:
     components: List[str]
     expect_exists: bool

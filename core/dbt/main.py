@@ -395,7 +395,6 @@ def _build_build_subparser(subparsers, base_subparser):
         '--indirect-selection',
         choices=['eager', 'cautious'],
         dest='indirect_selection',
-        nargs=1,
         help='''
             Select all tests that are adjacent to selected resources,
             even if they those resources have been explicitly selected.
@@ -742,7 +741,6 @@ def _build_test_subparser(subparsers, base_subparser):
         '--indirect-selection',
         choices=['eager', 'cautious'],
         dest='indirect_selection',
-        nargs=1,
         help='''
             Select all tests that are adjacent to selected resources,
             even if they those resources have been explicitly selected.
@@ -847,7 +845,6 @@ def _build_list_subparser(subparsers, base_subparser):
         '--indirect-selection',
         choices=['eager', 'cautious'],
         dest='indirect_selection',
-        nargs=1,
         help='''
             Select all tests that are adjacent to selected resources,
             even if they those resources have been explicitly selected.
