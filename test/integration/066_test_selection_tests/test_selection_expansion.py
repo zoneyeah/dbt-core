@@ -77,7 +77,12 @@ class TestSelectionExpansion(DBTIntegrationTest):
     def test__postgres__model_a_alone(self):
         select = 'model_a'
         exclude = None
-        expected = ['just_a','unique_model_a_fun']
+        expected = [
+            'cf_a_b', 'cf_a_src', 'just_a',
+            'relationships_model_a_fun__fun__ref_model_b_',
+            'relationships_model_a_fun__fun__source_my_src_my_tbl_',
+            'unique_model_a_fun'
+        ]
 
         self.list_tests_and_assert(select, exclude, expected)
         self.run_tests_and_assert(select, exclude, expected)
@@ -87,9 +92,11 @@ class TestSelectionExpansion(DBTIntegrationTest):
         select = 'model_a model_b'
         exclude = None
         expected = [
-            'cf_a_b','just_a','unique_model_a_fun',
-            'relationships_model_a_fun__fun__ref_model_b_'
+            'cf_a_b','cf_a_src','just_a','unique_model_a_fun',
+            'relationships_model_a_fun__fun__ref_model_b_',
+            'test.relationships_model_a_fun__fun__source_my_src_my_tbl_'
         ]
+
 
         self.list_tests_and_assert(select, exclude, expected)
         self.run_tests_and_assert(select, exclude, expected)
@@ -99,8 +106,9 @@ class TestSelectionExpansion(DBTIntegrationTest):
         select = 'model_a source:*'
         exclude = None
         expected = [
-            'cf_a_src','just_a','unique_model_a_fun',
+            'cf_a_b','cf_a_src','just_a','unique_model_a_fun',
             'source_unique_my_src_my_tbl_fun',
+            'relationships_model_a_fun__fun__ref_model_b_',
             'relationships_model_a_fun__fun__source_my_src_my_tbl_'
         ]
 
@@ -124,7 +132,11 @@ class TestSelectionExpansion(DBTIntegrationTest):
     def test__postgres__model_a_exclude_specific_test(self):
         select = 'model_a'
         exclude = 'unique_model_a_fun'
-        expected = ['just_a']
+        expected = [
+            'cf_a_b','cf_a_src','just_a',
+            'relationships_model_a_fun__fun__ref_model_b_'
+            'relationships_model_a_fun__fun__source_my_src_my_tbl_'
+        ]
 
         self.list_tests_and_assert(select, exclude, expected)
         self.run_tests_and_assert(select, exclude, expected)
@@ -147,7 +159,10 @@ class TestSelectionExpansion(DBTIntegrationTest):
     def test__postgres__model_a_only_data(self):
         select = 'model_a,test_type:schema'
         exclude = None
-        expected = ['unique_model_a_fun']
+        expected = [
+            'unique_model_a_fun',
+            'cf_a_b','cf_a_src','just_a'
+        ]
 
         self.list_tests_and_assert(select, exclude, expected)
         self.run_tests_and_assert(select, exclude, expected)
@@ -183,7 +198,10 @@ class TestSelectionExpansion(DBTIntegrationTest):
     def test__postgres__model_tag_test_name_intersection(self):
         select = 'tag:a_or_b,test_name:relationships'
         exclude = None
-        expected = ['relationships_model_a_fun__fun__ref_model_b_']
+        expected = [
+            'relationships_model_a_fun__fun__ref_model_b_',
+            'relationships_model_a_fun__fun__source_my_src_my_tbl_'
+        ]
 
         self.list_tests_and_assert(select, exclude, expected)
         self.run_tests_and_assert(select, exclude, expected)
@@ -223,7 +241,12 @@ class TestSelectionExpansion(DBTIntegrationTest):
     def test__postgres__exclude_data_test_tag(self):
         select = 'model_a'
         exclude = 'tag:data_test_tag'
-        expected = ['unique_model_a_fun']
+        expected = [
+            'cf_a_b', 'cf_a_src',
+            'relationships_model_a_fun__fun__ref_model_b_',
+            'relationships_model_a_fun__fun__source_my_src_my_tbl_',
+            'unique_model_a_fun'
+        ]
 
         self.list_tests_and_assert(select, exclude, expected)
         self.run_tests_and_assert(select, exclude, expected)
