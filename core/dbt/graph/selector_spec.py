@@ -156,7 +156,11 @@ class SelectionCriteria:
             # bad spec!
             raise RuntimeException(f'Invalid selector spec "{raw}"')
 
-        return cls.selection_criteria_from_dict(raw, result.groupdict(), eagerly_expand=eagerly_expand)
+        return cls.selection_criteria_from_dict(
+            raw,
+            result.groupdict(),
+            eagerly_expand=eagerly_expand
+        )
 
 
 class BaseSelectionGroup(Iterable[SelectionSpec], metaclass=ABCMeta):
