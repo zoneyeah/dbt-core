@@ -972,6 +972,7 @@ class ExposureParser(YamlReader):
             parsed = self.parse_exposure(unparsed)
             yield parsed
 
+
 class MetricParser(YamlReader):
     def __init__(self, schema_parser: SchemaParser, yaml: YamlBlock):
         super().__init__(schema_parser, yaml, NodeType.Metric.pluralize())
@@ -980,41 +981,43 @@ class MetricParser(YamlReader):
 
     def parse_metric(self, unparsed: UnparsedMetric) -> ParsedMetric:
         package_name = self.project.project_name
-        for definition in unparsed.definitions:
-            unique_id = f'{NodeType.Metric}.{package_name}.{definition.name}'
-            path = self.yaml.path.relative_path
+        unique_id = f'{NodeType.Metric}.{package_name}.{unparsed.name}'
+        path = self.yaml.path.relative_path
 
-            fqn = self.schema_parser.get_fqn_prefix(path)
-            fqn.append(definition.name)
+        fqn = self.schema_parser.get_fqn_prefix(path)
+        fqn.append(unparsed.name)
 
-            parsed = ParsedMetric(
-                package_name=package_name,
-                root_path=self.project.project_root,
-                path=path,
-                original_file_path=self.yaml.path.original_file_path,
-                unique_id=unique_id,
-                fqn=fqn,
-                model=unparsed.model,
-                name=definition.name,
-                description=definition.description,
-                display_name=definition.display_name,
-                agg=definition.agg,
-                sql=definition.sql,
-                timestamp_field=definition.timestamp_field,
-                dimensions=definition.dimensions
-            )
-            ctx = generate_parse_metrics(
-                parsed,
-                self.root_project,
-                self.schema_parser.manifest,
-                package_name,
-            )
-            model_ref = '{{ ' + unparsed.model + '}}'
-            get_rendered(
-                model_ref, ctx, parsed, capture_macros=True
-            )
-            # parsed now has a populated refs/sources
-            yield parsed
+        parsed = ParsedMetric(
+            package_name=package_name,
+            root_path=self.project.project_root,
+            path=path,
+            original_file_path=self.yaml.path.original_file_path,
+            unique_id=unique_id,
+            fqn=fqn,
+            model=unparsed.model,
+            name=unparsed.name,
+            description=unparsed.description,
+            display_name=unparsed.display_name,
+            agg=unparsed.agg,
+            sql=unparsed.sql,
+            timestamp_field=unparsed.timestamp_field,
+            dimensions=unparsed.dimensions
+        )
+        ctx = generate_parse_metrics(
+            parsed,
+            self.root_project,
+            self.schema_parser.manifest,
+            package_name,
+        )
+        model_ref = '{{ ref("' + unparsed.model + '") }}'
+        get_rendered(
+            model_ref, ctx, parsed, capture_macros=True
+        )
+        # TODO : Partial parsing doesn't  work for these (yet!)
+        # TODO : List command does not work for metrics (yet!)
+        # TODO : Should callers `ref()` the model name in their yml files?
+        # parsed now has a populated refs/sources
+        return parsed
 
     def parse(self) -> Iterable[ParsedMetric]:
         for data in self.get_key_dicts():
@@ -1024,5 +1027,4 @@ class MetricParser(YamlReader):
             except (ValidationError, JSONValidationException) as exc:
                 msg = error_context(self.yaml.path, self.key, data, exc)
                 raise CompilationException(msg) from exc
-            for parsed in self.parse_metric(unparsed):
-                yield parsed
+            yield self.parse_metric(unparsed)

@@ -780,8 +780,11 @@ class ParsedMetric(UnparsedBaseNode, HasUniqueID, HasFqn):
     sql: str
     timestamp_field: str
     dimensions: List[str]
-    created_at: int = field(default_factory=lambda: int(time.time()))
     resource_type: NodeType = NodeType.Metric
+    sources: List[List[str]] = field(default_factory=list)
+    depends_on: DependsOn = field(default_factory=DependsOn)
+    refs: List[List[str]] = field(default_factory=list)
+    created_at: int = field(default_factory=lambda: int(time.time()))
 
     @property
     def depends_on_nodes(self):

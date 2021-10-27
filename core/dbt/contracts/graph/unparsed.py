@@ -437,7 +437,8 @@ class UnparsedExposure(dbtClassMixin, Replaceable):
     depends_on: List[str] = field(default_factory=list)
 
 @dataclass
-class UnparsedMetricDefinition(dbtClassMixin, Replaceable):
+class UnparsedMetric(dbtClassMixin, Replaceable):
+    model: str
     name: str
     description: str = ''
     display_name: str = ''
@@ -445,8 +446,3 @@ class UnparsedMetricDefinition(dbtClassMixin, Replaceable):
     sql: str = ''
     timestamp_field: str = ''
     dimensions: List[str] = field(default_factory=list)
-
-@dataclass
-class UnparsedMetric(dbtClassMixin, Replaceable):
-    model: str
-    definitions: List[UnparsedMetricDefinition]

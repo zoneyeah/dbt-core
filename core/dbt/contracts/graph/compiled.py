@@ -6,6 +6,7 @@ from dbt.contracts.graph.parsed import (
     ParsedHookNode,
     ParsedModelNode,
     ParsedExposure,
+    ParsedMetric,
     ParsedResource,
     ParsedRPCNode,
     ParsedGenericTestNode,
@@ -224,4 +225,5 @@ CompileResultNode = Union[
 GraphMemberNode = Union[
     CompileResultNode,
     ParsedExposure,
+    ParsedMetric,
 ]
