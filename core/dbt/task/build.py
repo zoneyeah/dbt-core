@@ -65,7 +65,7 @@ class BuildTask(RunTask):
 
     def get_runner_type(self, node):
         return self.RUNNER_MAP.get(node.resource_type)
-        
+
     def compile_manifest(self):
         if self.manifest is None:
             raise InternalException(
