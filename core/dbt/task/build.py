@@ -73,4 +73,4 @@ class BuildTask(RunTask):
             )
         adapter = get_adapter(self.config)
         compiler = adapter.get_compiler()
-        self.graph = compiler.compile(self.manifest, resolve=True)
+        self.graph = compiler.compile(self.manifest, add_test_edges=True)

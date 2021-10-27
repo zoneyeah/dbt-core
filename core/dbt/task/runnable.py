@@ -87,7 +87,7 @@ class ManifestTask(ConfiguredTask):
             )
         adapter = get_adapter(self.config)
         compiler = adapter.get_compiler()
-        self.graph = compiler.compile(self.manifest, resolve=False)
+        self.graph = compiler.compile(self.manifest)
 
     def _runtime_initialize(self):
         self.load_manifest()
