@@ -48,7 +48,7 @@ class TestSelectionExpansion(DBTIntegrationTest):
         if exclude:
             test_args.extend(('--exclude', exclude))
         if eagerly_expand:
-            test_args.append(('--indirect-selection', 'eager'))
+            test_args.extend(('--indirect-selection', 'eager'))
         if selector_name:
             test_args.extend(('--selector', selector_name))
 
@@ -94,7 +94,7 @@ class TestSelectionExpansion(DBTIntegrationTest):
         expected = [
             'cf_a_b','cf_a_src','just_a','unique_model_a_fun',
             'relationships_model_a_fun__fun__ref_model_b_',
-            'test.relationships_model_a_fun__fun__source_my_src_my_tbl_'
+            'relationships_model_a_fun__fun__source_my_src_my_tbl_'
         ]
 
 
@@ -134,7 +134,7 @@ class TestSelectionExpansion(DBTIntegrationTest):
         exclude = 'unique_model_a_fun'
         expected = [
             'cf_a_b','cf_a_src','just_a',
-            'relationships_model_a_fun__fun__ref_model_b_'
+            'relationships_model_a_fun__fun__ref_model_b_',
             'relationships_model_a_fun__fun__source_my_src_my_tbl_'
         ]
 
@@ -142,8 +142,8 @@ class TestSelectionExpansion(DBTIntegrationTest):
         self.run_tests_and_assert(select, exclude, expected)
 
     @use_profile('postgres')
-    def test__postgres__only_schema(self):
-        select = 'test_type:schema'
+    def test__postgres__only_generic(self):
+        select = 'test_type:generic'
         exclude = None
         expected = [
             'relationships_model_a_fun__fun__ref_model_b_',
@@ -156,20 +156,26 @@ class TestSelectionExpansion(DBTIntegrationTest):
         self.run_tests_and_assert(select, exclude, expected)
 
     @use_profile('postgres')
-    def test__postgres__model_a_only_data(self):
-        select = 'model_a,test_type:schema'
+    def test__postgres__model_a_only_singular(self):
+        select = 'model_a,test_type:singular'
         exclude = None
-        expected = [
-            'unique_model_a_fun',
-            'cf_a_b','cf_a_src','just_a'
-        ]
+        expected = ['cf_a_b','cf_a_src','just_a']
 
         self.list_tests_and_assert(select, exclude, expected)
         self.run_tests_and_assert(select, exclude, expected)
 
+    # TODO: add this as cautious @use_profile('postgres')
+    # def test__postgres__model_a_only_singular(self):
+    #    select = 'model_a,test_type:singular'
+    #    exclude = None
+    #    expected = ['just_a']
+
+    #    self.list_tests_and_assert(select, exclude, expected)
+    #    self.run_tests_and_assert(select, exclude, expected)
+
     @use_profile('postgres')
-    def test__postgres__only_data(self):
-        select = 'test_type:data'
+    def test__postgres__only_singular(self):
+        select = 'test_type:singular'
         exclude = None
         expected = ['cf_a_b', 'cf_a_src', 'just_a']
 
@@ -177,10 +183,10 @@ class TestSelectionExpansion(DBTIntegrationTest):
         self.run_tests_and_assert(select, exclude, expected)
 
     @use_profile('postgres')
-    def test__postgres__model_a_only_data(self):
-        select = 'model_a,test_type:data'
+    def test__postgres__model_a_only_singular(self):
+        select = 'model_a,test_type:singular'
         exclude = None
-        expected = ['just_a']
+        expected = ['cf_a_b','cf_a_src','just_a']
 
         self.list_tests_and_assert(select, exclude, expected)
         self.run_tests_and_assert(select, exclude, expected)
