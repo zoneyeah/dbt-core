@@ -119,10 +119,7 @@ class ManifestFlatGraphBuilt(InfoLevel, CliEventABC):
 @dataclass
 class ReportPerformancePath(InfoLevel, CliEventABC):
     path: str
-<<<<<<< HEAD
 
-=======
->>>>>>> add one more event that actually has data
     def cli_msg(self) -> str:
         return f"Performance info: {self.path}"
 
