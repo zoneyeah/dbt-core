@@ -26,6 +26,7 @@ import dbt.task.seed as seed_task
 import dbt.task.serve as serve_task
 import dbt.task.snapshot as snapshot_task
 import dbt.task.test as test_task
+import dbt.task.meta as meta_task
 from dbt.profiler import profiler
 from dbt.task.rpc.server import RPCServerTask
 from dbt.adapters.factory import reset_adapters, cleanup_connections
@@ -937,6 +938,24 @@ def _build_run_operation_subparser(subparsers, base_subparser):
     return sub
 
 
+def _build_meta_subparser(subparsers, base_subparser):
+    sub = subparsers.add_parser(
+        'meta',
+        parents=[base_subparser],
+        help='''
+        Generate metadata information artifacts.
+        '''
+    )
+    sub.add_argument(
+        'type',
+        help='''
+        Type of metadata artifact to generate.
+        ''',
+    )
+    sub.set_defaults(cls=meta_task.MetaTask,
+                     which='meta')
+    return sub
+
 def parse_args(args, cls=DBTArgumentParser):
     p = cls(
         prog='dbt',
@@ -1121,6 +1140,7 @@ def parse_args(args, cls=DBTArgumentParser):
     _build_docs_serve_subparser(docs_subs, base_subparser)
     _build_source_freshness_subparser(source_subs, base_subparser)
     _build_run_operation_subparser(subs, base_subparser)
+    _build_meta_subparser(subs, base_subparser)
 
     if len(args) == 0:
         p.print_help()

@@ -342,3 +342,17 @@
   {% do run_query(sql) %}
 
 {% endmacro %}
+
+{% macro get_query_history(information_schema, last_queried_at) -%}
+  {{ return(adapter.dispatch('get_query_history', 'dbt')(information_schema, last_queried_at)) }}
+{%- endmacro %}
+
+{% macro default__get_query_history(information_schema, last_queried_at) -%}
+
+  {% set typename = adapter.type() %}
+  {% set msg -%}
+    get_catalog not implemented for {{ typename }}
+  {%- endset %}
+
+  {{ exceptions.raise_compiler_error(msg) }}
+{% endmacro %}
