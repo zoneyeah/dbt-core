@@ -538,15 +538,18 @@ class SourceStatusSelectorMethod(SelectorMethod):
     def search(
         self, included_nodes: Set[UniqueId], selector: str
     ) -> Iterator[UniqueId]:
-        if self.previous_state is None or self.previous_state.sources is None:
+        if self.previous_state is None or self.previous_state.sources.results is None:
             raise InternalException(
-                'No comparison sources.json'
+                'No comparison results in sources.json'
             )
-        print(type(self.previous_state.sources))
+        print((self.previous_state.sources.results))
+        for result in self.previous_state.sources.results:
+            print(result.status)
         matches = set(
-            result.unique_id for result in self.previous_state.sources
+            result.unique_id for result in self.previous_state.sources.results
             if result.status == selector
         )
+        print(matches)
         for node, real_node in self.all_nodes(included_nodes):
             if node in matches:
                 yield node
