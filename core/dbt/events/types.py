@@ -30,6 +30,11 @@ class ErrorLevel():
         return "error"
 
 
+class ExceptionLevel():
+    def level_tag(self) -> str:
+        return "exception"
+
+
 # The following classes represent the data necessary to describe a
 # particular event to both human readable logs, and machine reliable
 # event streams. classes extend superclasses that indicate what

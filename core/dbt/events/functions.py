@@ -22,6 +22,8 @@ def fire_event(e: Event) -> None:
             logger.GLOBAL_LOGGER.warning()(logger.timestamped_line(e.cli_msg()))
         elif e.level_tag() == 'error':
             logger.GLOBAL_LOGGER.error(logger.timestamped_line(e.cli_msg()))
+        elif e.level_tag() == 'exception':
+            logger.GLOBAL_LOGGER.exception(logger.timestamped_line(e.cli_msg()))
         else:
             raise AssertionError(
                 f"Event type {type(e).__name__} has unhandled level: {e.level_tag()}"
