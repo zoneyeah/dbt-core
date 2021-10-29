@@ -20,3 +20,7 @@ class AdapterLogger():
 
     def error(self, msg: str):
         fire_event(AdapterEventError(name=self.name, raw_msg=msg))
+
+    def exception(self, msg: str):
+        # TODO swap to use AdapterEventError when that hits the feature branch
+        fire_event(AdapterEventError(name=self.name, raw_msg=msg))
