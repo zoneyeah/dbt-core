@@ -542,6 +542,10 @@ class SourceStatusSelectorMethod(SelectorMethod):
             raise InternalException(
                 'No comparison results in sources.json'
             )
+        #TODO?: include all source nodes. 
+        # TODO?: If any source nodes have the same child and not ALL are equal to the selector status, 
+        # TODO?: stop the run
+        #TODO?: output in the terminal which nodes must equal the selector status to run downstream children nodes
         matches = set(
             result.unique_id for result in self.previous_state.sources.results
             if result.status == selector
