@@ -351,7 +351,7 @@
 
   {% set typename = adapter.type() %}
   {% set msg -%}
-    get_catalog not implemented for {{ typename }}
+    get_query_history not implemented for {{ typename }}
   {%- endset %}
 
   {{ exceptions.raise_compiler_error(msg) }}
