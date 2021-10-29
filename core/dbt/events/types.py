@@ -299,6 +299,14 @@ class MacroEventDebug(DebugLevel, CliEventABC):
         return self.msg
 
 
+@dataclass
+class GenericTestFileParse(DebugLevel, CliEventABC):
+    path: str
+
+    def cli_msg(self) -> str:
+        return f"Parsing {self.path}"
+
+
 # since mypy doesn't run on every file we need to suggest to mypy that every
 # class gets instantiated. But we don't actually want to run this code.
 # making the conditional `if False` causes mypy to skip it as dead code so
@@ -334,3 +342,4 @@ if 1 == 0:
     SelectorReportInvalidSelector(selector_methods={'': ''}, spec_method='', raw_spec='')
     MacroEventInfo(msg='')
     MacroEventDebug(msg='')
+    GenericTestFileParse(path='')
