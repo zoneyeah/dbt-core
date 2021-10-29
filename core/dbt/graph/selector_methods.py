@@ -46,6 +46,7 @@ class MethodName(StrEnum):
     State = 'state'
     Exposure = 'exposure'
     Result = 'result'
+    SourceStatus = 'source_status'
 
 
 def is_selected_node(fqn: List[str], node_selector: str):
@@ -533,6 +534,23 @@ class ResultSelectorMethod(SelectorMethod):
             if node in matches:
                 yield node
 
+class SourceStatusSelectorMethod(SelectorMethod):
+    def search(
+        self, included_nodes: Set[UniqueId], selector: str
+    ) -> Iterator[UniqueId]:
+        if self.previous_state is None or self.previous_state.sources is None:
+            raise InternalException(
+                'No comparison sources.json'
+            )
+        print(type(self.previous_state.sources))
+        matches = set(
+            result.unique_id for result in self.previous_state.sources
+            if result.status == selector
+        )
+        for node, real_node in self.all_nodes(included_nodes):
+            if node in matches:
+                yield node
+
 
 class MethodManager:
     SELECTOR_METHODS: Dict[MethodName, Type[SelectorMethod]] = {
@@ -547,6 +565,7 @@ class MethodManager:
         MethodName.State: StateSelectorMethod,
         MethodName.Exposure: ExposureSelectorMethod,
         MethodName.Result: ResultSelectorMethod,
+        MethodName.SourceStatus: SourceStatusSelectorMethod,
     }
 
     def __init__(
