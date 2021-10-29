@@ -69,19 +69,19 @@ class AdapterEventBase():
         return f"{self.name} adapter: {self.raw_msg}"
 
 
-class AdapterEventDebug(DebugLevel, AdapterEventBase, CliEventABC):
+class AdapterEventDebug(DebugLevel, AdapterEventBase, CliEventABC, ShowException):
     pass
 
 
-class AdapterEventInfo(InfoLevel, AdapterEventBase, CliEventABC):
+class AdapterEventInfo(InfoLevel, AdapterEventBase, CliEventABC, ShowException):
     pass
 
 
-class AdapterEventWarning(WarnLevel, AdapterEventBase, CliEventABC):
+class AdapterEventWarning(WarnLevel, AdapterEventBase, CliEventABC, ShowException):
     pass
 
 
-class AdapterEventError(ErrorLevel, AdapterEventBase, CliEventABC):
+class AdapterEventError(ErrorLevel, AdapterEventBase, CliEventABC, ShowException):
     pass
 
 
