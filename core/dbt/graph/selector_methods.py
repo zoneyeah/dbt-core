@@ -542,14 +542,10 @@ class SourceStatusSelectorMethod(SelectorMethod):
             raise InternalException(
                 'No comparison results in sources.json'
             )
-        print((self.previous_state.sources.results))
-        for result in self.previous_state.sources.results:
-            print(result.status)
         matches = set(
             result.unique_id for result in self.previous_state.sources.results
             if result.status == selector
         )
-        print(matches)
         for node, real_node in self.all_nodes(included_nodes):
             if node in matches:
                 yield node
