@@ -114,6 +114,12 @@ class SelectionCriteria:
 
         parents_depth = _match_to_int(dct, 'parents_depth')
         children_depth = _match_to_int(dct, 'children_depth')
+
+        # If defined in selector, attempt to override CLI flag
+        indirect_selection = dct.get('indirect_selection', None)
+        if indirect_selection in ['cautious', 'eager']:
+            eagerly_expand = indirect_selection != 'cautious'
+
         return cls(
             raw=raw,
             method=method_name,
@@ -124,7 +130,7 @@ class SelectionCriteria:
             parents_depth=parents_depth,
             children=bool(dct.get('children')),
             children_depth=children_depth,
-            eagerly_expand=(eagerly_expand or bool(dct.get('eagerly_expand'))),
+            eagerly_expand=eagerly_expand
         )
 
     @classmethod
@@ -145,8 +151,6 @@ class SelectionCriteria:
             dct['parents'] = bool(dct.get('parents'))
         if 'children' in dct:
             dct['children'] = bool(dct.get('children'))
-        if 'eagerly_expand' in dct:
-            dct['eagerly_expand'] = bool(dct.get('eagerly_expand'))
         return dct
 
     @classmethod

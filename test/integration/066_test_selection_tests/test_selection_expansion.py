@@ -142,6 +142,16 @@ class TestSelectionExpansion(DBTIntegrationTest):
         self.run_tests_and_assert(select, exclude, expected)
 
     @use_profile('postgres')
+    def test__postgres__model_a_exclude_specific_test_cautious(self):
+        select = 'model_a'
+        exclude = 'unique_model_a_fun'
+        expected = ['just_a']
+        indirect_selection = 'cautious'
+
+        self.list_tests_and_assert(select, exclude, expected, indirect_selection)
+        self.run_tests_and_assert(select, exclude, expected, indirect_selection)
+
+    @use_profile('postgres')
     def test__postgres__only_generic(self):
         select = 'test_type:generic'
         exclude = None
