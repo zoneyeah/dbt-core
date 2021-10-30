@@ -293,6 +293,21 @@ class TestSelectionExpansion(DBTIntegrationTest):
         self.run_tests_and_assert(select, exclude, expected)
 
     @use_profile('postgres')
+    def test__postgres__model_a_indirect_selection_eager(self):
+        select = 'model_a'
+        exclude = None
+        expected = [
+            'cf_a_b', 'cf_a_src', 'just_a',
+            'relationships_model_a_fun__fun__ref_model_b_',
+            'relationships_model_a_fun__fun__source_my_src_my_tbl_',
+            'unique_model_a_fun'
+        ]
+        indirect_selection = 'eager'
+
+        self.list_tests_and_assert(select, exclude, expected, indirect_selection)
+        self.run_tests_and_assert(select, exclude, expected, indirect_selection)
+
+    @use_profile('postgres')
     def test__postgres__model_a_indirect_selection_exclude_unique_tests(self):
         select = 'model_a'
         exclude = 'test_name:unique'
