@@ -291,7 +291,7 @@ def build_node_edges(nodes: List[ManifestNode]):
     return _sort_values(forward_edges), _sort_values(backward_edges)
 
 
-# Build a map of children of macros
+# Build a map of children of macros and generic tests
 def build_macro_edges(nodes: List[Any]):
     forward_edges: Dict[str, List[str]] = {
         n.unique_id: [] for n in nodes if n.unique_id.startswith('macro') or n.depends_on.macros
@@ -569,6 +569,7 @@ class Manifest(MacroMethods, DataClassMessagePackMixin, dbtClassMixin):
     state_check: ManifestStateCheck = field(default_factory=ManifestStateCheck)
     source_patches: MutableMapping[SourceKey, SourcePatch] = field(default_factory=dict)
     disabled: MutableMapping[str, List[CompileResultNode]] = field(default_factory=dict)
+    env_vars: MutableMapping[str, str] = field(default_factory=dict)
 
     _doc_lookup: Optional[DocLookup] = field(
         default=None, metadata={'serialize': lambda x: None, 'deserialize': lambda x: None}
@@ -1048,6 +1049,7 @@ class Manifest(MacroMethods, DataClassMessagePackMixin, dbtClassMixin):
             self.state_check,
             self.source_patches,
             self.disabled,
+            self.env_vars,
             self._doc_lookup,
             self._source_lookup,
             self._ref_lookup,

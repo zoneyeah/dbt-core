@@ -3,6 +3,7 @@ import functools
 from typing import NoReturn, Optional, Mapping, Any
 
 from dbt.logger import GLOBAL_LOGGER as logger
+from dbt.logger import get_secret_env
 from dbt.node_types import NodeType
 from dbt import flags
 from dbt.ui import line_wrap_message, warning_tag
@@ -390,6 +391,8 @@ class CommandError(RuntimeException):
         super().__init__(message)
         self.cwd = cwd
         self.cmd = cmd
+        for secret in get_secret_env():
+            self.cmd = str(self.cmd).replace(secret, "*****")
         self.args = (cwd, cmd, message)
 
     def __str__(self):
@@ -464,6 +467,15 @@ def invalid_type_error(method_name, arg_name, got_value, expected_type,
     raise_compiler_error(msg.format(version=version, method_name=method_name,
                          arg_name=arg_name, expected_type=expected_type,
                          got_value=got_value, got_type=got_type))
+
+
+def invalid_bool_error(got_value, macro_name) -> NoReturn:
+    """Raise a CompilationException when an macro expects a boolean but gets some
+    other value.
+    """
+    msg = ("Macro '{macro_name}' returns '{got_value}'.  It is not type 'bool' "
+           "and cannot not be converted reliably to a bool.")
+    raise_compiler_error(msg.format(macro_name=macro_name, got_value=got_value))
 
 
 def ref_invalid_args(model, args) -> NoReturn:

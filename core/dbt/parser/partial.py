@@ -1,5 +1,7 @@
+import os
 from copy import deepcopy
 from typing import MutableMapping, Dict, List
+from itertools import chain
 from dbt.contracts.graph.manifest import Manifest
 from dbt.contracts.files import (
     AnySourceFile, ParseFileType, parse_file_type_to_parser,
@@ -13,7 +15,12 @@ mssat_files = (
     ParseFileType.Seed,
     ParseFileType.Snapshot,
     ParseFileType.Analysis,
-    ParseFileType.Test,
+    ParseFileType.SingularTest,
+)
+
+mg_files = (
+    ParseFileType.Macro,
+    ParseFileType.GenericTest,
 )
 
 
@@ -57,6 +64,7 @@ class PartialParsing:
         self.project_parser_files = {}
         self.deleted_manifest = Manifest()
         self.macro_child_map: Dict[str, List[str]] = {}
+        self.env_vars_to_source_files = self.build_env_vars_to_source_files()
         self.build_file_diff()
         self.processing_file = None
         self.deleted_special_override_macro = False
@@ -88,7 +96,7 @@ class PartialParsing:
             if self.saved_files[file_id].parse_file_type == ParseFileType.Schema:
                 deleted_schema_files.append(file_id)
             else:
-                if self.saved_files[file_id].parse_file_type == ParseFileType.Macro:
+                if self.saved_files[file_id].parse_file_type in mg_files:
                     changed_or_deleted_macro_file = True
                 deleted.append(file_id)
 
@@ -106,9 +114,14 @@ class PartialParsing:
                         raise Exception(f"Serialization failure for {file_id}")
                     changed_schema_files.append(file_id)
                 else:
-                    if self.saved_files[file_id].parse_file_type == ParseFileType.Macro:
+                    if self.saved_files[file_id].parse_file_type in mg_files:
                         changed_or_deleted_macro_file = True
                     changed.append(file_id)
+        # handled changed env_vars for non-schema-files
+        for file_id in list(chain.from_iterable(self.env_vars_to_source_files.values())):
+            if file_id in deleted or file_id in changed:
+                continue
+            changed.append(file_id)
         file_diff = {
             "deleted": deleted,
             "deleted_schema_files": deleted_schema_files,
@@ -213,7 +226,7 @@ class PartialParsing:
             self.deleted_manifest.files[file_id] = self.saved_manifest.files.pop(file_id)
 
         # macros
-        if saved_source_file.parse_file_type == ParseFileType.Macro:
+        if saved_source_file.parse_file_type in mg_files:
             self.delete_macro_file(saved_source_file, follow_references=True)
 
         # docs
@@ -229,7 +242,7 @@ class PartialParsing:
 
         if new_source_file.parse_file_type in mssat_files:
             self.update_mssat_in_saved(new_source_file, old_source_file)
-        elif new_source_file.parse_file_type == ParseFileType.Macro:
+        elif new_source_file.parse_file_type in mg_files:
             self.update_macro_in_saved(new_source_file, old_source_file)
         elif new_source_file.parse_file_type == ParseFileType.Documentation:
             self.update_doc_in_saved(new_source_file, old_source_file)
@@ -790,3 +803,39 @@ class PartialParsing:
             self.remove_tests(orig_file, 'sources', orig_source['name'])
             self.merge_patch(orig_file, 'sources', orig_source)
             self.add_to_pp_files(orig_file)
+
+    # This builds a dictionary of files that need to be scheduled for parsing
+    # because the env var has changed.
+    def build_env_vars_to_source_files(self):
+        env_vars_to_source_files = {}
+        # The SourceFiles contain a list of env_vars that were used in the file.
+        # The SchemaSourceFiles contain a dictionary of env_vars to schema file blocks.
+        # Create a combined dictionary of env_vars to files that contain them.
+        for source_file in self.saved_files.values():
+            if source_file.parse_file_type == ParseFileType.Schema:
+                continue
+            for env_var in source_file.env_vars:
+                if env_var not in env_vars_to_source_files:
+                    env_vars_to_source_files[env_var] = []
+                env_vars_to_source_files[env_var].append(source_file.file_id)
+
+        # Check whether the env_var has changed. If it hasn't, remove the env_var
+        # from env_vars_to_source_files so that we can use it as dictionary of
+        # which files need to be scheduled for parsing.
+        delete_unchanged_vars = []
+        for env_var in env_vars_to_source_files.keys():
+            prev_value = None
+            if env_var in self.saved_manifest.env_vars:
+                prev_value = self.saved_manifest.env_vars[env_var]
+                current_value = os.getenv(env_var)
+                if prev_value == current_value:
+                    delete_unchanged_vars.append(env_var)
+                if current_value is None:
+                    # env_var no longer set, remove from manifest
+                    del self.saved_manifest.env_vars[env_var]
+
+        # Actually remove the vars that haven't changed
+        for env_var in delete_unchanged_vars:
+            del env_vars_to_source_files[env_var]
+
+        return env_vars_to_source_files
