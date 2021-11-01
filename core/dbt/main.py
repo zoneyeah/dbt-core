@@ -9,6 +9,7 @@ from contextlib import contextmanager
 from pathlib import Path
 
 import dbt.version
+from dbt.events.functions import setup_event_logger
 import dbt.flags as flags
 import dbt.task.build as build_task
 import dbt.task.clean as clean_task
@@ -240,6 +241,9 @@ def run_from_args(parsed):
     if task.config is not None:
         log_path = getattr(task.config, 'log_path', None)
     # we can finally set the file logger up
+    # TODO move as a part of #4179
+    breakpoint()
+    setup_event_logger(log_path or 'logs')
     log_manager.set_path(log_path)
     if dbt.tracking.active_user is not None:  # mypy appeasement, always true
         logger.debug("Tracking: {}".format(dbt.tracking.active_user.state()))

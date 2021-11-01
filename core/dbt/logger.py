@@ -45,6 +45,10 @@ DEBUG_LOG_FORMAT = (
 
 SECRET_ENV_PREFIX = 'DBT_ENV_SECRET_'
 
+# TODO this is a terrible place for a default like this
+# fix via issue #4179
+LOG_DIR: str = "logs"
+
 
 def get_secret_env() -> List[str]:
     return [
