@@ -65,6 +65,7 @@ setup(
         'dbt-extractor==0.4.0',
         'typing-extensions>=3.7.4,<3.11',
         'werkzeug>=1,<3',
+        'structlog>=21.2.0,<21.3.0'
         # the following are all to match snowflake-connector-python
         'requests<3.0.0',
         'idna>=2.5,<4',
