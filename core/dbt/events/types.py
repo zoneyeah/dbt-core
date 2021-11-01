@@ -1,7 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from typing import Any, List, Dict
-from dbt.contracts.files import AnySourceFile
 from dbt.ui import warning_tag
 
 
@@ -361,7 +360,8 @@ class ManifestWrongMetadataVersion(DebugLevel, CliEventABC):
     version: str
 
     def cli_msg(self) -> str:
-        return "Manifest metadata did not contain correct version. Contained '{self.version}' instead."
+        return ("Manifest metadata did not contain correct version. "
+                f"Contained '{self.version}' instead.")
 
 
 @dataclass
@@ -371,8 +371,8 @@ class PartialParsingVersionMismatch(InfoLevel, CliEventABC):
 
     def cli_msg(self) -> str:
         return ("Unable to do partial parsing because of a dbt version mismatch. "
-               f"Saved manifest version: {self.saved_version}. "
-               f"Current version: {self.current_version}.")
+                f"Saved manifest version: {self.saved_version}. "
+                f"Current version: {self.current_version}.")
 
 
 class PartialParsingFailedBecauseConfigChange(InfoLevel, CliEventABC):
@@ -494,7 +494,6 @@ class PartialParsingEnabled(DebugLevel, CliEventABC):
     added: int
     changed: int
 
-
     def cli_msg(self) -> str:
         return (f"Partial parsing enabled: "
                 f"{self.deleted} files deleted, "
@@ -527,11 +526,11 @@ class PartialParsingUpdatedFile(DebugLevel, CliEventABC):
 
 
 @dataclass
-class ParsingParsingNodeMissingInSourceFile(DebugLevel, CliEventABC):
-    source_file: AnySourceFile
+class PartialParsingNodeMissingInSourceFile(DebugLevel, CliEventABC):
+    source_file: str
 
     def cli_msg(self) -> str:
-        f"Partial parsing: node not found for source_file {self.source_file}"
+        return f"Partial parsing: node not found for source_file {self.source_file}"
 
 
 @dataclass
@@ -627,7 +626,7 @@ if 1 == 0:
     MacroEventDebug(msg='')
     GenericTestFileParse(path='')
     MacroFileParse(path='')
-    PartialParsingFullReparseBecauseOfError(file='')
+    PartialParsingFullReparseBecauseOfError()
     PartialParsingFile(file_dict={})
     PartialParsingException(exc_info={})
     PartialParsingSkipParsing()
@@ -653,11 +652,11 @@ if 1 == 0:
     PartialParsingAddedFile(file_id='')
     PartialParsingDeletedFile(file_id='')
     PartialParsingUpdatedFile(file_id='')
-    ParsingParsingNodeMissingInSourceFile(source_file=AnySourceFile)
+    PartialParsingNodeMissingInSourceFile(source_file='')
     PartialParsingMissingNodes(file_id='')
     PartialParsingChildMapMissingUniqueID(unique_id='')
     PartialParsingUpdateSchemaFile(file_id='')
     PartialParsingDeletedSource(unique_id='')
-    PartialParsingDeletedExposure(uniquer_id='')
+    PartialParsingDeletedExposure(unique_id='')
     InvalidDisabledSourceInTestNode(msg='')
     InvalidRefInTestNode(msg='')
