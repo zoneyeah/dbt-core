@@ -33,9 +33,10 @@ class ErrorLevel():
 
 @dataclass
 class ShowException():
-    exc_info: Any = None
-    stack_info: Any = None
-    extra: Any = None
+    def __post_init__(self):
+        self.exc_info: Any = None
+        self.stack_info: Any = None
+        self.extra: Any = None
 
 
 # The following classes represent the data necessary to describe a
