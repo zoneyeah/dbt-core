@@ -1,5 +1,5 @@
 
-from structlog import get_logger  # type: ignore # TODO eventually remove dependency on this logger
+from structlog import get_logger
 from dbt.events.history import EVENT_HISTORY
 from dbt.events.types import CliEventABC, Event, ShowException
 
@@ -19,55 +19,65 @@ def timestamped_cli_line(e: CliEventABC) -> str:
 # to files, etc.)
 def fire_event(e: Event) -> None:
     EVENT_HISTORY.append(e)
+    level_tag = e.level_tag()
     if isinstance(e, CliEventABC):
-        if e.level_tag() == 'test' and not isinstance(e, ShowException):
-            # TODO after implmenting #3977 send to new test level
-            log.debug(timestamped_cli_line(e))
-        elif e.level_tag() == 'test' and isinstance(e, ShowException):
-            # TODO after implmenting #3977 send to new test level
-            log.debug(
-                timestamped_cli_line(e),
-                exc_info=e.exc_info,
-                stack_info=e.stack_info,
-                extra=e.extra
-            )
-        elif e.level_tag() == 'debug' and not isinstance(e, ShowException):
-            log.debug(timestamped_cli_line(e))
-        elif e.level_tag() == 'debug' and isinstance(e, ShowException):
-            log.debug(
-                timestamped_cli_line(e),
-                exc_info=e.exc_info,
-                stack_info=e.stack_info,
-                extra=e.extra
-            )
-        elif e.level_tag() == 'info' and not isinstance(e, ShowException):
-            log.info(timestamped_cli_line(e))
-        elif e.level_tag() == 'info' and isinstance(e, ShowException):
-            log.info(
-                timestamped_cli_line(e),
-                exc_info=e.exc_info,
-                stack_info=e.stack_info,
-                extra=e.extra
-            )
-        elif e.level_tag() == 'warn' and not isinstance(e, ShowException):
-            log.warning(timestamped_cli_line(e))
-        elif e.level_tag() == 'warn' and isinstance(e, ShowException):
-            log.warning(
-                timestamped_cli_line(e),
-                exc_info=e.exc_info,
-                stack_info=e.stack_info,
-                extra=e.extra
-            )
-        elif e.level_tag() == 'error' and not isinstance(e, ShowException):
-            log.error(timestamped_cli_line(e))
-        elif e.level_tag() == 'error' and isinstance(e, ShowException):
-            log.error(
-                timestamped_cli_line(e),
-                exc_info=e.exc_info,
-                stack_info=e.stack_info,
-                extra=e.extra
-            )
+        log_line = timestamped_cli_line(e)
+        if isinstance(e, ShowException):
+            if level_tag == 'test':
+                # TODO after implmenting #3977 send to new test level
+                log.debug(
+                    log_line,
+                    exc_info=e.exc_info,
+                    stack_info=e.stack_info,
+                    extra=e.extra
+                )
+            elif level_tag == 'debug':
+                log.debug(
+                    log_line,
+                    exc_info=e.exc_info,
+                    stack_info=e.stack_info,
+                    extra=e.extra
+                )
+            elif level_tag == 'info':
+                log.info(
+                    log_line,
+                    exc_info=e.exc_info,
+                    stack_info=e.stack_info,
+                    extra=e.extra
+                )
+            elif level_tag == 'warn':
+                log.warning(
+                    log_line,
+                    exc_info=e.exc_info,
+                    stack_info=e.stack_info,
+                    extra=e.extra
+                )
+
+            elif level_tag == 'error':
+                log.error(
+                    log_line,
+                    exc_info=e.exc_info,
+                    stack_info=e.stack_info,
+                    extra=e.extra
+                )
+            else:
+                raise AssertionError(
+                    f"Event type {type(e).__name__} has unhandled level: {e.level_tag()}"
+                )
+        # not CliEventABC and not ShowException
         else:
-            raise AssertionError(
-                f"Event type {type(e).__name__} has unhandled level: {e.level_tag()}"
-            )
+            if level_tag == 'test':
+                # TODO after implmenting #3977 send to new test level
+                log.debug(log_line)
+            elif level_tag == 'debug':
+                log.debug(log_line)
+            elif level_tag == 'info':
+                log.info(log_line)
+            elif level_tag == 'warn':
+                log.warning(log_line)
+            elif level_tag == 'error':
+                log.error(log_line)
+            else:
+                raise AssertionError(
+                    f"Event type {type(e).__name__} has unhandled level: {e.level_tag()}"
+                )
