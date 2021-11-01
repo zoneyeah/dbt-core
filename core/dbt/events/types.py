@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
 from typing import Any, List, Dict
 from dbt.contracts.files import AnySourceFile
+from dbt.ui import warning_tag
 
 
 # types to represent log levels
@@ -573,6 +574,22 @@ class PartialParsingDeletedExposure(DebugLevel, CliEventABC):
         return f"Partial parsing: deleted exposure {self.unique_id}"
 
 
+@dataclass
+class InvalidDisabledSourceInTestNode(WarnLevel, CliEventABC):
+    msg: str
+
+    def cli_msg(self) -> str:
+        return warning_tag(self.msg)
+
+
+@dataclass
+class InvalidRefInTestNode(WarnLevel, CliEventABC):
+    msg: str
+
+    def cli_msg(self) -> str:
+        return warning_tag(self.msg)
+
+
 # since mypy doesn't run on every file we need to suggest to mypy that every
 # class gets instantiated. But we don't actually want to run this code.
 # making the conditional `if False` causes mypy to skip it as dead code so
@@ -642,3 +659,5 @@ if 1 == 0:
     PartialParsingUpdateSchemaFile(file_id='')
     PartialParsingDeletedSource(unique_id='')
     PartialParsingDeletedExposure(uniquer_id='')
+    InvalidDisabledSourceInTestNode(msg='')
+    InvalidRefInTestNode(msg='')
