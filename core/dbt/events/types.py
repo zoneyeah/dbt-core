@@ -297,6 +297,9 @@ class MacroEventDebug(DebugLevel, CliEventABC):
 
     def cli_msg(self) -> str:
         return self.msg
+
+
+@dataclass
 class MissingProfileTarget(InfoLevel, CliEventABC):
     profile_name: str
     target_name: str
