@@ -1,5 +1,6 @@
 from abc import ABCMeta, abstractmethod
 from dataclasses import dataclass
+import datetime
 from typing import Any, List
 
 
@@ -47,6 +48,11 @@ class ShowException():
 
 # top-level superclass for all events
 class Event(metaclass=ABCMeta):
+    ts: datetime.date
+
+    def __init__(self):
+        self.ts = datetime.datetime.now()
+
     # do not define this yourself. inherit it from one of the above level types.
     @abstractmethod
     def level_tag(self) -> str:
